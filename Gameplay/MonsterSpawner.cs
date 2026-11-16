@@ -27,6 +27,51 @@ internal sealed class MonsterSpawner
         this.monitor = monitor;
     }
 
+    public bool TrySpawnRandomMonster()
+    {
+        if (!Context.IsWorldReady)
+        {
+            this.monitor.Log("Random spawn rejected: no save is currently loaded.", LogLevel.Warn);
+            return false;
+        }
+
+        if (!Context.IsMainPlayer)
+        {
+            this.monitor.Log("Random spawn rejected: only the multiplayer host can create monsters.", LogLevel.Warn);
+            return false;
+        }
+
+        if (Game1.eventUp || Game1.currentLocation is null || Game1.player is null)
+        {
+            this.monitor.Log("Random spawn rejected: the current game state isn't suitable for a spawn.", LogLevel.Warn);
+            return false;
+        }
+
+        GameLocation location = Game1.currentLocation;
+        Vector2 playerTile = Game1.player.Tile;
+
+        foreach (Point offset in NearbyTileOffsets)
+        {
+            Vector2 tile = new(playerTile.X + offset.X, playerTile.Y + offset.Y);
+            if (!location.isTileLocationTotallyClearAndPlaceable(tile))
+                continue;
+
+            Vector2 pixelPosition = tile * 64f;
+            if (!MonsterCatalog.TryCreateRandom(pixelPosition, out Monster? monster) || monster is null)
+            {
+                this.monitor.Log("Random spawn rejected: no compatible vanilla monsters could be created. Check the installed Stardew version.", LogLevel.Error);
+                return false;
+            }
+
+            location.characters.Add(monster);
+            this.monitor.Log($"Spawned random monster {monster.GetType().Name} in {location.Name} near {Game1.player.Name}.", LogLevel.Info);
+            return true;
+        }
+
+        this.monitor.Log("Random spawn rejected: couldn't find a clear tile near the player.", LogLevel.Warn);
+        return false;
+    }
+
     public bool TrySpawnGreenSlime()
     {
         if (!Context.IsWorldReady)
