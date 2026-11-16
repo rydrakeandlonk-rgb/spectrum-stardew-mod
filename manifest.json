@@ -1,0 +1,9 @@
+{
+  "Name": "Spectrum Stardew Mod",
+  "Author": "RydrakeAndLonk",
+  "Version": "0.1.0",
+  "Description": "Connects Spectrum and Twitch events to Stardew Valley gameplay.",
+  "UniqueID": "RydrakeAndLonk.SpectrumStardewMod",
+  "EntryDll": "SpectrumStardewMod.dll",
+  "MinimumApiVersion": "4.5.0"
+}
