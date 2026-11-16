@@ -1,69 +1,75 @@
-# Spectrum Stardew Mod
+# Spectrum Stardew Monster Spawner
 
-A public, install-and-connect Stardew Valley mod that turns Twitch Channel Point redemptions into in-game monster encounters.
+A private Spectrum integration that turns Twitch Channel Point redemptions into random vanilla monster encounters in Stardew Valley.
 
-The goal is that any streamer can download the mod, install it through SMAPI, connect their own Twitch account, configure their rewards, and play. They should not need to create a Cloudflare account, run a server, manage API credentials, or build the project themselves.
+Only Spectrum members explicitly enabled by an administrator in Spectrum Control Center can connect. Downloading or building the mod does not grant access to the live service.
 
-## Intended player experience
+## Intended experience
 
-1. Download a versioned ZIP from GitHub Releases (and, when published, Nexus Mods).
-2. Install SMAPI, then extract the mod folder into the Stardew Valley Mods folder.
-3. Launch the game and open the mod's setup page/link.
-4. Sign in to Twitch using the official Twitch authorization page.
-5. Connect the game using a short-lived pairing code, then configure which Channel Point rewards trigger which monsters.
-6. Start the farm. The host mod connects automatically and processes redemptions.
+1. An enabled Spectrum streamer installs the mod through SMAPI.
+2. They launch Stardew Valley and pair the host game with Spectrum Control Center.
+3. Control Center verifies the signed-in Twitch identity and administrator-controlled activation record.
+4. The streamer connects the Channel Point reward used for Random Monster Spawner.
+5. The host game connects to the Spectrum gateway and receives redemption requests.
+6. The host chooses a random supported monster using inverse-health weighting and spawns it near the player.
 
-No Twitch password or long-lived Twitch token is entered into the game or committed to this repository.
+No Twitch password, Twitch client secret, or long-lived Twitch token is stored in the mod.
 
-## Product architecture
+## Spectrum architecture
 
-This is a small monorepo: the SMAPI mod, hosted-service source, account/setup web app, packaging scripts, and documentation all live here.
+The existing Spectrum Cloudflare project owns identity, permissions, dashboard management, Twitch authorisation, EventSub and the live gateway.
 
-`Twitch OAuth + EventSub → hosted Spectrum service → host SMAPI mod → Stardew Valley`
+Twitch Channel Points → Spectrum Event Hub → Stardew gateway → host SMAPI mod → Stardew Valley
 
-- **SMAPI mod:** installed by each streamer; connects the host game to the service and applies validated spawn requests.
-- **Hosted service:** handles Twitch OAuth, EventSub subscriptions, account/reward configuration, pairing, event delivery, and reconnect handling. It is operated centrally; end users do not deploy it.
-- **Setup web app:** lets streamers sign in with Twitch, select their channel, connect a game installation, and map rewards to supported monsters.
-- **GitHub Releases:** publishes a ready-to-install ZIP for each version.
-- **Nexus Mods:** optional additional distribution channel using the same tested release package.
+- Control Center: administrator-only Mods page, Spectrum member activation, connection status and reward configuration.
+- Event Hub: receives and verifies Twitch Channel Point redemption notifications and routes approved redemptions.
+- Stardew gateway: owns short-lived game pairing, authenticated host connections, deduplication and request delivery.
+- SMAPI mod: runs in the host game, chooses a random monster from its safe allowlist, and creates it on the game thread.
+
+The live service is centrally operated. Spectrum streamers do not deploy Workers or manage Twitch developer credentials.
+
+## Random monster selection
+
+The redemption is always a random monster; viewers do not choose a monster ID. The mod uses an allowlist of vanilla monsters and inverse-health weighting: higher-health monsters have a lower selection weight. Monster types whose constructors are unavailable on the installed game version are skipped safely.
+
+The initial candidate pool includes Green Slime, Bat, Frost Bat, Fly, Grub, Dust Spirit, Rock Golem, Shadow Brute, Shadow Shaman, Serpent, Mummy, Lava Crab and Pepper Rex. The actual available pool depends on compatibility with the installed Stardew version. The weighting is an initial balance and will be tuned through gameplay testing.
 
 ## Multiplayer
 
-The farm host is authoritative. Only the host's mod connection receives and applies spawn requests. Stardew's multiplayer world synchronisation should make the spawned monster visible to farmhands; this must be verified in real multiplayer tests. Farmhands do not need Twitch accounts or separate mod connections for the feature to work.
+The farm host is authoritative. Only the host's mod connection processes external redemption requests and creates monsters. Farmhands do not need separate Twitch connections. Monster replication must be verified in a real host/farmhand test before release.
 
-## Repository layout
+## Repository contents
 
-- `src/SpectrumStardewMod/` — SMAPI mod source.
-- `server/` — hosted service source and deployment configuration.
-- `web/` — streamer setup and Twitch account-linking app.
-- `packaging/` — scripts and release package layout.
-- `docs/` — architecture, security, development, installation, and release guides.
+- Gameplay/MonsterSpawner.cs — host-only world spawning.
+- Gameplay/MonsterCatalog.cs — allowlisted random monster pool and weighted selection.
+- ModEntry.cs — SMAPI entry point and local test commands.
+- manifest.json and SpectrumStardewMod.csproj — SMAPI project metadata.
+- docs/ — architecture, development and roadmap.
 
-The existing root-level SMAPI project is the initial prototype and will be migrated into this layout as implementation proceeds.
+## Current implementation status
 
-## Current status
+Gameplay prototype + Control Center management foundation. The mod now contains a weighted random monster selection prototype and local SMAPI test command. The Control Center repository contains an admin-only Mods page, per-member activation API, and additive D1 migration.
 
-**Prototype foundation only.** The repository currently contains a basic SMAPI project and a local Green Slime test command. Twitch OAuth, EventSub, the hosted service, setup UI, automatic game pairing, reward configuration, release ZIP packaging, and Nexus publication are not implemented yet. The test spawn and multiplayer replication also still need compilation and in-game verification.
+The live gateway, browser pairing, Twitch redemption EventSub subscription/routing, remote game connection, reward mapping UI, release ZIP packaging, and Nexus distribution are not complete. The migration has not been applied and the dashboard has not been deployed. The C# project has not yet been compiled or tested in-game.
 
-See [Architecture](docs/ARCHITECTURE.md), [Roadmap](docs/ROADMAP.md), and [Development](docs/DEVELOPMENT.md).
+## Local test commands
 
-## Requirements
+After building and installing through SMAPI:
 
-- Stardew Valley version supported by the published release.
-- SMAPI version supported by the published release.
-- Internet connection for Twitch redemption integration.
-- A Twitch account with the appropriate broadcaster permissions to authorize Channel Point redemption access.
+    spectrum_spawn_test
+    spectrum_spawn_random_test
 
-The base game mod should still load when the online service is unavailable; Twitch-triggered spawns will pause until the connection returns.
+The first command spawns a Green Slime. The second selects from the weighted random pool. Both are host-only.
 
-## Security principles
+## Security
 
-- Twitch OAuth is completed in the browser using the hosted service; never collect Twitch passwords.
-- Never ship a Twitch client secret or service-wide credential inside the mod ZIP.
-- Store only the minimum account and reward configuration required to operate the service.
-- Use short-lived pairing codes, authenticated game sessions, event IDs, expiry, deduplication, and rate limits.
-- Never accept arbitrary code or unrestricted game object types from the network.
+- Only approved, active Spectrum members with an explicit enabled record can pair.
+- A valid Twitch login alone does not grant access.
+- Never ship service credentials or Twitch tokens in the mod ZIP.
+- Use revocable game-session credentials, one-time pairing codes, redemption IDs, expiry, deduplication, rate limits and spawn caps.
+- Network callbacks must enqueue typed requests; game state is changed only on the SMAPI game thread.
+- Never accept arbitrary C# types, commands, or executable content from the service.
 
 ## License
 
-To be decided before public distribution.
+Private Spectrum project. Redistribution and service access are not authorised.
