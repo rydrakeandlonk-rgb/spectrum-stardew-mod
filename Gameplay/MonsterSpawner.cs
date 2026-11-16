@@ -14,11 +14,11 @@ namespace SpectrumStardewMod.Gameplay;
 internal sealed class MonsterSpawner
 {
     private static readonly Point[] NearbyTileOffsets =
-    [
-        new(1, 0), new(-1, 0), new(0, 1), new(0, -1),
-        new(1, 1), new(-1, 1), new(1, -1), new(-1, -1),
-        new(2, 0), new(-2, 0), new(0, 2), new(0, -2)
-    ];
+    {
+        new Point(1, 0), new Point(-1, 0), new Point(0, 1), new Point(0, -1),
+        new Point(1, 1), new Point(-1, 1), new Point(1, -1), new Point(-1, -1),
+        new Point(2, 0), new Point(-2, 0), new Point(0, 2), new Point(0, -2)
+    };
 
     private readonly IMonitor monitor;
 
