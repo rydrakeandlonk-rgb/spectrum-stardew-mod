@@ -1,98 +1,110 @@
 # Architecture
 
-## Product goal
+## Product boundary
 
-Any streamer should be able to install the mod through SMAPI, sign in to Twitch in a browser, connect their own Stardew Valley host session, map Channel Point rewards to monsters, and use the feature without operating their own backend.
-
-The repository is intended to contain the complete source for the product: game mod, hosted service, setup web app, packaging, and documentation. The hosted service is operated centrally by the project maintainer.
+This is a private Spectrum integration, not a public self-service service. Only active Spectrum members explicitly enabled by a Control Center administrator may pair a game. The existing Spectrum Cloudflare repository owns the management plane and live service; this repository owns the SMAPI game client.
 
 ## High-level flow
 
-`Streamer browser → Twitch OAuth → Spectrum account/configuration service`
+Control Center admin enables member → member pairs Stardew host → gateway session
 
-`Twitch EventSub → hosted EventSub receiver → per-streamer event routing → host SMAPI connection → Stardew Valley`
+Twitch Channel Point redemption → Event Hub → Stardew gateway → host SMAPI mod → Stardew Valley
 
-The browser handles sign-in and configuration. The game mod receives a one-time pairing code or authenticated session credential, not the streamer's Twitch password or OAuth refresh token.
+## Component responsibilities
 
-## Components
+### Spectrum Control Center
+
+- Administrator-only Mods page.
+- Reads the active Spectrum member roster.
+- Enables/disables Stardew Monster Spawner per member.
+- Shows activation and, after gateway integration, connection/last-seen state.
+- Owns the canonical Twitch identity and authorisation.
+- Will own streamer-facing reward mapping configuration.
+
+### Spectrum Event Hub
+
+- Uses the existing central EventSub ingress and signing secret.
+- Must subscribe to channel.channel_points_custom_reward_redemption.add for enabled Spectrum broadcasters with the required central Twitch scope.
+- Validates EventSub signatures and broadcaster identity.
+- Routes only redemptions for active, enabled Stardew members.
+- Deduplicates by Twitch EventSub message ID and redemption ID.
+- Does not perform Stardew gameplay or choose monster classes.
+
+The central Control Center OAuth scope list already includes channel:read:redemptions; each affected broadcaster must have granted it in their stored Twitch authorisation. EventSub subscription sync and notification routing still need implementation.
+
+### Stardew gateway
+
+A dedicated service in the Spectrum Cloudflare repository.
+
+- Creates one-time pairing codes for the SMAPI host.
+- Completes pairing only after Control Center confirms the active Spectrum member and Stardew mod activation.
+- Issues a revocable, game-session-only credential.
+- Maintains the host's persistent outbound connection.
+- Accepts authenticated, typed redemption requests from Event Hub.
+- Tracks connection status and last-seen timestamps for Control Center.
+- Enforces request expiry, deduplication, reconnect handling and rate limits.
+- Never accepts a client-supplied monster type; the game client chooses from its local allowlist.
 
 ### SMAPI mod
 
-- Runs in the streamer's Stardew Valley installation.
-- Exposes a setup URL and short-lived pairing flow.
-- Maintains an authenticated outbound connection to the hosted service.
-- Receives typed, validated spawn requests.
-- Queues requests and applies them only on SMAPI's game thread.
-- Only the multiplayer host processes requests and changes the world.
-- Reconnects safely after network interruptions and reports basic connection state.
+- Runs on the host's Stardew installation.
+- Pairs using a short-lived code displayed in the SMAPI console/in-game UI.
+- Maintains an authenticated outbound gateway connection.
+- Queues typed spawn requests and processes them on the SMAPI game thread.
+- Checks that the world is ready and the local player is the multiplayer host.
+- Spawns exactly one monster per accepted redemption.
+- Farmhands do not connect to Twitch or independently process redemption requests.
 
-### Hosted service
+## Random monster selection
 
-- Provides the public HTTPS setup/API endpoints.
-- Performs Twitch OAuth authorization-code flow and securely stores the minimum required token material server-side.
-- Creates and maintains Twitch EventSub subscriptions for each connected broadcaster.
-- Validates EventSub webhook signatures and message types.
-- Associates Twitch broadcaster IDs, configured rewards, and paired game sessions.
-- Delivers spawn requests to the correct active host connection.
-- Handles offline sessions, retry policy, event expiry, deduplication, rate limits, and revocation/disconnection.
-- Keeps client secrets and signing keys in server-side secret storage only.
+The redemption type is fixed: Random Monster Spawner.
 
-### Setup web app
+The SMAPI client owns the final random selection so the gateway never needs to know or trust a game class name. The initial candidate list is a hardcoded vanilla allowlist. Each candidate has an expected base-health fallback; where possible, the constructed monster's initial health is read by reflection. The selection weight is:
 
-- Uses Twitch's official authorization page; the app never asks for a Twitch password.
-- Shows the signed-in Twitch channel and authorization status.
-- Lets the streamer pair a running game mod.
-- Lists eligible Channel Point rewards and maps selected rewards to an allowlisted monster type and safe spawn settings.
-- Provides pause, disconnect, and connection-status controls.
+    weight = 1 / health ^ 1.35
 
-### Distribution
+A weighted draw from the available candidates makes high-HP monsters less common without making them impossible. Candidate constructors are discovered from the installed Stardew game assembly. A candidate that cannot be constructed is skipped. This is an initial balancing model, not a final promise about exact game spawn rates.
 
-- GitHub is the source of truth for all project code and documentation.
-- Each release publishes a versioned, ready-to-install ZIP containing the SMAPI mod and required mod files, not the server source or server secrets.
-- Nexus Mods can host the same release ZIP as an additional download location.
-- The hosted service and setup app are deployed once by the project maintainer; individual users do not deploy infrastructure.
+## Control Center data
 
-## Twitch authorization and EventSub
+Migration 0028_stardew_mod_access.sql creates:
 
-The Twitch integration is per streamer. Each broadcaster explicitly authorizes the application with the scopes required to read their Channel Point redemptions. The service must verify the broadcaster identity and create the appropriate EventSub subscription for that broadcaster.
+- stardew_mod_access: per-member enable state, current connection status, game/SMAPI version and last-seen timestamps.
+- stardew_mod_reward_mappings: per-member Twitch reward IDs and display titles.
 
-The exact OAuth scopes, EventSub subscription version, webhook verification, token refresh, and Twitch app configuration must be checked against the current Twitch developer documentation during implementation. Tokens must be encrypted at rest, access must be revocable, and logs must not contain tokens.
-
-## Game pairing and connection
-
-1. The user launches Stardew Valley with the mod installed.
-2. The mod displays a setup URL and requests a short-lived pairing code from the service.
-3. The user signs in to Twitch in the browser and enters/approves the pairing code.
-4. The service binds the authorized broadcaster account to that game installation/session.
-5. The mod exchanges the pairing proof for a revocable game-session credential and opens an outbound authenticated connection.
-6. The streamer configures reward-to-monster mappings in the web app.
-7. EventSub redemptions are validated, mapped, and delivered to that streamer's active host connection.
-
-Pairing codes must expire quickly, be single-use, and be rate-limited. Game-session credentials must be revocable and must not grant access to Twitch APIs.
+Access is disabled by default. Only the administrator API can change it. The gateway must re-check the member's active status and enabled flag at pairing and before delivery. Disabling access must invalidate active sessions.
 
 ## Multiplayer authority
 
-The host is authoritative. Only the host's mod connection processes external spawn requests and creates monsters. Farmhands do not need Twitch authorization or a separate service connection. Vanilla monster entities are added to the current location's character collection so Stardew's multiplayer networking can replicate the world entity.
+Only the host creates monster entities. Stardew's multiplayer world synchronisation is expected to replicate the location character to farmhands, but this must be tested with two actual game clients. If a monster does not synchronise correctly, implement an explicit host-to-farmhand mod-message protocol; do not allow each client to independently spawn.
 
-This must be verified in a real multiplayer test. If a monster type or game context does not synchronise correctly, add a small mod-message protocol rather than allowing each client to independently spawn it.
+## Security and reliability
 
-## Reliability and abuse controls
+- Derive member identity from the validated Control Center session/pairing proof, never from a body field supplied by the mod.
+- Do not expose a public registration or activation endpoint.
+- Keep all service credentials and Twitch tokens server-side.
+- Verify EventSub signatures against the raw body.
+- Deduplicate EventSub delivery and redemption IDs.
+- Reject disabled, removed, suspended or non-Spectrum broadcasters.
+- Expire old events rather than replaying a backlog when a game reconnects.
+- Enforce per-member/reward/session cooldowns and spawn caps.
+- Mutate Stardew state only on the game thread.
+- Log operational status, not OAuth tokens or session credentials.
 
-- Validate Twitch webhook signatures and message types.
-- Validate broadcaster, reward ID, game-session binding, monster allowlist, request age, and game state.
-- Deduplicate using the Twitch redemption/event ID.
-- Rate-limit per broadcaster, reward, and game session.
-- Enforce configurable per-minute and per-session spawn caps.
-- Expire events when the game is offline or the event is too old; do not unexpectedly replay a backlog after a long absence.
-- Never mutate game state from a network/background thread.
-- Queue incoming requests and process them from a SMAPI game-loop event.
-- Do not accept arbitrary C# types, commands, or executable content from the service.
-- Provide a clear pause/disconnect control.
+## Implementation status
 
-## Privacy and data minimisation
+Implemented in source:
+- SMAPI prototype and local Green Slime test command.
+- Reflection-based allowlisted monster catalogue and inverse-health weighted selection.
+- Local random-spawn test command.
+- Control Center admin Mods page and per-member activation API.
+- Additive D1 schema migration for member access and reward mappings.
 
-Store only what is required to authenticate the broadcaster, maintain EventSub, remember reward mappings, and route events to the paired game. Publish a clear privacy policy before public launch, including retention, deletion, disconnect, and token revocation behavior. Avoid collecting viewer information unless a feature explicitly requires it.
-
-## Current implementation status
-
-The repository currently contains only the initial SMAPI prototype. The hosted service, OAuth, EventSub, setup web app, pairing protocol, reward configuration, and release pipeline described here are design targets, not implemented features.
+Not yet implemented or verified:
+- Apply migration 0028 to production D1.
+- Deploy Control Center Worker and sync dashboard KV assets.
+- Event Hub Channel Point EventSub subscription and redemption route.
+- Stardew gateway, pairing, persistent host connection and revocation.
+- Reward mapping editor and end-to-end configuration.
+- Build/compile against the user's Stardew installation.
+- In-game spawn, multiplayer replication, and clean ZIP install tests.
