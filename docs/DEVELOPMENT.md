@@ -2,15 +2,7 @@
 
 ## Product development model
 
-This repository is the source of truth for the complete product:
-
-- SMAPI game mod.
-- Hosted Twitch/EventSub service.
-- Streamer setup web app.
-- Release packaging scripts.
-- Documentation.
-
-The hosted service is centrally operated by the project maintainer. End users should only need the published mod ZIP and a browser to connect Twitch.
+This repository contains the SMAPI game client and its release packaging. Spectrum Control Center, Event Hub and the Stardew gateway live in the existing spectrum-cloudflare repository. The integration is private to Spectrum members explicitly enabled by a Control Center administrator.
 
 ## Current SMAPI prototype requirements
 
@@ -19,54 +11,51 @@ The hosted service is centrally operated by the project maintainer. End users sh
 - .NET 6 SDK
 - Visual Studio 2022 or another .NET-capable editor
 
-The current root-level project uses Pathoschild's Stardew ModBuildConfig package to reference local Stardew Valley and SMAPI assemblies and prepare the mod output. The planned monorepo migration will move this project under `src/SpectrumStardewMod/`.
+The root-level project uses Pathoschild's Stardew ModBuildConfig package to reference local Stardew Valley and SMAPI assemblies and prepare the mod output.
 
-## Build the current prototype
+## Build the prototype
 
 From the repository root:
 
-```powershell
-dotnet restore
-dotnet build
-```
+    dotnet restore
+    dotnet build
 
 ModBuildConfig uses the Stardew Valley installation detected on the development machine. If detection fails, configure the game path according to the ModBuildConfig documentation.
 
-## Install the current prototype for local testing
-
-Copy the generated mod folder from the build output into:
-
-`%AppData%\StardewValley\Mods\SpectrumStardewMod`
-
-Launch Stardew Valley through SMAPI.
-
-## First gameplay test
+## Local gameplay tests
 
 1. Load a disposable test save as the host.
 2. Open the SMAPI console.
-3. Run `spectrum_spawn_test`.
-4. Confirm one Green Slime appears on a clear tile near the player.
-5. Check the SMAPI log for the spawn confirmation.
-6. Repeat in a multiplayer farm with a farmhand connected; confirm exactly one slime appears for both players.
+3. Run spectrum_spawn_test to spawn a Green Slime.
+4. Run spectrum_spawn_random_test to exercise the weighted random candidate pool.
+5. Check the SMAPI log for the selected monster and spawn result.
+6. Repeat in a multiplayer farm with a farmhand connected; confirm exactly one monster appears for both players.
 
-Do not test on a save you cannot afford to restore. Back up saves before early gameplay testing.
+The random pool uses inverse-health weighting. Candidate constructors are discovered from the installed Stardew assembly; unavailable candidates are skipped. Confirm the actual candidate pool and balance in-game before release.
 
-## Public release package
+Back up saves before early gameplay testing.
 
-The intended user-facing download is a versioned ZIP with the mod folder at the ZIP root, containing the compiled DLL, `manifest.json`, and any required bundled dependencies/assets. It must not contain source-only files, Twitch client secrets, server credentials, or the hosted service's private configuration.
+## Build a distributable ZIP
 
-A release packaging script will create the same ZIP for GitHub Releases and Nexus Mods. The package must be tested by extracting it into a clean SMAPI Mods folder before publication.
+Run from the repository root in PowerShell:
 
-## Secrets and local configuration
+    .\packaging\Build-Release.ps1
+
+The script restores and builds the project in Release mode, stages the compiled output and manifest, and creates dist/SpectrumStardewMod-VERSION.zip. It does not publish a GitHub Release or Nexus page automatically. Inspect and test the ZIP on a clean SMAPI installation before uploading it to a release.
+
+The ZIP must contain the mod's compiled DLL, manifest.json, and required dependencies/assets at its root. It must not contain source-only files, Twitch client secrets, service credentials, or private gateway configuration.
+
+## Secrets and configuration
 
 - Never commit Twitch client secrets, OAuth tokens, signing keys, or production service credentials.
-- Use local ignored configuration for development.
-- Production secrets belong in the hosted service's secret manager/environment, never in the mod or public ZIP.
-- Test OAuth and EventSub with dedicated test accounts before inviting public users.
+- The game mod must never store Twitch access or refresh tokens.
+- The gateway issues revocable game-session credentials after Control Center verifies member access.
+- Network callbacks enqueue typed requests; game state changes only on the SMAPI game thread.
 
 ## Current limitations
 
-- Only a Green Slime test spawn is implemented.
-- No Twitch, Cloudflare, WebSocket, OAuth, EventSub, setup web app, or reward configuration exists yet.
-- No public downloadable ZIP or Nexus release exists yet.
-- Multiplayer replication is designed to rely on Stardew's networked location character collection, but still needs an actual host/farmhand test.
+- Weighted random monster selection is implemented in source but has not been compiled or verified against the target game installation.
+- Twitch EventSub redemption subscription/routing, gateway, pairing, and remote connection are not implemented yet.
+- Control Center Mods page and D1 migration are committed in the Spectrum Cloudflare repository but have not been deployed/applied.
+- Reward mapping UI and live connection reporting are not implemented yet.
+- No tested ZIP, GitHub Release or Nexus release exists yet.
