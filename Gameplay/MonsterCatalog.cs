@@ -5,36 +5,42 @@ using StardewValley.Monsters;
 namespace SpectrumStardewMod.Gameplay;
 
 /// <summary>
-/// Builds a safe allowlisted pool of vanilla monsters and chooses from it with
-/// inverse-health weighting. A monster with more base health receives a lower
-/// chance of selection. Types that cannot be constructed on the installed game
-/// version are skipped rather than breaking the redemption.
+/// Builds a safe allowlisted pool from monster types documented as spawnable by
+/// Stardew Valley's Console Commands debug command. This mod creates monsters
+/// directly and does not require the Console Commands mod.
 /// </summary>
 internal static class MonsterCatalog
 {
     private sealed record Candidate(string TypeName, double ExpectedHealth);
 
+    // Based on the wiki's documented monster command types.
+    // Duggy is excluded because its spawn depends on terrain.
+    // ExpectedHealth values are fallback weights only; constructed health is
+    // read from the game object whenever the installed version exposes it.
     private static readonly Candidate[] Candidates =
     {
-        new("GreenSlime", 24),
         new("Bat", 15),
-        new("FrostBat", 30),
+        new("DinoMonster", 500),
+        new("DustSpirit", 40),
         new("Fly", 30),
+        new("Ghost", 50),
+        new("GreenSlime", 24),
         new("Grub", 30),
-        new("DustSpirit", 50),
+        new("LavaCrab", 120),
+        new("Mummy", 140),
+        new("RockCrab", 60),
         new("RockGolem", 80),
+        new("Serpent", 150),
         new("ShadowBrute", 160),
         new("ShadowShaman", 140),
-        new("Serpent", 150),
-        new("Mummy", 140),
-        new("LavaCrab", 120),
-        new("PepperRex", 500)
+        new("Skeleton", 70),
+        new("SquidKid", 120)
     };
 
     public static bool TryCreateRandom(Vector2 pixelPosition, out Monster? monster)
     {
         var available = new List<(Monster Monster, double Weight)>();
-        var assembly = typeof(GreenSlime).Assembly;
+        Assembly assembly = typeof(GreenSlime).Assembly;
 
         foreach (Candidate candidate in Candidates)
         {
@@ -49,8 +55,6 @@ internal static class MonsterCatalog
                     continue;
 
                 double health = ReadHealth(instance) ?? candidate.ExpectedHealth;
-                // Inverse power weighting makes high-HP monsters substantially rarer
-                // while retaining a non-zero chance for every available candidate.
                 double weight = 1d / Math.Pow(Math.Max(1d, health), 1.35d);
                 available.Add((instance, weight));
             }
