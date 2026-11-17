@@ -59,11 +59,11 @@ A dedicated service in the Spectrum Cloudflare repository.
 
 The redemption type is fixed: Random Monster Spawner.
 
-The SMAPI client owns the final random selection so the gateway never needs to know or trust a game class name. The initial candidate list is a hardcoded vanilla allowlist. Each candidate has an expected base-health fallback; where possible, the constructed monster's initial health is read by reflection. The selection weight is:
+The SMAPI client owns the final random selection so the gateway never needs to know or trust a game class name. The initial candidate list follows the Stardew Valley Wiki's documented monster command allowlist: Bat, DinoMonster, DustSpirit, Fly, Ghost, GreenSlime, Grub, LavaCrab, Mummy, RockCrab, RockGolem, Serpent, ShadowBrute, ShadowShaman, Skeleton and SquidKid. Duggy is excluded because its spawn depends on terrain. That wiki syntax belongs to the separate Console Commands debug tooling; this mod does not depend on that mod. It attempts to instantiate the listed vanilla game types directly. Each candidate has an expected-health fallback; where possible, the constructed monster's initial health is read from the game object. The selection weight is:
 
     weight = 1 / health ^ 1.35
 
-A weighted draw from the available candidates makes high-HP monsters less common without making them impossible. Candidate constructors are discovered from the installed Stardew game assembly. A candidate that cannot be constructed is skipped. This is an initial balancing model, not a final promise about exact game spawn rates.
+A weighted draw from the available candidates makes high-HP monsters less common without making them impossible. Candidate constructors are discovered from the installed Stardew game assembly. A candidate that cannot be constructed is skipped. This reflection-based construction is a prototype and must be verified against the target Stardew version; the wiki's command list establishes valid command names, not necessarily compatible .NET constructor signatures. This is an initial balancing model, not a final promise about exact game spawn rates.
 
 ## Control Center data
 
