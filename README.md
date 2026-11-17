@@ -32,7 +32,7 @@ The live service is centrally operated. Spectrum streamers do not deploy Workers
 
 The redemption is always a random monster; viewers do not choose a monster ID. The mod uses an allowlist of vanilla monsters and inverse-health weighting: higher-health monsters have a lower selection weight. Monster types whose constructors are unavailable on the installed game version are skipped safely.
 
-The initial candidate pool includes Green Slime, Bat, Frost Bat, Fly, Grub, Dust Spirit, Rock Golem, Shadow Brute, Shadow Shaman, Serpent, Mummy, Lava Crab and Pepper Rex. The actual available pool depends on compatibility with the installed Stardew version. The weighting is an initial balance and will be tuned through gameplay testing.
+The initial allowlist follows the Stardew Valley Wiki's documented monster command types: Bat, DinoMonster, DustSpirit, Fly, Ghost, GreenSlime, Grub, LavaCrab, Mummy, RockCrab, RockGolem, Serpent, ShadowBrute, ShadowShaman, Skeleton and SquidKid. Duggy is excluded because its spawn depends on terrain. The wiki documents these names for the Console Commands debug command; this mod does not require that separate mod and instead attempts to construct the allowlisted game types directly. Constructor compatibility still needs in-game verification. Higher-health candidates receive lower selection weights.
 
 ## Multiplayer
 
