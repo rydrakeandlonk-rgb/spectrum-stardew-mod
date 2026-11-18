@@ -309,7 +309,10 @@ internal static class MonsterCatalog
         if (!Game1.content.DoesAssetExist<Texture2D>(assetName))
             return;
         try { monster.Sprite.LoadTexture(assetName); }
-        catch (Exception ex) { Game1.log.Warn($"Couldn't load dangerous monster texture '{assetName}': {ex.Message}"); }
+        catch
+        {
+            // Keep the dangerous stat variant even if its optional texture fails to load.
+        }
     }
 
     private static Candidate C(string id, string display, string type, double health, MonsterPool[] pools,
