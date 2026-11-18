@@ -32,7 +32,8 @@ The current reference-assembly snapshot is based on Stardew Valley 1.6.15 and SM
 3. Run `spectrum_spawn_test` to request a Green Slime through Stardew's built-in debug command parser.
 4. Run `spectrum_spawn_random_test` to exercise the weighted random monster allowlist.
 5. Run `spectrum_connection_status` to inspect the gateway connection.
-6. Check the SMAPI log for the selected monster and command result.
+6. Check the compact SMAPI log entries for the redeemer, reward, redemption time, command ID and confirmed spawn result.
+7. Confirm a successful redemption appears in Stardew's existing chat with the Twitch username, monster name and location. Failed spawns must not produce a success chat message.
 7. Repeat in a multiplayer farm with a farmhand connected; confirm exactly one monster appears for both players.
 
 The network client validates typed messages and queues them for the SMAPI update thread. It does not execute server-supplied command text or monster class names. The local monster catalogue selects the type and tile coordinate.
