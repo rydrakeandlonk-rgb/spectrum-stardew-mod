@@ -54,6 +54,7 @@ A dedicated service in the Spectrum Cloudflare repository.
 - Checks that the world is ready and the local player is the multiplayer host.
 - Selects a local allowlisted monster type and tile coordinate.
 - Calls Game1.parseDebugInput with a generated monster command so Stardew's own DebugCommands handler creates the monster.
+- Confirms the location's character count increases before reporting success, writes compact one-line redemption/spawn logs, and posts successful results through the existing in-game chat.
 - Farmhands do not connect to Twitch or independently process redemption requests.
 
 ## Random monster selection
