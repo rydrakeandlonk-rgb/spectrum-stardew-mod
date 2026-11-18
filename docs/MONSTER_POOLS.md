@@ -14,7 +14,7 @@ Progression eligibility and difficulty weighting are separate:
 - Combat Level is a secondary adjustment within the current stage, not the main progression gate.
 - Easy, Normal and Hard shift the target threat and weighting curve; they do not directly alter monster stats.
 - The active generated Mines area uses `Game1.netWorldState.Value.MinesDifficulty`; Skull Cavern uses `SkullCavesDifficulty`. Each level (clamped to 0–2) raises the target by 12%, and only applies in its matching area. Quarry Mine and all other locations use 0.
-- The first-pass threat estimate is the catalogue's balancing value, not a claim about exact runtime health or damage. It should be refined against vanilla monster data and in-game results.
+- The threat score is read from the vanilla `Data/Monsters` asset: health, attack, defence/resilience, speed, experience, miss chance and glider behaviour contribute. The old catalogue health estimate is only a fallback when a data key is missing or the asset format changes. Dangerous variants use a 1.5x threat estimate; no vanilla monster stats are modified.
 
 ## Location groups and unlock conditions
 
