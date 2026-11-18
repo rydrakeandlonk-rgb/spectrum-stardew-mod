@@ -102,6 +102,12 @@ internal sealed record MonsterProgressionSnapshot(
             "danger-skull" => early with { DangerousSkullCavernUnlocked = true },
             "bug-lair" => early with { BugLairUnlocked = true },
             "volcano" => early with { VolcanoDungeonUnlocked = true },
+            "combat-0" => actual with { CombatLevel = 0 },
+            "combat-5" => actual with { CombatLevel = 5 },
+            "combat-10" => actual with { CombatLevel = 10 },
+            "shrine-0" => actual with { CurrentAreaDifficulty = 0 },
+            "shrine-1" => actual with { CurrentAreaDifficulty = 1 },
+            "shrine-2" => actual with { CurrentAreaDifficulty = 2 },
             "all" => actual with
             {
                 MinesCompleted = true,
@@ -118,7 +124,7 @@ internal sealed record MonsterProgressionSnapshot(
 
         if (nextOverride is null)
         {
-            error = "Unknown preset. Use early, mines, skull100, danger-mines, quarry, skull-cavern, danger-skull, bug-lair, volcano, or all.";
+            error = "Unknown preset. Use early, mines, skull100, danger-mines, quarry, skull-cavern, danger-skull, bug-lair, volcano, combat-0, combat-5, combat-10, shrine-0, shrine-1, shrine-2, or all.";
             return false;
         }
 
