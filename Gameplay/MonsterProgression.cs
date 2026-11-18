@@ -64,8 +64,8 @@ internal sealed record MonsterProgressionSnapshot(
         };
     }
 
-    public static MonsterProgressionSnapshot Read(Farmer farmer) =>
-        testOverride ?? ReadActual(farmer);
+    public static MonsterProgressionSnapshot Read(Farmer farmer, bool useTestOverride = true) =>
+        useTestOverride ? testOverride ?? ReadActual(farmer) : ReadActual(farmer);
 
     /// <summary>
     /// Applies a temporary, in-memory progression profile for testing.
