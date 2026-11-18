@@ -418,9 +418,13 @@ internal static class MonsterCatalog
 
     private static void ConfigureNamedSlime(GreenSlime slime, string name, Color color)
     {
+        // Copper and Iron Slime are custom catalogue variants, not keys in
+        // vanilla Data/Monsters. Keep the stats initialized by GreenSlime's
+        // supported constructor, then apply only the custom name and tint.
+        // Calling parseMonsterInfo(name) here throws because those data keys
+        // do not exist in the vanilla asset.
         slime.Name = name;
         slime.color.Value = color;
-        ParseMonsterInfo(slime, name);
         slime.reloadSprite();
     }
 
