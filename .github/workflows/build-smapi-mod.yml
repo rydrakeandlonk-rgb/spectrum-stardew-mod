@@ -69,8 +69,47 @@ jobs:
           zip="$(find dist -type f -name '*.zip' -print -quit)"
           test -n "$dll" || { echo "::error::Compiled mod DLL was not produced."; exit 1; }
           test -n "$zip" || { echo "::error::Release ZIP was not produced."; exit 1; }
+          package_listing="$(mktemp)"
+          unzip -Z1 "$zip" > "$package_listing"
+          grep -Eq '(^|/)manifest\.json
+
+      - name: Upload build package
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: spectrum-stardew-mod-${{ github.sha }}
+          path: dist/*.zip
+          if-no-files-found: error
+          retention-days: 14
+ "$package_listing" || { echo "::error::Release ZIP is missing manifest.json."; exit 1; }
+          grep -Eq '(^|/)SpectrumStardewMod\.dll
+
+      - name: Upload build package
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: spectrum-stardew-mod-${{ github.sha }}
+          path: dist/*.zip
+          if-no-files-found: error
+          retention-days: 14
+ "$package_listing" || { echo "::error::Release ZIP is missing SpectrumStardewMod.dll."; exit 1; }
+          if grep -Eq '(^|/)config\.json
+
+      - name: Upload build package
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: spectrum-stardew-mod-${{ github.sha }}
+          path: dist/*.zip
+          if-no-files-found: error
+          retention-days: 14
+ "$package_listing"; then
+            echo "::error::Release ZIP must not contain a local config.json or host token."
+            exit 1
+          fi
           echo "Compiled assembly: $dll"
           echo "Release package: $zip"
+          echo "Verified package contents: manifest.json and SpectrumStardewMod.dll; no local config.json."
 
       - name: Upload build package
         if: github.event_name != 'pull_request'
