@@ -89,7 +89,10 @@ internal sealed record MonsterProgressionSnapshot(
             // Quest 30 is the completed Cryptic Note (Secret Note #10) story quest.
             // Quest history was added in Stardew 1.6.16, so read it reflectively to
             // keep the source compatible with the pinned 1.6.15 build references.
-            SkullCavern100Reached: HasCompletedQuest(farmer, 30),
+            // Older supported game builds don't expose questsCompleted. Their
+            // permanent qiCave mail flag is set when the floor-100 reward milk
+            // has been consumed, so use it as a version-compatible fallback.
+            SkullCavern100Reached: HasCompletedQuest(farmer, 30) || farmer.mailReceived.Contains("qiCave"),
             CombatLevel: Math.Clamp(farmer.CombatLevel, 0, 10),
             CurrentAreaName: currentAreaName,
             CurrentAreaDifficulty: currentAreaDifficulty,
