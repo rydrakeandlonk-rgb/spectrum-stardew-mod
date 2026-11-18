@@ -65,7 +65,7 @@ An administrator enables the member in Control Center, then uses **Pair / re-pai
 1. Launch the mod once so SMAPI creates its local config file.
 2. Open the generated `config.json` in the mod folder.
 3. Set `BroadcasterUserId` to the numeric ID shown by Control Center.
-4. In the Stardew Valley page, select this streamer under Spawn behaviour configuration. Enable the desired behaviour, enter the exact Twitch Channel Point reward title, configure its options, and save it. No Twitch reward ID needs to be copied.
+4. In the Stardew Valley page, set the shared **Spawn Random Monster** Channel Point reward title. Use the same title on each Spectrum channel's Twitch reward. No Twitch reward ID needs to be copied.
 5. Set `HostToken` to the one-time token shown by Control Center.
 6. Leave `GatewayUrl` at its default value and restart Stardew Valley.
 7. For the chat-selected monster behaviour, enable “Require viewers to enter text” on that Twitch reward. Chat can enter a supported monster name such as `Green Slime`.
