@@ -78,6 +78,12 @@ After installing the GitHub Actions ZIP through SMAPI, enter these commands in t
 
 The first command requests a Green Slime. The second selects from the progression-eligible weighted random pool. The pool-status command reports unlocked progression groups, selectable variant definitions, and any definitions still missing constructor/setup support. All are host-only.
 
+Developer validation commands:
+- `spectrum_progression_test <early|mines|skull100|danger-mines|quarry|skull-cavern|danger-skull|bug-lair|volcano|all|reset>` temporarily simulates progression in memory only; it never edits the save. Use `reset` to restore real save checks.
+- `spectrum_spawn_monster_force_test <monster name or ID>` bypasses progression for a local test spawn only; catalogue exclusions remain enforced.
+- `spectrum_monster_catalog_test` executes every supported constructor and special setup without adding monsters to the world.
+- `spectrum_spawn_random_test [easy|normal|hard]` exercises the three selection difficulty modes.
+
 The integration writes compact redemption and spawn results to the SMAPI console, retaining each command ID for deduplication and tracing. Successful spawns are announced through Stardew's existing in-game chat with the Twitch redeemer, monster type and location. The announcement is only shown after the game reports that a character was added.
 
 The integration currently accepts one typed behaviour: **Spawn Random Monster**. The mod chooses one progression-eligible vanilla variant locally from the explicit catalogue and constructs it using its supported vanilla setup. Spawn requests remain queued until Start Spawns is enabled in Control Center; each new connection defaults to stopped. Failed attempts remain pending and are retried rather than acknowledged.
