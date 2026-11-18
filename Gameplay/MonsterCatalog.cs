@@ -45,7 +45,7 @@ internal static class MonsterCatalog
             return Array.Empty<string>();
 
         HashSet<string> eligibleClassNames =
-            MonsterLocationPools.GetEligibleClassNames(MonsterProgression.Read(Game1.player));
+            MonsterLocationPools.GetEligibleClassNames(MonsterProgressionSnapshot.Read(Game1.player));
 
         return Candidates
             .Where(candidate => eligibleClassNames.Contains(candidate.TypeName))
@@ -59,7 +59,7 @@ internal static class MonsterCatalog
             return Array.Empty<string>();
 
         HashSet<string> eligibleClassNames =
-            MonsterLocationPools.GetEligibleClassNames(MonsterProgression.Read(Game1.player));
+            MonsterLocationPools.GetEligibleClassNames(MonsterProgressionSnapshot.Read(Game1.player));
         HashSet<string> discoveredClassNames =
             Candidates.Select(candidate => candidate.TypeName).ToHashSet(StringComparer.Ordinal);
 
@@ -80,7 +80,7 @@ internal static class MonsterCatalog
             throw new InvalidOperationException("A save must be loaded before selecting a progression-eligible monster.");
 
         HashSet<string> eligibleClassNames =
-            MonsterLocationPools.GetEligibleClassNames(MonsterProgression.Read(Game1.player));
+            MonsterLocationPools.GetEligibleClassNames(MonsterProgressionSnapshot.Read(Game1.player));
         Candidate[] eligibleCandidates = Candidates
             .Where(candidate => eligibleClassNames.Contains(candidate.TypeName))
             .ToArray();
@@ -114,7 +114,7 @@ internal static class MonsterCatalog
         string requested = Normalize(value);
         HashSet<string> eligibleClassNames = Game1.player is null
             ? new HashSet<string>(StringComparer.Ordinal)
-            : MonsterLocationPools.GetEligibleClassNames(MonsterProgression.Read(Game1.player));
+            : MonsterLocationPools.GetEligibleClassNames(MonsterProgressionSnapshot.Read(Game1.player));
 
         Candidate? match = Candidates.FirstOrDefault(candidate =>
             eligibleClassNames.Contains(candidate.TypeName) &&
