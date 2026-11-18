@@ -105,10 +105,27 @@ internal static class MonsterCatalog
     public static IReadOnlyList<string> AllTypes => Candidates.Select(candidate => candidate.DisplayName).ToArray();
     public static IReadOnlyList<string> GetEligibleTypes() => GetEligibleCandidates().Select(candidate => candidate.DisplayName).ToArray();
 
-    public static IReadOnlyList<string> GetUnresolvedEligibleClassNames() =>
-        GetUnlockedCandidates().Where(candidate => !HasSupportedDefinition(candidate))
-            .Select(candidate => $"{candidate.DisplayName} ({candidate.ClassName})")
-            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToArray();
+    public static IReadOnlyList<string> GetCatalogValidationIssues()
+    {
+        var issues = new List<string>();
+        IReadOnlyDictionary<MonsterPool, string[]> pools = MonsterLocationPools.GetDefinitionsByPool();
+        HashSet<string> pooledIds = pools.Values.SelectMany(ids => ids).ToHashSet(StringComparer.Ordinal);
+
+        foreach (string id in pooledIds.Where(id => !CandidatesById.ContainsKey(id)))
+            issues.Add($"Pool references missing definition: {id}");
+
+        foreach (Candidate candidate in Candidates)
+        {
+            if (!pooledIds.Contains(candidate.Id))
+                issues.Add($"Definition isn't assigned to a location pool: {candidate.Id}");
+            if (ExcludedNames.Contains(candidate.DisplayName) || ExcludedNames.Contains(candidate.ClassName))
+                issues.Add($"Excluded monster entered the catalogue: {candidate.DisplayName}");
+            if (!HasSupportedDefinition(candidate))
+                issues.Add($"Missing constructor or setup support: {candidate.DisplayName} ({candidate.ClassName})");
+        }
+
+        return issues.OrderBy(issue => issue, StringComparer.OrdinalIgnoreCase).ToArray();
+    }
 
     public static string GetDisplayName(string typeName) =>
         FindCandidate(typeName)?.DisplayName ?? Regex.Replace(typeName, "([a-z0-9])([A-Z])", "$1 $2");
@@ -213,6 +230,7 @@ internal static class MonsterCatalog
             Normalize(candidate.Id) == normalized ||
             Normalize(candidate.DisplayName) == normalized ||
             Normalize(candidate.DisplayName.Split('(')[0].Trim()) == normalized ||
+            Normalize(GetParentheticalAlias(candidate.DisplayName)) == normalized ||
             Normalize(candidate.ClassName) == normalized);
     }
 
@@ -312,6 +330,13 @@ internal static class MonsterCatalog
         new(id, display, type, health, argument, dangerous, post);
 
     private static MonsterPool[] P(params MonsterPool[] pools) => pools;
+    private static string GetParentheticalAlias(string value)
+    {
+        int open = value.IndexOf('(');
+        int close = value.LastIndexOf(')');
+        return open >= 0 && close > open ? value.Substring(open + 1, close - open - 1).Trim() : "";
+    }
+
     private static string Normalize(string? value) => new((value ?? "").Where(char.IsLetterOrDigit).ToArray());
     private static double GetWeight(double health, double exponent) => 1d / Math.Pow(Math.Max(1d, health), exponent);
 }
