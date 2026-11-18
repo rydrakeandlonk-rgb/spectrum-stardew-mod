@@ -17,7 +17,8 @@ The product is a private Spectrum integration. Control Center decides which acti
 - [x] Implement first-pass dangerous monster setup with an additional-difficulty stat step and optional dangerous textures.
 - [ ] Validate dangerous scaling and visuals in-game; compare the fixed global stat step with vanilla mine-specific scaling.
 - [x] Add an authenticated WebSocket client, reconnect loop and typed command validation.
-- [x] Queue remote commands for processing on the SMAPI update thread and acknowledge after handling.
+- [x] Queue remote commands for processing on the SMAPI update thread and acknowledge only after successful handling.
+- [x] Persist the latest 500 successful redemption IDs in the active save before acknowledgement to reduce duplicate spawns after reconnects or game restarts.
 - [ ] Compile against the target Stardew Valley installation.
 - [ ] Verify every explicit monster variant, its post-construction behaviour and its spawn compatibility in-game, especially the Armored Bug constructor flag and dangerous form.
 - [ ] Verify multiplayer replication with a host and farmhand.
