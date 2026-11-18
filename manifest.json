@@ -1,8 +1,8 @@
 {
   "Name": "Spectrum Stardew Monster Spawner",
   "Author": "RydrakeAndLonk",
-  "Version": "0.7.5",
-  "Description": "Private Spectrum integration for dashboard-controlled Twitch Channel Point random monster spawns.",
+  "Version": "0.8.0",
+  "Description": "Private Spectrum integration with shared in-game and Control Center monster-spawner controls.",
   "UniqueID": "RydrakeAndLonk.SpectrumStardewMod",
   "EntryDll": "SpectrumStardewMod.dll",
   "MinimumApiVersion": "4.5.0"
