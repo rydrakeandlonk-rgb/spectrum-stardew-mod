@@ -14,6 +14,7 @@ internal sealed class ModEntry : Mod
 {
     private MonsterSpawner? monsterSpawner;
     private GameModsClient? gameModsClient;
+    private ModConfig? config;
     private readonly HashSet<string> processedCommandIds = new(StringComparer.Ordinal);
     private readonly Queue<string> processedCommandOrder = new();
     private const string ProcessedCommandGlobalKey = "processed-spectrum-command-ids";
@@ -27,17 +28,15 @@ internal sealed class ModEntry : Mod
 
         this.LoadProcessedCommands(helper);
 
-        ModConfig config = helper.ReadConfig<ModConfig>();
-        if (!string.IsNullOrWhiteSpace(config.BroadcasterUserId) &&
-            !string.IsNullOrWhiteSpace(config.HostToken))
-        {
-            this.gameModsClient = new GameModsClient(config, this.Monitor);
-        }
-        else
+        this.config = helper.ReadConfig<ModConfig>();
+        if (string.IsNullOrWhiteSpace(this.config.BroadcasterUserId) ||
+            string.IsNullOrWhiteSpace(this.config.HostToken))
         {
             this.Monitor.Log("Spectrum Game Mods connection is not paired yet. Local test commands remain available.", LogLevel.Info);
         }
 
+        helper.Events.GameLoop.SaveLoaded += this.OnSaveLoaded;
+        helper.Events.GameLoop.ReturnedToTitle += this.OnReturnedToTitle;
         helper.Events.GameLoop.UpdateTicked += this.OnUpdateTicked;
         helper.Events.Display.RenderedHud += this.OnRenderedHud;
         helper.Events.Input.ButtonPressed += this.OnButtonPressed;
@@ -91,6 +90,33 @@ internal sealed class ModEntry : Mod
         );
 
         this.Monitor.Log("Spectrum Stardew Mod loaded. Use 'spectrum_connection_status' to check the gateway connection.", LogLevel.Info);
+    }
+
+    private void OnSaveLoaded(object? sender, SaveLoadedEventArgs e)
+    {
+        if (!Context.IsMainPlayer)
+        {
+            this.Monitor.Log("Spectrum host connection skipped on a farmhand. Only the multiplayer host connects to the gateway.", LogLevel.Trace);
+            return;
+        }
+
+        if (this.config is null ||
+            string.IsNullOrWhiteSpace(this.config.BroadcasterUserId) ||
+            string.IsNullOrWhiteSpace(this.config.HostToken))
+        {
+            return;
+        }
+
+        this.gameModsClient?.Dispose();
+        this.gameModsClient = new GameModsClient(this.config, this.Monitor);
+        this.Monitor.Log("Starting the Spectrum host connection for the loaded host save.", LogLevel.Info);
+    }
+
+    private void OnReturnedToTitle(object? sender, ReturnedToTitleEventArgs e)
+    {
+        this.gameModsClient?.Dispose();
+        this.gameModsClient = null;
+        this.retryCommandsAtUtc = DateTime.MinValue;
     }
 
     private void OnRenderedHud(object? sender, RenderedHudEventArgs e)
