@@ -41,6 +41,26 @@ internal static class MonsterCatalog
         "skeleton-mage", "dangerous-armored-bug"
     };
 
+    private static readonly (string Id, MonsterPool Pool)[] RequiredPoolAssignments =
+    {
+        ("green-slime", MonsterPool.Mines),
+        ("blue-slime", MonsterPool.Mines),
+        ("red-slime", MonsterPool.Mines),
+        ("purple-slime", MonsterPool.SkullCavern),
+        ("copper-slime", MonsterPool.QuarryMine),
+        ("iron-slime", MonsterPool.QuarryMine),
+        ("tiger-slime", MonsterPool.VolcanoDungeon),
+        ("dangerous-green-slime", MonsterPool.DangerousMines),
+        ("dangerous-blue-slime", MonsterPool.DangerousMines),
+        ("dangerous-red-slime", MonsterPool.DangerousMines),
+        ("dangerous-purple-slime", MonsterPool.DangerousMines),
+        ("dangerous-copper-slime", MonsterPool.DangerousMines),
+        ("dangerous-iron-slime", MonsterPool.DangerousMines),
+        ("skeleton-mage", MonsterPool.DangerousMines),
+        ("dangerous-armored-bug", MonsterPool.DangerousSkullCavern),
+        ("dangerous-squid-kid", MonsterPool.DangerousMines)
+    };
+
     private static readonly Candidate[] Candidates =
     {
         C("green-slime", "Green Slime", "GreenSlime", 24, P(MonsterPool.Mines, MonsterPool.Farm)),
@@ -156,6 +176,12 @@ internal static class MonsterCatalog
                 issues.Add($"Required roster definition is missing: {id}");
             else if (!pooledIds.Contains(id))
                 issues.Add($"Required roster definition has no location pool: {id}");
+        }
+
+        foreach ((string id, MonsterPool expectedPool) in RequiredPoolAssignments)
+        {
+            if (!pools.TryGetValue(expectedPool, out string[]? assignedIds) || !assignedIds.Contains(id, StringComparer.Ordinal))
+                issues.Add($"Required roster definition is missing from {expectedPool}: {id}");
         }
 
         foreach (Candidate candidate in Candidates)
