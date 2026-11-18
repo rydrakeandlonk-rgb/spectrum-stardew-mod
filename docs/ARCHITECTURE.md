@@ -69,11 +69,15 @@ Dangerous candidates are separate entries. They receive one additional-difficult
 
 The definitions use known vanilla constructor patterns for named variants: Bat subtype integer codes; Ghost, Serpent, RockCrab and Shooter name arguments; Fly, Grub and Skeleton boolean options; and explicit setup methods for Stick Bug and Tiger Slime. Copper/Iron Slimes and Iridium Golem require post-construction setup based on vanilla data and constructor behaviour. These paths compile-check against the pinned Stardew 1.6.15 reference assemblies but still require in-game validation.
 
-The weighting formula remains:
+Random selection now targets a threat band based on permanent save progression:
+- Before Mines floor 120: target 75.
+- After Mines floor 120, before Skull Cavern floor 100: target 155.
+- After Skull Cavern floor 100: target 260.
+- Combat Level contributes a secondary adjustment of up to 25% within each stage.
+- Easy shifts the target lower; Hard shifts it higher. The weighting curve controls how tightly selection clusters around the target.
+- Dangerous variants use a higher catalogue threat estimate.
 
-    weight = 1 / weightingHealth ^ 1.35
-
-Dangerous entries use a higher effective health estimate so they are less likely to dominate selection. These values are balancing estimates, not guaranteed encounter difficulty. Progression gates and weighting remain separate so the global pool can grow without making every unlocked monster equally likely.
+These are first-pass balancing estimates only. They do not directly change vanilla monster stats. The next balance pass should derive a fuller threat score from vanilla monster data and runtime properties, then compare the distribution in-game.
 ## Control Center data
 
 Migration 0028_stardew_mod_access.sql creates:
@@ -107,7 +111,7 @@ Implemented in source:
 - Authenticated WebSocket client with reconnect, typed command validation and command acknowledgements.
 - Game-thread queue processing and host-only execution guard.
 - Explicit variant-aware vanilla monster construction and dangerous-variant setup.
-- Explicit variant definitions, progression-aware global candidate selection, canonical display-name validation and inverse-health weighted random selection.
+- Explicit variant definitions, progression-aware global candidate selection, canonical display-name validation and progression-targeted threat weighting using permanent Mines and Skull Cavern milestones, with Combat Level as a secondary factor.
 - Control Center admin Mods page and per-member activation API.
 - Additive D1 schema migration for member access and reward mappings.
 
