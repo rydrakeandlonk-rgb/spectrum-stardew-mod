@@ -179,6 +179,8 @@ internal sealed class ModEntry : Mod
         IReadOnlyList<string> eligibleTypes = MonsterCatalog.GetEligibleTypes();
         IReadOnlyList<string> catalogIssues = MonsterCatalog.GetCatalogValidationIssues();
 
+        this.Monitor.Log($"Progression stage: {progression.ProgressionStageName} | Combat Level: {progression.CombatLevel}/10", LogLevel.Info);
+        this.Monitor.Log($"Milestones: Mines floor 120 {(progression.MinesCompleted ? "reached" : "not reached")} | Skull Cavern floor 100 {(progression.SkullCavern100Reached ? "reached" : "not reached")}", LogLevel.Info);
         this.Monitor.Log($"Unlocked monster pools: {string.Join(", ", unlockedPools)}", LogLevel.Info);
         this.Monitor.Log($"Currently selectable monster variants ({eligibleTypes.Count}/{MonsterCatalog.AllTypes.Count}): {string.Join(", ", eligibleTypes)}", LogLevel.Info);
         this.Monitor.Log(
