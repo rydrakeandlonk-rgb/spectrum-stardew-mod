@@ -25,7 +25,7 @@ The workflow:
 
 The current reference-assembly snapshot is based on Stardew Valley 1.6.15 and SMAPI 4.4.0. This provides a repeatable compile check, but does not replace testing against the installed Stardew Valley and SMAPI versions required by the mod.
 
-## Local gameplay tests
+## In-game validation (required before release)
 
 1. Load a disposable test save as the host.
 2. Open the SMAPI console.
@@ -68,8 +68,8 @@ Before any distribution, verify the ZIP on a clean SMAPI installation. It must c
 
 ## Current limitations
 
-- The SMAPI WebSocket client and built-in monster command dispatch are implemented in source but have not been compiled or verified against the target game installation.
-- The shared gateway, Control Center pairing/revocation controls and guarded Event Hub routing are committed but have not been deployed or tested end-to-end.
+- The SMAPI project has compiled successfully and a ZIP artifact has been produced through GitHub Actions using the pinned community reference assemblies. The artifact has not yet been installed and verified against the target game/SMAPI installation.
+- The shared gateway, Control Center pairing/revocation controls and guarded Event Hub routing are committed but production deployment and end-to-end delivery remain unverified.
 - Migration 0028 has not been applied to production D1 and dashboard KV assets have not been synchronised.
-- Live connection reporting is not implemented yet.
-- No tested ZIP, GitHub Release or Nexus release exists yet.
+- Live connection reporting is implemented in the gateway and Control Center API source, but its deployed behaviour remains unverified.
+- No in-game-tested ZIP, GitHub Release or public mod release exists yet.

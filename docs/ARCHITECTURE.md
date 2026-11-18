@@ -17,7 +17,7 @@ Twitch Channel Point redemption → Event Hub → Stardew gateway → host SMAPI
 - Administrator-only Mods page.
 - Reads the active Spectrum member roster.
 - Enables/disables Stardew Monster Spawner per member.
-- Shows activation and pairing state; live connection/last-seen reporting still needs to be wired.
+- Shows activation, pairing and connection state. Live connection status reporting is implemented in source; deployed behaviour still needs end-to-end verification.
 - Owns the canonical Twitch identity and authorisation.
 - Provides administrator controls for each member's Twitch reward ID and title.
 
@@ -41,7 +41,7 @@ A dedicated service in the Spectrum Cloudflare repository.
 - Issues a revocable, game-session-only credential.
 - Maintains the host's persistent outbound connection.
 - Accepts authenticated, typed redemption requests from Event Hub.
-- Stores live connection and pending-command state in the per-broadcaster Durable Object; reporting connection status and last-seen timestamps back to Control Center remains outstanding.
+- Stores live connection and pending-command state in the per-broadcaster Durable Object; connect, disconnect and revocation status is reported to the authenticated Control Center API.
 - Enforces request expiry, deduplication, reconnect handling and rate limits.
 - Never accepts a client-supplied monster type; the game client chooses from its local allowlist.
 
@@ -110,7 +110,7 @@ Not yet implemented or verified:
 - Verify every allowlisted monster type is accepted by the installed Stardew version.
 - Apply migration 0028 to production D1 through the confirmation-gated workflow.
 - Deploy Control Center and synchronise dashboard KV assets; deploy Event Hub and Game Mods through their connected Workers Builds.
-- Add live connection/last-seen reporting.
+- Verify live connection/last-seen reporting against a connected SMAPI host.
 - Complete end-to-end EventSub delivery, command acknowledgement and host/farmhand multiplayer tests.
 - Verify clean ZIP installation and release packaging.
 

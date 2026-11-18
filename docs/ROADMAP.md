@@ -42,14 +42,15 @@ The product is a private Spectrum integration. Control Center decides which acti
 - [x] Maintain persistent outbound host WebSocket connections.
 - [x] Deliver typed redemption requests with deduplication and reconnect queueing.
 - [x] Expire stale pending commands and clear pending commands on revocation/re-pairing.
-- [ ] Report live connection state to Control Center.
+- [x] Report live connection state to Control Center in source; production verification remains pending.
 - [ ] Complete rate-limit and operational monitoring policy.
 - [ ] Verify end-to-end delivery and acknowledgements.
 
 ## Phase 5 — Packaging and release
 
 - [x] Add a reproducible build/package script that creates a ready-to-install SMAPI ZIP.
-- [ ] Compile and verify the ZIP on a clean SMAPI installation.
+- [x] Compile and package a ZIP through GitHub Actions using pinned reference assemblies.
+- [ ] Install and verify the ZIP on a clean SMAPI installation.
 - [ ] Publish a versioned ZIP asset in GitHub Releases.
 - [ ] Decide whether the source repository remains public or private; the live service remains restricted either way.
 - [ ] Prepare distribution only after the private beta is stable.
