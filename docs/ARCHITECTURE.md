@@ -78,7 +78,7 @@ Random selection now targets a threat band based on permanent save progression:
 - Easy shifts the target lower; Hard shifts it higher. The weighting curve controls how tightly selection clusters around the target.
 - Dangerous variants use a higher catalogue threat estimate.
 
-These are first-pass balancing estimates only. They do not directly change vanilla monster stats. The next balance pass should derive a fuller threat score from vanilla monster data and runtime properties, then compare the distribution in-game.
+The score is derived from vanilla `Data/Monsters` health, attack, defence, speed, experience, miss chance and glider fields. Dangerous variants receive a 1.5x threat estimate. The old catalogue health estimate is a fallback if a data entry cannot be resolved. This affects selection only; it does not alter monster stats. The target bands and score formula still need distribution checks in-game.
 ## Control Center data
 
 Migration 0028_stardew_mod_access.sql creates:
