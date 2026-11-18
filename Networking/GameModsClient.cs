@@ -26,7 +26,12 @@ internal sealed class GameModsClient : IDisposable
     private readonly ModConfig config;
     private readonly IMonitor monitor;
     private readonly ConcurrentQueue<GameCommand> commands = new();
+    private readonly ConcurrentQueue<GameAction> actions = new();
     private readonly ConcurrentDictionary<string, byte> queuedCommandIds = new(StringComparer.Ordinal);
+    private volatile HostSettings settings = new();
+    private volatile int settingsRevision = 1;
+    private volatile string spawnOverride = "follow";
+    private volatile bool safetyGateEnabled;
     private readonly CancellationTokenSource cancellation = new();
     private readonly SemaphoreSlim sendLock = new(1, 1);
     private ClientWebSocket? socket;
@@ -43,6 +48,10 @@ internal sealed class GameModsClient : IDisposable
 
     public bool IsConnected => this.connected;
     public bool SpawnsEnabled => this.spawnsEnabled;
+    public HostSettings Settings => this.settings;
+    public int SettingsRevision => this.settingsRevision;
+    public string SpawnOverride => this.spawnOverride;
+    public bool SafetyGateEnabled => this.safetyGateEnabled;
 
     public bool TryDequeueCommand(out GameCommand? command)
     {
@@ -56,6 +65,59 @@ internal sealed class GameModsClient : IDisposable
     {
         if (this.queuedCommandIds.TryAdd(command.CommandId, 0))
             this.commands.Enqueue(command);
+    }
+
+    public bool TryDequeueAction(out GameAction? action) => this.actions.TryDequeue(out action);
+
+    public async Task UpdateSettingsAsync(HostSettings next)
+    {
+        await this.SendMessageAsync(new
+        {
+            type = "settings.update",
+            base_revision = this.settingsRevision,
+            settings = new
+            {
+                spawn_enabled = next.SpawnEnabled,
+                difficulty = next.Difficulty,
+                chat_responses = next.ChatResponses,
+                debug_messages = next.DebugMessages
+            }
+        });
+    }
+
+    public async Task AcknowledgeActionAsync(string actionId, bool success, int removedCount, string? error = null)
+    {
+        await this.SendMessageAsync(new
+        {
+            type = "action.ack",
+            action_id = actionId,
+            success,
+            removed_count = removedCount,
+            error
+        });
+    }
+
+    private async Task SendMessageAsync(object message)
+    {
+        ClientWebSocket? current = this.socket;
+        if (current is null || current.State != WebSocketState.Open) return;
+        byte[] payload = JsonSerializer.SerializeToUtf8Bytes(message);
+        try
+        {
+            await this.sendLock.WaitAsync(this.cancellation.Token);
+            try
+            {
+                current = this.socket;
+                if (current is null || current.State != WebSocketState.Open) return;
+                await current.SendAsync(new ArraySegment<byte>(payload), WebSocketMessageType.Text, true, this.cancellation.Token);
+            }
+            finally { this.sendLock.Release(); }
+        }
+        catch (OperationCanceledException) { }
+        catch (WebSocketException ex)
+        {
+            this.monitor.Log($"Could not send a Spectrum host update yet: {ex.Message}", LogLevel.Trace);
+        }
     }
 
     public async Task AcknowledgeAsync(string commandId)
@@ -221,13 +283,48 @@ internal sealed class GameModsClient : IDisposable
                 return;
             }
 
+            if (type == "settings.state")
+            {
+                if (root.TryGetProperty("settings", out JsonElement settingsElement) &&
+                    settingsElement.ValueKind == JsonValueKind.Object)
+                {
+                    this.settings = new HostSettings(
+                        ReadBool(settingsElement, "spawn_enabled", true),
+                        ReadString(settingsElement, "difficulty") is "easy" or "hard" ? ReadString(settingsElement, "difficulty") : "normal",
+                        ReadBool(settingsElement, "chat_responses", true),
+                        ReadBool(settingsElement, "debug_messages", false)
+                    );
+                }
+                this.settingsRevision = ReadInt(root, "revision", this.settingsRevision);
+                this.spawnOverride = ReadString(root, "spawn_override") is "force_on" or "force_off" ? ReadString(root, "spawn_override") : "follow";
+                this.safetyGateEnabled = ReadBool(root, "safety_gate_enabled", false);
+                this.spawnsEnabled = ReadBool(root, "effective_spawn_enabled", false);
+                this.monitor.Log(
+                    $"Spectrum settings synced (revision {this.settingsRevision}); preference {(this.settings.SpawnEnabled ? "enabled" : "disabled")}; override {this.spawnOverride}; safety gate {(this.safetyGateEnabled ? "open" : "closed")}.",
+                    this.settings.DebugMessages ? LogLevel.Info : LogLevel.Trace
+                );
+                return;
+            }
+
             if (type == "spawns.state")
             {
                 this.spawnsEnabled = root.TryGetProperty("enabled", out JsonElement enabled) &&
                     enabled.ValueKind == JsonValueKind.True;
-                this.monitor.Log(this.spawnsEnabled
-                    ? "Spectrum monster spawns enabled by Control Center."
-                    : "Spectrum monster spawns paused by Control Center.", LogLevel.Info);
+                return;
+            }
+
+            if (type == "game.action")
+            {
+                string actionId = ReadString(root, "action_id");
+                string game = ReadString(root, "game");
+                string name = ReadString(root, "name");
+                if (string.IsNullOrWhiteSpace(actionId) || game != "stardew-valley" ||
+                    name != "stardew.clear_loaded_monsters")
+                {
+                    this.monitor.Log("Ignored an unsupported Spectrum game action.", LogLevel.Warn);
+                    return;
+                }
+                this.actions.Enqueue(new GameAction(actionId, game, name));
                 return;
             }
 
@@ -295,6 +392,17 @@ internal sealed class GameModsClient : IDisposable
             value.TryGetInt32(out int result)
                 ? result
                 : fallback;
+    }
+
+    private static bool ReadBool(JsonElement element, string propertyName, bool fallback)
+    {
+        if (!element.TryGetProperty(propertyName, out JsonElement value)) return fallback;
+        return value.ValueKind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            _ => fallback
+        };
     }
 
     public void Dispose()
