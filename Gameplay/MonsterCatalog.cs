@@ -106,7 +106,7 @@ internal static class MonsterCatalog
     public static IReadOnlyList<string> GetEligibleTypes() => GetEligibleCandidates().Select(candidate => candidate.DisplayName).ToArray();
 
     public static IReadOnlyList<string> GetUnresolvedEligibleClassNames() =>
-        GetEligibleCandidates().Where(candidate => !HasSupportedConstructor(candidate))
+        GetUnlockedCandidates().Where(candidate => !HasSupportedDefinition(candidate))
             .Select(candidate => $"{candidate.DisplayName} ({candidate.ClassName})")
             .OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToArray();
 
@@ -193,7 +193,26 @@ internal static class MonsterCatalog
         if (Game1.player is null)
             return Array.Empty<Candidate>();
         HashSet<string> ids = MonsterLocationPools.GetEligibleDefinitionIds(MonsterProgressionSnapshot.Read(Game1.player));
-        return Candidates.Where(candidate => ids.Contains(candidate.Id) && !ExcludedNames.Contains(candidate.DisplayName)).ToArray();
+        return Candidates.Where(candidate =>
+            ids.Contains(candidate.Id) &&
+            !ExcludedNames.Contains(candidate.DisplayName) &&
+            !ExcludedNames.Contains(candidate.ClassName))
+            .ToArray();
+    }
+
+    private static Candidate[] GetEligibleCandidates() =>
+        GetUnlockedCandidates().Where(HasSupportedDefinition).ToArray();
+
+    private static Candidate[] GetUnlockedCandidates()
+    {
+        if (Game1.player is null)
+            return Array.Empty<Candidate>();
+        HashSet<string> ids = MonsterLocationPools.GetEligibleDefinitionIds(MonsterProgressionSnapshot.Read(Game1.player));
+        return Candidates.Where(candidate =>
+            ids.Contains(candidate.Id) &&
+            !ExcludedNames.Contains(candidate.DisplayName) &&
+            !ExcludedNames.Contains(candidate.ClassName))
+            .ToArray();
     }
 
     private static Candidate? FindCandidate(string? value)
@@ -205,7 +224,24 @@ internal static class MonsterCatalog
             Normalize(candidate.ClassName) == normalized);
     }
 
-    private static bool HasSupportedConstructor(Candidate candidate) => TryGetConstructor(candidate, out _);
+    private static bool HasSupportedDefinition(Candidate candidate)
+    {
+        if (!TryGetConstructor(candidate, out _))
+            return false;
+
+        return candidate.Post switch
+        {
+            PostConstruction.None => true,
+            PostConstruction.CopperSlime or PostConstruction.IronSlime =>
+                typeof(GreenSlime).GetField("color", BindingFlags.Instance | BindingFlags.Public) is not null &&
+                typeof(Monster).GetMethod("parseMonsterInfo", BindingFlags.Instance | BindingFlags.NonPublic) is not null,
+            PostConstruction.TigerSlime => typeof(GreenSlime).GetMethod("makeTigerSlime") is not null,
+            PostConstruction.StickBug => typeof(RockCrab).GetMethod("makeStickBug") is not null,
+            PostConstruction.IridiumGolem =>
+                typeof(Monster).GetMethod("parseMonsterInfo", BindingFlags.Instance | BindingFlags.NonPublic) is not null,
+            _ => false
+        };
+    }
 
     private static bool TryGetConstructor(Candidate candidate, out ConstructorInfo? constructor)
     {
