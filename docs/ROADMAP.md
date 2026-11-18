@@ -5,7 +5,7 @@ The product is a private Spectrum integration. Control Center decides which acti
 ## Phase 1 — Gameplay foundation
 
 - [x] Create the SMAPI project and host-only Green Slime test command.
-- [x] Discover all vanilla monster subclasses supported by the built-in monster command, validate canonical names and use inverse-health weighted random selection.
+- [x] Discover all vanilla monster subclasses supported by the built-in monster command, validate canonical names and use progression-targeted threat weighting with permanent save milestones and Combat Level as a secondary factor.
 - [x] Add direct, explicit vanilla constructor dispatch for named monster variants.
 - [x] Add a local random monster test command.
 - [x] Add first-pass location-group progression checks using vanilla save flags and completed Special Order history.
