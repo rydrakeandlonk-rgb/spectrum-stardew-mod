@@ -24,7 +24,7 @@ Twitch Channel Points → Spectrum Event Hub → Stardew gateway → host SMAPI 
 - Control Center: administrator-only Stardew Valley page, per-member Mod access, live game connection, shared reward title, pending queue count and per-host Start/Stop Spawns control.
 - Event Hub: receives and verifies Twitch Channel Point redemption notifications and routes approved redemptions.
 - Stardew gateway: owns short-lived game pairing, authenticated host connections, deduplication and request delivery.
-- SMAPI mod: runs in the host game, chooses and constructs a random vanilla monster variant from its explicit allowlist on the game thread.
+- SMAPI mod: runs in the host game, chooses and constructs a random vanilla monster variant from its explicit allowlist on the game thread, saves the latest 500 successful redemption IDs in mod-global data, and acknowledges only after that history is persisted.
 
 ## Monster spawning
 
