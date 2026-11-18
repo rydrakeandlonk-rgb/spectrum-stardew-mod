@@ -212,13 +212,13 @@ internal static class MonsterCatalog
     public static string GetDisplayName(string typeName) =>
         FindCandidate(typeName)?.DisplayName ?? Regex.Replace(typeName, "([a-z0-9])([A-Z])", "$1 $2");
 
-    public static string GetRandomType(string difficulty = "normal")
+    public static string GetRandomType(string difficulty = "normal", bool useTestProgression = true)
     {
-        Candidate[] eligible = GetEligibleCandidates().ToArray();
+        Candidate[] eligible = GetEligibleCandidates(useTestProgression).ToArray();
         if (eligible.Length == 0)
             throw new InvalidOperationException("No progression-eligible monster definitions are available.");
 
-        MonsterProgressionSnapshot progression = MonsterProgressionSnapshot.Read(Game1.player!);
+        MonsterProgressionSnapshot progression = MonsterProgressionSnapshot.Read(Game1.player!, useTestProgression);
         string selectedDifficulty = difficulty.Trim().ToLowerInvariant();
         double exponent = selectedDifficulty switch
         {
@@ -256,16 +256,16 @@ internal static class MonsterCatalog
         return eligible[^1].Id;
     }
 
-    public static bool TryGetCanonicalType(string? value, out string monsterType, bool ignoreProgression = false)
+    public static bool TryGetCanonicalType(string? value, out string monsterType, bool ignoreProgression = false, bool useTestProgression = true)
     {
         Candidate? candidate = FindCandidate(value);
-        Candidate[] allowed = ignoreProgression ? GetTestableCandidates() : GetEligibleCandidates();
+        Candidate[] allowed = ignoreProgression ? GetTestableCandidates() : GetEligibleCandidates(useTestProgression);
         bool eligible = candidate is not null && allowed.Any(item => item.Id == candidate.Id);
         monsterType = eligible ? candidate!.Id : "";
         return eligible;
     }
 
-    public static bool TryCreateMonster(string candidateId, Vector2 position, out Monster? monster, out string error, bool ignoreProgression = false)
+    public static bool TryCreateMonster(string candidateId, Vector2 position, out Monster? monster, out string error, bool ignoreProgression = false, bool useTestProgression = true)
     {
         monster = null;
         error = "";
@@ -274,7 +274,7 @@ internal static class MonsterCatalog
             error = "Unknown spawn definition.";
             return false;
         }
-        Candidate[] allowed = ignoreProgression ? GetTestableCandidates() : GetEligibleCandidates();
+        Candidate[] allowed = ignoreProgression ? GetTestableCandidates() : GetEligibleCandidates(useTestProgression);
         if (!allowed.Any(item => item.Id == candidate.Id))
         {
             error = ignoreProgression
@@ -315,19 +315,19 @@ internal static class MonsterCatalog
         }
     }
 
-    private static Candidate[] GetEligibleCandidates() =>
-        GetUnlockedCandidates().Where(HasSupportedDefinition).ToArray();
+    private static Candidate[] GetEligibleCandidates(bool useTestProgression = true) =>
+        GetUnlockedCandidates(useTestProgression).Where(HasSupportedDefinition).ToArray();
 
     // Developer-only test path: bypasses progression gates, but never the
     // approved roster exclusions or constructor/setup validation.
     private static Candidate[] GetTestableCandidates() =>
         Candidates.Where(candidate => !IsExcludedCandidate(candidate) && HasSupportedDefinition(candidate)).ToArray();
 
-    private static Candidate[] GetUnlockedCandidates()
+    private static Candidate[] GetUnlockedCandidates(bool useTestProgression = true)
     {
         if (Game1.player is null)
             return Array.Empty<Candidate>();
-        HashSet<string> ids = MonsterLocationPools.GetEligibleDefinitionIds(MonsterProgressionSnapshot.Read(Game1.player));
+        HashSet<string> ids = MonsterLocationPools.GetEligibleDefinitionIds(MonsterProgressionSnapshot.Read(Game1.player, useTestProgression));
         return Candidates.Where(candidate =>
             ids.Contains(candidate.Id) &&
             !IsExcludedCandidate(candidate))
