@@ -86,7 +86,7 @@ internal sealed record MonsterProgressionSnapshot(
             VolcanoDungeonUnlocked = false
         };
 
-        testOverride = preset.Trim().ToLowerInvariant() switch
+        MonsterProgressionSnapshot? nextOverride = preset.Trim().ToLowerInvariant() switch
         {
             "early" => early,
             "mines" => early with { MinesCompleted = true },
@@ -116,11 +116,13 @@ internal sealed record MonsterProgressionSnapshot(
             _ => null
         };
 
-        if (testOverride is null)
+        if (nextOverride is null)
         {
             error = "Unknown preset. Use early, mines, skull100, danger-mines, quarry, skull-cavern, danger-skull, bug-lair, volcano, or all.";
             return false;
         }
+
+        testOverride = nextOverride;
 
         error = "";
         return true;
