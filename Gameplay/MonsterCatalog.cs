@@ -560,14 +560,19 @@ internal static class MonsterCatalog
         if (candidate.Id.EndsWith("red-slime", StringComparison.Ordinal) ||
             candidate.Id.EndsWith("purple-slime", StringComparison.Ordinal))
             return "Sludge";
-        if (candidate.Id.EndsWith("copper-slime", StringComparison.Ordinal))
-            return "Copper Slime";
-        if (candidate.Id.EndsWith("iron-slime", StringComparison.Ordinal))
-            return "Iron Slime";
+        if (candidate.Id.EndsWith("copper-slime", StringComparison.Ordinal) ||
+            candidate.Id.EndsWith("iron-slime", StringComparison.Ordinal))
+            return "Green Slime";
         if (candidate.Id.EndsWith("cave-fly", StringComparison.Ordinal))
             return "Fly";
         if (candidate.Id.EndsWith("dust-spirit", StringComparison.Ordinal))
             return "Dust Spirit";
+        if (candidate.Id is "mutant-fly" or "dangerous-cave-fly")
+            return "Fly";
+        if (candidate.Id is "mutant-grub" or "dangerous-grub")
+            return "Grub";
+        if (candidate.Id == "dangerous-armored-bug")
+            return "Bug";
 
         string name = candidate.DisplayName.StartsWith("Dangerous ", StringComparison.Ordinal)
             ? candidate.DisplayName.Substring("Dangerous ".Length)
