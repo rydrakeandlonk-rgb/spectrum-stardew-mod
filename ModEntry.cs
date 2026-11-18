@@ -13,6 +13,8 @@ internal sealed class ModEntry : Mod
     private GameModsClient? gameModsClient;
     private readonly HashSet<string> processedCommandIds = new(StringComparer.Ordinal);
     private readonly Queue<string> processedCommandOrder = new();
+    private const string ProcessedCommandSaveKey = "processed-spectrum-command-ids";
+    private bool processedCommandsLoaded;
     private DateTime retryCommandsAtUtc = DateTime.MinValue;
 
     public override void Entry(IModHelper helper)
@@ -30,6 +32,8 @@ internal sealed class ModEntry : Mod
             this.Monitor.Log("Spectrum Game Mods connection is not paired yet. Local test commands remain available.", LogLevel.Info);
         }
 
+        helper.Events.GameLoop.SaveLoaded += this.OnSaveLoaded;
+        helper.Events.GameLoop.ReturnedToTitle += this.OnReturnedToTitle;
         helper.Events.GameLoop.UpdateTicked += this.OnUpdateTicked;
 
         helper.ConsoleCommands.Add(
@@ -57,6 +61,43 @@ internal sealed class ModEntry : Mod
         );
 
         this.Monitor.Log("Spectrum Stardew Mod loaded. Use 'spectrum_connection_status' to check the gateway connection.", LogLevel.Info);
+    }
+
+    private void OnSaveLoaded(object? sender, SaveLoadedEventArgs e)
+    {
+        this.processedCommandIds.Clear();
+        this.processedCommandOrder.Clear();
+
+        List<string> savedIds = this.Helper.Data.ReadSaveData<List<string>>(ProcessedCommandSaveKey) ?? new List<string>();
+        foreach (string id in savedIds.Where(id => !string.IsNullOrWhiteSpace(id)).TakeLast(500))
+        {
+            if (this.processedCommandIds.Add(id))
+                this.processedCommandOrder.Enqueue(id);
+        }
+
+        this.processedCommandsLoaded = true;
+        this.Monitor.Log($"Loaded {this.processedCommandIds.Count} saved Spectrum redemption IDs for duplicate protection.", LogLevel.Trace);
+    }
+
+    private void OnReturnedToTitle(object? sender, ReturnedToTitleEventArgs e)
+    {
+        this.processedCommandIds.Clear();
+        this.processedCommandOrder.Clear();
+        this.processedCommandsLoaded = false;
+    }
+
+    private void RememberProcessedCommand(string commandId)
+    {
+        if (!this.processedCommandsLoaded || string.IsNullOrWhiteSpace(commandId))
+            return;
+
+        if (this.processedCommandIds.Add(commandId))
+            this.processedCommandOrder.Enqueue(commandId);
+
+        while (this.processedCommandOrder.Count > 500)
+            this.processedCommandIds.Remove(this.processedCommandOrder.Dequeue());
+
+        this.Helper.Data.WriteSaveData(ProcessedCommandSaveKey, this.processedCommandOrder.ToList());
     }
 
     private void OnUpdateTicked(object? sender, UpdateTickedEventArgs e)
@@ -118,11 +159,9 @@ internal sealed class ModEntry : Mod
                 string spawnDescription = spawnedCount == 1 ? $"a {monsterSummary}" : monsterSummary;
                 Game1.chatBox?.addInfoMessage($"{redeemer} spawned {spawnDescription} in the {locationName}!");
 
-                this.processedCommandIds.Add(command.CommandId);
-                this.processedCommandOrder.Enqueue(command.CommandId);
-                while (this.processedCommandOrder.Count > 500)
-                    this.processedCommandIds.Remove(this.processedCommandOrder.Dequeue());
-
+                // Persist before acknowledgement so a reconnect or game restart
+                // cannot normally replay a redemption that already spawned.
+                this.RememberProcessedCommand(command.CommandId);
                 _ = this.gameModsClient.AcknowledgeAsync(command.CommandId);
             }
             else
