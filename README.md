@@ -9,7 +9,7 @@ Only Spectrum members explicitly enabled by an administrator in Spectrum Control
 1. An enabled Spectrum streamer installs the Spectrum mod through SMAPI.
 2. They launch Stardew Valley and pair the host game with Spectrum Control Center.
 3. Control Center verifies the signed-in Twitch identity and administrator-controlled activation record.
-4. The streamer configures one or more Channel Point reward titles and spawn behaviours in Control Center.
+4. An administrator sets the shared **Spawn Random Monster** Channel Point reward title in Control Center.
 5. The host game connects to the Spectrum gateway and receives typed spawn-behaviour requests.
 6. The host selects a monster from the local allowlist and invokes Stardew Valley's built-in monster debug handler.
 
