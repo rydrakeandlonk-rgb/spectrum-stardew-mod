@@ -234,10 +234,24 @@ internal sealed class ModEntry : Mod
 
     private void OnConnectionStatusCommand(string command, string[] args)
     {
-        bool connected = this.gameModsClient?.IsConnected == true;
-        this.Monitor.Log(connected
-            ? "Spectrum Game Mods is connected."
-            : "Spectrum Game Mods is not connected. Check BroadcasterUserId, HostToken and the SMAPI log.", LogLevel.Info);
+        if (this.gameModsClient is null)
+        {
+            this.Monitor.Log("Spectrum Game Mods is not paired. Add BroadcasterUserId and HostToken to the local mod config.", LogLevel.Warn);
+            return;
+        }
+
+        if (!this.gameModsClient.IsConnected)
+        {
+            this.Monitor.Log("Spectrum Game Mods is not connected. Check GatewayUrl, BroadcasterUserId, HostToken and the SMAPI log.", LogLevel.Warn);
+            return;
+        }
+
+        this.Monitor.Log(
+            this.gameModsClient.SpawnsEnabled
+                ? "Spectrum Game Mods is connected; monster spawns are ENABLED by Control Center."
+                : "Spectrum Game Mods is connected; monster spawns are PAUSED by Control Center.",
+            LogLevel.Info
+        );
     }
 
     private void OnMonsterPoolStatusCommand(string command, string[] args)
