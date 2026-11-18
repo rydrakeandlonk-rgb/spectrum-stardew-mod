@@ -36,12 +36,11 @@ The current reference-assembly snapshot is based on Stardew Valley 1.6.15 and SM
 6. Run `spectrum_progression_test early`, then `spectrum_monster_pool_status`, to confirm only Mines and Farm are unlocked. Repeat with `mines`, `skull100`, `danger-mines`, `quarry`, `skull-cavern`, `danger-skull`, `bug-lair`, `volcano`, and `all`; confirm each profile exposes only its intended pools and stage. Finish with `spectrum_progression_test reset` to restore the real save.
 7. Use `spectrum_spawn_monster_force_test <monster name or ID>` to spawn a progression-locked entry for a local constructor/appearance check. This bypasses progression only; excluded entries and unsupported constructors remain blocked. The gateway path never uses this override.
 8. Run `spectrum_spawn_random_test easy`, `spectrum_spawn_random_test normal`, and `spectrum_spawn_random_test hard` under early, Mines-complete and Skull-Cavern-100 profiles to exercise the threat weighting modes.
-9. Run `spectrum_monster_pool_status` to inspect the actual save's progression stage, milestones, Combat Level, current-area Shrine of Challenge difficulty, vanilla threat-data coverage, unlocked groups, selectable variants, and catalogue validation.
-6. Run `spectrum_monster_pool_status` to inspect the save's progression stage, Mines 120 and Skull Cavern 100 milestones, Combat Level, current-area Shrine of Challenge difficulty, vanilla threat-data coverage, unlocked location groups, selectable variants, and unresolved constructor/setup definitions.
-7. Run `spectrum_connection_status` to inspect the gateway connection.
-8. Check the compact SMAPI log entries for the redeemer, reward, redemption time, command ID and confirmed spawn result. Failed attempts stay queued for retry; only successful spawns are acknowledged. The latest 500 successful redemption IDs are also saved in the mod's local global data to prevent normal reconnect/restart replay.
-9. Confirm a successful redemption appears in Stardew's existing chat with the Twitch username, monster name and location. Failed spawns must not produce a success chat message.
-10. Repeat in a multiplayer farm with a farmhand connected; confirm exactly one monster appears for both players.
+9. Run `spectrum_monster_pool_status` again after `spectrum_progression_test reset` to confirm the real save's progression is restored.
+10. Run `spectrum_connection_status` to inspect the gateway connection.
+11. Check the compact SMAPI log entries for the redeemer, reward, redemption time, command ID and confirmed spawn result. Failed attempts stay queued for retry; only successful spawns are acknowledged. The latest 500 successful redemption IDs are also saved in the mod's local global data to prevent normal reconnect/restart replay.
+12. Confirm a successful redemption appears in Stardew's existing chat with the Twitch username, monster name and location. Failed spawns must not produce a success chat message.
+13. Repeat in a multiplayer farm with a farmhand connected; confirm exactly one monster appears for both players.
 
 The network client validates typed messages and queues them for the SMAPI update thread. It does not execute server-supplied command text or monster class names. The local catalogue filters explicit vanilla variant definitions through the mod installation's progression snapshot. See docs/MONSTER_POOLS.md for unlock rules, constructor mappings and dangerous-variant setup. Every entry still needs in-game validation.
 
