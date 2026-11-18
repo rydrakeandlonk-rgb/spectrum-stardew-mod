@@ -58,7 +58,7 @@ Rock Crab and Rock Crab (dangerous) remain eligible. Other Rock Crab-family vari
 
 ## Explicit variant catalogue
 
-The catalogue now contains individual spawn definitions instead of one entry per reflected C# class. It maps the reference roster to vanilla constructors and post-construction setup:
+The catalogue now contains individual spawn definitions instead of one entry per reflected C# class. It maps the reference roster to vanilla constructors and post-construction setup. The Dangerous Mines pool includes the regular Lava Bat, as in the supplied roster; it does not add a separate Dangerous Lava Bat. Dangerous Copper Slime, Dangerous Iron Slime and Skeleton Mage are not part of the approved pool roster:
 
 - Bat subtypes use the vanilla integer constructor codes for Frost Bat, Lava Bat, Iridium Bat, Haunted Skull, Magma Sprite and Magma Sparker.
 - Blue, red and purple slimes use the vanilla GreenSlime mine-level constructor paths; the friendly display labels identify the Wiki colour names (Frost Jelly and Sludge are the corresponding internal names).
