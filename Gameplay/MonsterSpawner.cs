@@ -71,10 +71,10 @@ internal sealed class MonsterSpawner
         {
             case "difficulty_random":
                 count = 1;
-                chooseMonster = () => MonsterCatalog.GetRandomType(command.Difficulty);
+                chooseMonster = () => MonsterCatalog.GetRandomType(command.Difficulty, useTestProgression: false);
                 break;
             case "chat_monster":
-                if (!MonsterCatalog.TryGetCanonicalType(command.UserInput, out candidateId))
+                if (!MonsterCatalog.TryGetCanonicalType(command.UserInput, out candidateId, useTestProgression: false))
                 {
                     result = "FAILED: unsupported or progression-locked chat monster";
                     return false;
@@ -91,7 +91,7 @@ internal sealed class MonsterSpawner
                 chooseMonster = () => MonsterCatalog.GetRandomType(command.Difficulty);
                 break;
             case "random_count_specific_monster":
-                if (!MonsterCatalog.TryGetCanonicalType(command.MonsterType, out candidateId))
+                if (!MonsterCatalog.TryGetCanonicalType(command.MonsterType, out candidateId, useTestProgression: false))
                 {
                     result = "FAILED: unsupported or progression-locked configured monster";
                     return false;
@@ -124,7 +124,7 @@ internal sealed class MonsterSpawner
         for (int i = 0; i < requestedCount; i++)
         {
             string selectedId = chooseMonster();
-            if (!this.TrySpawnCandidate(selectedId, out string spawnedLocation, out Monster? createdMonster) ||
+            if (!this.TrySpawnCandidate(selectedId, out string spawnedLocation, out Monster? createdMonster, useTestProgression: false) ||
                 createdMonster is null)
             {
                 // A redemption is atomic: if the full requested group cannot be
@@ -162,7 +162,7 @@ internal sealed class MonsterSpawner
     private static int ClampCount(int value, int fallback) =>
         Math.Clamp(value <= 0 ? fallback : value, 1, MaximumMonstersPerRedemption);
 
-    private bool TrySpawnCandidate(string candidateId, out string locationName, out Monster? spawnedMonster, bool ignoreProgression = false)
+    private bool TrySpawnCandidate(string candidateId, out string locationName, out Monster? spawnedMonster, bool ignoreProgression = false, bool useTestProgression = true)
     {
         locationName = "";
         spawnedMonster = null;
@@ -186,7 +186,7 @@ internal sealed class MonsterSpawner
                 continue;
 
             int before = location.characters.Count;
-            if (!MonsterCatalog.TryCreateMonster(candidateId, tile * 64f, out Monster? monster, out string error, ignoreProgression) || monster is null)
+            if (!MonsterCatalog.TryCreateMonster(candidateId, tile * 64f, out Monster? monster, out string error, ignoreProgression, useTestProgression) || monster is null)
             {
                 this.monitor.Log($"[Spectrum] SPAWN FAILED | {MonsterCatalog.GetDisplayName(candidateId)} | {error}", LogLevel.Warn);
                 return false;
