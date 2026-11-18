@@ -62,7 +62,7 @@ internal sealed class MonsterSpawner
         foreach (Point offset in NearbyTileOffsets)
         {
             Vector2 tile = new(playerTile.X + offset.X, playerTile.Y + offset.Y);
-            if (!location.isTileLocationTotallyClearAndPlaceable(tile))
+            if (!location.CanSpawnCharacterHere(tile))
                 continue;
 
             int tileX = (int)tile.X;
