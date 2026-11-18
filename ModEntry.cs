@@ -109,7 +109,8 @@ internal sealed class ModEntry : Mod
             if (spawned)
             {
                 string redeemer = DisplayValue(command.TwitchUserName);
-                Game1.chatBox?.addInfoMessage($"{redeemer} spawned {monsterSummary} in {locationName}!");
+                string spawnDescription = spawnedCount == 1 ? $"a {monsterSummary}" : monsterSummary;
+                Game1.chatBox?.addInfoMessage($"{redeemer} spawned {spawnDescription} in the {locationName}!");
             }
 
             // Acknowledge only after the game-thread handler has processed the command.
