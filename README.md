@@ -68,7 +68,7 @@ An administrator enables the member in Control Center, then uses **Pair / re-pai
 4. In the Stardew Valley page, set the shared **Spawn Random Monster** Channel Point reward title. Use the same title on each Spectrum channel's Twitch reward. No Twitch reward ID needs to be copied.
 5. Set `HostToken` to the one-time token shown by Control Center.
 6. Leave `GatewayUrl` at its default value and restart Stardew Valley.
-7. For the chat-selected monster behaviour, enable “Require viewers to enter text” on that Twitch reward. Chat can enter a supported monster name such as `Green Slime`.
+7. Once the host appears as Connected, use **Start Spawns** in the dashboard when you want queued redemptions to begin processing. New game connections always start paused.
 
 The host token is stored locally as a revocable game-session credential. Never commit or share the local config. Re-pairing rotates the token and closes the previous host connection. Use `spectrum_connection_status` in the SMAPI console to check the connection.
 
