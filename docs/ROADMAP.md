@@ -9,6 +9,7 @@ The product is a private Spectrum integration. Control Center decides which acti
 - [x] Add direct, explicit vanilla constructor dispatch for named monster variants.
 - [x] Add a local random monster test command.
 - [x] Add first-pass location-group progression checks using vanilla save flags and completed Special Order history.
+- [x] Gate Quarry Mine on the repaired Quarry bridge and Mutant Bug Lair on Krobus opening its passage.
 - [x] Track permanent Mines-floor-120 and Skull-Cavern-floor-100 milestones per host save, with Combat Level as a secondary factor.
 - [x] Add first-pass progression-based threat targeting without directly changing vanilla monster stats.
 - [x] Derive monster threat scores from vanilla `Data/Monsters` stats with a fallback for unresolved entries.
