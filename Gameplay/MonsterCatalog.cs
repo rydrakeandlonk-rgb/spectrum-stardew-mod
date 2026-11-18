@@ -166,9 +166,12 @@ internal static class MonsterCatalog
 
         try
         {
-            object?[] args = candidate.ConstructorArgument is null
+            object? constructorArgument = candidate.Id == "wilderness-golem"
+                ? Game1.player?.CombatLevel ?? 0
+                : candidate.ConstructorArgument;
+            object?[] args = constructorArgument is null
                 ? new object?[] { position }
-                : new object?[] { position, candidate.ConstructorArgument };
+                : new object?[] { position, constructorArgument };
             monster = constructor!.Invoke(args) as Monster;
             if (monster is null)
             {
@@ -209,6 +212,7 @@ internal static class MonsterCatalog
         return Candidates.FirstOrDefault(candidate =>
             Normalize(candidate.Id) == normalized ||
             Normalize(candidate.DisplayName) == normalized ||
+            Normalize(candidate.DisplayName.Split('(')[0].Trim()) == normalized ||
             Normalize(candidate.ClassName) == normalized);
     }
 
