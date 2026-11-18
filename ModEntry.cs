@@ -178,7 +178,9 @@ internal sealed class ModEntry : Mod
         IReadOnlyList<MonsterPool> unlockedPools = MonsterLocationPools.GetUnlockedPools(progression);
         IReadOnlyList<string> eligibleTypes = MonsterCatalog.GetEligibleTypes();
         IReadOnlyList<string> catalogIssues = MonsterCatalog.GetCatalogValidationIssues();
+        IReadOnlyList<string> threatDataFallbacks = MonsterCatalog.GetThreatDataFallbacks();
 
+        this.Monitor.Log($"Vanilla threat data: {MonsterCatalog.AllTypes.Count - threatDataFallbacks.Count}/{MonsterCatalog.AllTypes.Count} definitions | Fallbacks: {(threatDataFallbacks.Count == 0 ? "none" : string.Join(", ", threatDataFallbacks))}", LogLevel.Info);
         this.Monitor.Log($"Progression stage: {progression.ProgressionStageName} | Combat Level: {progression.CombatLevel}/10", LogLevel.Info);
         this.Monitor.Log($"Current area: {progression.CurrentAreaName} | Shrine difficulty: {progression.CurrentAreaDifficulty}/2", LogLevel.Info);
         this.Monitor.Log($"Milestones: Mines floor 120 {(progression.MinesCompleted ? "reached" : "not reached")} | Skull Cavern floor 100 {(progression.SkullCavern100Reached ? "reached" : "not reached")}", LogLevel.Info);
