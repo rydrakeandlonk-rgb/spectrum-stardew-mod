@@ -49,6 +49,12 @@ internal sealed class ModEntry : Mod
         );
 
         helper.ConsoleCommands.Add(
+            "spectrum_spawn_monster_test",
+            "Spawn one progression-eligible catalogue monster by name or ID. Usage: spectrum_spawn_monster_test <monster name or ID>",
+            this.OnSpawnMonsterTestCommand
+        );
+
+        helper.ConsoleCommands.Add(
             "spectrum_connection_status",
             "Show the Spectrum Game Mods connection status. Usage: spectrum_connection_status",
             this.OnConnectionStatusCommand
@@ -195,6 +201,18 @@ internal sealed class ModEntry : Mod
     private void OnSpawnRandomTestCommand(string command, string[] args)
     {
         this.monsterSpawner?.TrySpawnRandomMonster();
+    }
+
+    private void OnSpawnMonsterTestCommand(string command, string[] args)
+    {
+        if (args.Length == 0)
+        {
+            this.Monitor.Log("Usage: spectrum_spawn_monster_test <monster name or ID>", LogLevel.Warn);
+            return;
+        }
+
+        string monsterType = string.Join(" ", args);
+        this.monsterSpawner?.TrySpawnMonster(monsterType);
     }
 
     private void OnConnectionStatusCommand(string command, string[] args)
