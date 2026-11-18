@@ -12,7 +12,7 @@ internal static class MonsterCatalog
     private enum PostConstruction { None, CopperSlime, IronSlime, TigerSlime, StickBug, IridiumGolem }
 
     private sealed record Candidate(
-        string Id, string DisplayName, string ClassName, double ExpectedHealth,
+        string Id, string DisplayName, string ClassName, double WeightingHealth,
         object? ConstructorArgument = null, bool Dangerous = false,
         PostConstruction Post = PostConstruction.None);
 
@@ -60,7 +60,7 @@ internal static class MonsterCatalog
         C("carbon-ghost", "Carbon Ghost", "Ghost", 100, P(MonsterPool.DangerousMines, MonsterPool.SkullCavern), "Carbon Ghost"),
         C("putrid-ghost", "Putrid Ghost", "Ghost", 200, P(MonsterPool.DangerousMines), "Putrid Ghost"),
         C("skeleton", "Skeleton", "Skeleton", 70, P(MonsterPool.Mines), false),
-        C("skeleton-mage", "Skeleton Mage", "Skeleton", 90, P(MonsterPool.DangerousMines), true),
+
         C("spider", "Spider", "Leaper", 150, P(MonsterPool.DangerousMines)),
         C("shadow-brute", "Shadow Brute", "ShadowBrute", 160, P(MonsterPool.Mines, MonsterPool.Farm)),
         C("shadow-shaman", "Shadow Shaman", "ShadowShaman", 140, P(MonsterPool.Mines)),
@@ -80,8 +80,7 @@ internal static class MonsterCatalog
         C("dangerous-blue-slime", "Dangerous Blue Slime", "GreenSlime", 350, P(MonsterPool.DangerousMines), 40, PostConstruction.None, true),
         C("dangerous-red-slime", "Dangerous Red Slime", "GreenSlime", 450, P(MonsterPool.DangerousMines), 80, PostConstruction.None, true),
         C("dangerous-purple-slime", "Dangerous Purple Slime", "GreenSlime", 650, P(MonsterPool.DangerousMines, MonsterPool.DangerousSkullCavern), 121, PostConstruction.None, true),
-        C("dangerous-copper-slime", "Dangerous Copper Slime", "GreenSlime", 350, P(MonsterPool.DangerousMines), new Color(184, 115, 51), PostConstruction.CopperSlime, true),
-        C("dangerous-iron-slime", "Dangerous Iron Slime", "GreenSlime", 450, P(MonsterPool.DangerousMines), new Color(170, 175, 185), PostConstruction.IronSlime, true),
+
         C("dangerous-bat", "Dangerous Bat", "Bat", 300, P(MonsterPool.DangerousMines), null, PostConstruction.None, true),
         C("dangerous-haunted-skull", "Dangerous Haunted Skull", "Bat", 350, P(MonsterPool.DangerousMines), 77377, PostConstruction.None, true),
         C("dangerous-bug", "Dangerous Bug", "Bug", 300, P(MonsterPool.DangerousMines), 0, PostConstruction.None, true),
@@ -142,11 +141,11 @@ internal static class MonsterCatalog
             "hard" => 0.9d,
             _ => 1.35d
         };
-        double totalWeight = eligible.Sum(candidate => GetWeight(candidate.ExpectedHealth * (candidate.Dangerous ? 1.5d : 1d), exponent));
+        double totalWeight = eligible.Sum(candidate => GetWeight(candidate.WeightingHealth * (candidate.Dangerous ? 1.5d : 1d), exponent));
         double roll = Random.Shared.NextDouble() * totalWeight;
         foreach (Candidate candidate in eligible)
         {
-            roll -= GetWeight(candidate.ExpectedHealth * (candidate.Dangerous ? 1.5d : 1d), exponent);
+            roll -= GetWeight(candidate.WeightingHealth * (candidate.Dangerous ? 1.5d : 1d), exponent);
             if (roll <= 0)
                 return candidate.Id;
         }
