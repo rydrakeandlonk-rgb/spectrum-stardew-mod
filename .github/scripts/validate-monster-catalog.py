@@ -91,6 +91,19 @@ if "dangerous-armored-bug" not in catalogue_ids:
 if "skeleton-mage" not in catalogue_ids:
     errors.append("Skeleton Mage is missing.")
 
+# Copper and Iron Slimes are custom visual variants built on GreenSlime's
+# initialized vanilla stats. Their custom display names must never be passed
+# to parseMonsterInfo, because neither name exists in Data/Monsters.
+named_slime = re.search(
+    r'private static void ConfigureNamedSlime\\(.*?\\n    }',
+    catalog,
+    re.DOTALL,
+)
+if not named_slime:
+    errors.append("ConfigureNamedSlime implementation is missing.")
+elif "ParseMonsterInfo" in named_slime.group(0) or "parseMonsterInfo" in named_slime.group(0):
+    errors.append("Custom Copper/Iron Slimes must not parse missing Data/Monsters keys.")
+
 if errors:
     print("Monster catalogue validation failed:")
     for error in errors:
