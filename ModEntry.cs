@@ -127,6 +127,7 @@ internal sealed class ModEntry : Mod
         this.pairingCancellation?.Cancel();
         this.pairingCancellation?.Dispose();
         this.pairingCancellation = null;
+        this.pairingResults.Clear();
         this.pairingInProgress = false;
         this.pairingStatus = "";
         this.pairingVerificationUri = "";
@@ -330,16 +331,19 @@ internal sealed class ModEntry : Mod
 
     private void OnUpdateTicked(object? sender, UpdateTickedEventArgs e)
     {
-        while (this.pairingResults.TryDequeue(out PairingResult? pairingResult) && pairingResult is not null)
+        if (Context.IsWorldReady && Context.IsMainPlayer)
         {
-            this.config ??= new ModConfig();
-            this.config.BroadcasterUserId = pairingResult.BroadcasterUserId;
-            this.config.HostToken = pairingResult.HostToken;
-            this.Helper.WriteConfig(this.config);
-            this.gameModsClient?.Dispose();
-            this.gameModsClient = new GameModsClient(this.config, this.Monitor);
-            this.pairingStatus = "Twitch account authorised · connecting…";
-            Game1.chatBox?.addInfoMessage("Spectrum Twitch connection authorised. Spawning remains paused until Control Center opens the safety gate.");
+            while (this.pairingResults.TryDequeue(out PairingResult? pairingResult) && pairingResult is not null)
+            {
+                this.config ??= new ModConfig();
+                this.config.BroadcasterUserId = pairingResult.BroadcasterUserId;
+                this.config.HostToken = pairingResult.HostToken;
+                this.Helper.WriteConfig(this.config);
+                this.gameModsClient?.Dispose();
+                this.gameModsClient = new GameModsClient(this.config, this.Monitor);
+                this.pairingStatus = "Twitch account authorised · connecting…";
+                Game1.chatBox?.addInfoMessage("Spectrum Twitch connection authorised. Spawning remains paused until Control Center opens the safety gate.");
+            }
         }
 
         if (this.gameModsClient?.IsConnected == true &&
