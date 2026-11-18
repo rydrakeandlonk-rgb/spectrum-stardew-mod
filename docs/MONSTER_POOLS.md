@@ -62,7 +62,7 @@ The catalogue now contains individual spawn definitions instead of one entry per
 
 - Bat subtypes use the vanilla integer constructor codes for Frost Bat, Lava Bat, Iridium Bat, Haunted Skull, Magma Sprite and Magma Sparker.
 - Blue, red and purple slimes use the vanilla GreenSlime mine-level constructor paths; the friendly display labels identify the Wiki colour names (Frost Jelly and Sludge are the corresponding internal names).
-- Copper and Iron Slimes use the GreenSlime colour constructor, then load the matching vanilla monster data entry for stats and drops.
+- Copper and Iron Slimes use the one-argument GreenSlime constructor, then set their colour and load the matching vanilla monster data entry for stats and drops.
 - Carbon Ghost, Putrid Ghost, Royal Serpent, Lava Crab, Iridium Crab, Truffle Crab, False Magma Cap and Shadow Sniper use their named string constructor arguments.
 - Mutant Fly and Mutant Grub use the hard-mode boolean constructor option.
 - Skeleton Mage uses the Skeleton mage option; Spider maps to Stardew's Leaper class.
