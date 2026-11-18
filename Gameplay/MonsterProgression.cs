@@ -20,6 +20,7 @@ internal enum MonsterPool
 /// <summary>
 /// A lightweight snapshot of the active host player's permanent progression.
 /// This is read only when a monster is selected, never polled in the update loop.
+/// The optional developer test snapshot is memory-only and never writes save data.
 /// </summary>
 internal sealed record MonsterProgressionSnapshot(
     bool MinesCompleted,
@@ -34,6 +35,10 @@ internal sealed record MonsterProgressionSnapshot(
     bool DangerousSkullCavernUnlocked,
     bool VolcanoDungeonUnlocked)
 {
+    private static MonsterProgressionSnapshot? testOverride;
+
+    public static bool IsTestOverrideActive => testOverride is not null;
+
     public int ProgressionStage => this.SkullCavern100Reached ? 2 : this.MinesCompleted ? 1 : 0;
 
     public string ProgressionStageName => this.ProgressionStage switch
@@ -59,7 +64,71 @@ internal sealed record MonsterProgressionSnapshot(
         };
     }
 
-    public static MonsterProgressionSnapshot Read(Farmer farmer)
+    public static MonsterProgressionSnapshot Read(Farmer farmer) =>
+        testOverride ?? ReadActual(farmer);
+
+    /// <summary>
+    /// Applies a temporary, in-memory progression profile for testing.
+    /// It never changes Farmer fields, mail, quests, special orders, or save data.
+    /// </summary>
+    public static bool TrySetTestPreset(string preset, Farmer farmer, out string error)
+    {
+        MonsterProgressionSnapshot actual = ReadActual(farmer);
+        MonsterProgressionSnapshot early = actual with
+        {
+            MinesCompleted = false,
+            SkullCavern100Reached = false,
+            DangerousMinesUnlocked = false,
+            QuarryMineUnlocked = false,
+            SkullCavernUnlocked = false,
+            BugLairUnlocked = false,
+            DangerousSkullCavernUnlocked = false,
+            VolcanoDungeonUnlocked = false
+        };
+
+        testOverride = preset.Trim().ToLowerInvariant() switch
+        {
+            "early" => early,
+            "mines" => early with { MinesCompleted = true },
+            "skull100" => early with
+            {
+                MinesCompleted = true,
+                SkullCavern100Reached = true,
+                SkullCavernUnlocked = true
+            },
+            "danger-mines" => early with { DangerousMinesUnlocked = true },
+            "quarry" => early with { QuarryMineUnlocked = true },
+            "skull-cavern" => early with { SkullCavernUnlocked = true },
+            "danger-skull" => early with { DangerousSkullCavernUnlocked = true },
+            "bug-lair" => early with { BugLairUnlocked = true },
+            "volcano" => early with { VolcanoDungeonUnlocked = true },
+            "all" => actual with
+            {
+                MinesCompleted = true,
+                SkullCavern100Reached = true,
+                DangerousMinesUnlocked = true,
+                QuarryMineUnlocked = true,
+                SkullCavernUnlocked = true,
+                BugLairUnlocked = true,
+                DangerousSkullCavernUnlocked = true,
+                VolcanoDungeonUnlocked = true
+            },
+            _ => null
+        };
+
+        if (testOverride is null)
+        {
+            error = "Unknown preset. Use early, mines, skull100, danger-mines, quarry, skull-cavern, danger-skull, bug-lair, volcano, or all.";
+            return false;
+        }
+
+        error = "";
+        return true;
+    }
+
+    public static void ClearTestOverride() => testOverride = null;
+
+    private static MonsterProgressionSnapshot ReadActual(Farmer farmer)
     {
         // Qi's challenges are repeatable Special Orders. Their permanent
         // completion history lives on the shared FarmerTeam, not questsCompleted.
