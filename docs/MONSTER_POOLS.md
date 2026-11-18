@@ -9,9 +9,11 @@ The unlocked groups are combined as a set, so a monster family listed in more th
 Farm monsters are always eligible. They do not have a Combat Level unlock gate; the possibility of an early, unusually strong farm monster is intentional.
 
 Progression eligibility and difficulty weighting are separate:
-- Progression determines which monster entries may be selected.
-- Difficulty weighting controls the relative chance of selecting an eligible entry.
-- The scaling system must keep encounters completable and avoid forcing a save reset.
+- Existing pool unlocks determine which monster entries may be selected.
+- A permanent three-stage save milestone sets the threat target: before Mines floor 120, after Mines floor 120, and after Skull Cavern floor 100.
+- Combat Level is a secondary adjustment within the current stage, not the main progression gate.
+- Easy, Normal and Hard shift the target threat and weighting curve; they do not directly alter monster stats.
+- The first-pass threat estimate is the catalogue's balancing value, not a claim about exact runtime health or damage. It should be refined against vanilla monster data and in-game results.
 
 ## Location groups and unlock conditions
 
@@ -32,13 +34,15 @@ The progression reader uses existing save state:
 
 | Progression | Vanilla value |
 |---|---|
+| Mines floor 120 reached | `Game1.player.deepestMineLevel >= 120` |
+| Skull Cavern floor 100 story reached | `Game1.player.questsCompleted.Contains(30)` (completed Cryptic Note quest) |
 | Danger in the Deep completed | `Game1.player.team.completedSpecialOrders.Contains("QiChallenge9")` |
 | Skull Cavern Invasion completed | `Game1.player.team.completedSpecialOrders.Contains("QiChallenge10")` |
 | Golden Scythe obtained | `Game1.player.mailReceived.Contains("gotGoldenScythe")` |
 | Skull Key obtained | `Game1.player.hasSkullKey` |
 | Ginger Island unlocked | `Game1.player.hasOrWillReceiveMail("willyBoatFixed")` |
 
-The Qi challenges are repeatable Special Orders, so their permanent completion history is read from `completedSpecialOrders`, not the active quest list or `questsCompleted`. The Skull Key property is used instead of checking whether the door was opened.
+The Skull Cavern milestone uses the completed Cryptic Note story quest (quest ID 30), not an active quest or the consumable Iridium Snake Milk item. The Mines milestone uses the save's deepest regular-mine floor. The Qi challenges are repeatable Special Orders, so their permanent completion history is read from `completedSpecialOrders`, not the active quest list or `questsCompleted`. The Skull Key property is used instead of checking whether the door was opened.
 
 ## Efficiency
 
