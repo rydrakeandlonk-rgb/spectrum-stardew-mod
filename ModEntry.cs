@@ -50,6 +50,12 @@ internal sealed class ModEntry : Mod
             this.OnConnectionStatusCommand
         );
 
+        helper.ConsoleCommands.Add(
+            "spectrum_monster_pool_status",
+            "Show progression-unlocked monster pools and class families not yet supported by the current constructor catalogue.",
+            this.OnMonsterPoolStatusCommand
+        );
+
         this.Monitor.Log("Spectrum Stardew Mod loaded. Use 'spectrum_connection_status' to check the gateway connection.", LogLevel.Info);
     }
 
@@ -158,5 +164,28 @@ internal sealed class ModEntry : Mod
         this.Monitor.Log(connected
             ? "Spectrum Game Mods is connected."
             : "Spectrum Game Mods is not connected. Check BroadcasterUserId, HostToken and the SMAPI log.", LogLevel.Info);
+    }
+
+    private void OnMonsterPoolStatusCommand(string command, string[] args)
+    {
+        if (!Context.IsWorldReady || Game1.player is null)
+        {
+            this.Monitor.Log("Load a save before checking monster pool progression.", LogLevel.Warn);
+            return;
+        }
+
+        MonsterProgressionSnapshot progression = MonsterProgression.Read(Game1.player);
+        IReadOnlyList<MonsterPool> unlockedPools = MonsterLocationPools.GetUnlockedPools(progression);
+        IReadOnlyList<string> eligibleTypes = MonsterCatalog.GetEligibleTypes();
+        IReadOnlyList<string> unresolvedTypes = MonsterCatalog.GetUnresolvedEligibleClassNames();
+
+        this.Monitor.Log($"Unlocked monster pools: {string.Join(", ", unlockedPools)}", LogLevel.Info);
+        this.Monitor.Log($"Currently selectable discovered classes ({eligibleTypes.Count}): {string.Join(", ", eligibleTypes)}", LogLevel.Info);
+        this.Monitor.Log(
+            unresolvedTypes.Count == 0
+                ? "All configured class families are present in the current constructor catalogue."
+                : $"Class families awaiting explicit variant/constructor support ({unresolvedTypes.Count}): {string.Join(", ", unresolvedTypes)}",
+            unresolvedTypes.Count == 0 ? LogLevel.Info : LogLevel.Warn
+        );
     }
 }
