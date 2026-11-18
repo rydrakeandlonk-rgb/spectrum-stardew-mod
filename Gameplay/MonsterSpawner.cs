@@ -21,11 +21,11 @@ internal sealed class MonsterSpawner
     public MonsterSpawner(IMonitor monitor) => this.monitor = monitor;
 
     public bool TrySpawnRandomMonster() =>
-        this.TrySpawnCandidate(MonsterCatalog.GetRandomType(), out _);
+        this.TrySpawnCandidate(MonsterCatalog.GetRandomType(), out _, out _);
 
     public bool TrySpawnGreenSlime() =>
         MonsterCatalog.TryGetCanonicalType("Green Slime", out string id) &&
-        this.TrySpawnCandidate(id, out _);
+        this.TrySpawnCandidate(id, out _, out _);
 
     public bool TryExecute(
         GameCommand command,
@@ -97,17 +97,36 @@ internal sealed class MonsterSpawner
         }
 
         requestedCount = Math.Clamp(count, 1, MaximumMonstersPerRedemption);
+        var createdMonsters = new List<Monster>();
+        GameLocation? createdInLocation = null;
         for (int i = 0; i < requestedCount; i++)
         {
             string selectedId = chooseMonster();
-            if (!this.TrySpawnCandidate(selectedId, out string spawnedLocation))
+            if (!this.TrySpawnCandidate(selectedId, out string spawnedLocation, out Monster? createdMonster) ||
+                createdMonster is null)
+            {
+                // A redemption is atomic: if the full requested group cannot be
+                // placed, remove this attempt's earlier spawns before it is retried.
+                if (createdInLocation is not null)
+                {
+                    foreach (Monster previousMonster in createdMonsters)
+                        createdInLocation.characters.Remove(previousMonster);
+                }
+                createdMonsters.Clear();
+                spawnedTypes.Clear();
+                spawnedCount = 0;
+                locationName = "";
                 break;
+            }
+
+            createdInLocation ??= Game1.currentLocation;
+            createdMonsters.Add(createdMonster);
             spawnedCount++;
             spawnedTypes.Add(selectedId);
             locationName = spawnedLocation;
         }
 
-        result = spawnedCount == requestedCount ? "SUCCESS" : spawnedCount > 0 ? "PARTIAL" : "FAILED";
+        result = spawnedCount == requestedCount ? "SUCCESS" : "FAILED";
         return spawnedCount > 0;
     }
 
@@ -121,9 +140,10 @@ internal sealed class MonsterSpawner
     private static int ClampCount(int value, int fallback) =>
         Math.Clamp(value <= 0 ? fallback : value, 1, MaximumMonstersPerRedemption);
 
-    private bool TrySpawnCandidate(string candidateId, out string locationName)
+    private bool TrySpawnCandidate(string candidateId, out string locationName, out Monster? spawnedMonster)
     {
         locationName = "";
+        spawnedMonster = null;
         if (!Context.IsWorldReady || !Context.IsMainPlayer)
         {
             this.monitor.Log("[Spectrum] SPAWN FAILED | host world not ready", LogLevel.Warn);
@@ -156,6 +176,7 @@ internal sealed class MonsterSpawner
                 this.monitor.Log($"[Spectrum] SPAWN FAILED | {MonsterCatalog.GetDisplayName(candidateId)} | {location.Name} | character wasn't added", LogLevel.Warn);
                 return false;
             }
+            spawnedMonster = monster;
             locationName = location.Name;
             return true;
         }
