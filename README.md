@@ -32,9 +32,9 @@ The mod does not implement monster constructors or duplicate Stardew's spawn log
 
     monster GreenSlime 24 18
 
-This invokes the same built-in debug-command handler used by SMAPI's debug console route. The command type is selected from a hard-coded allowlist, and tile coordinates are selected locally near the host player. No command text or monster type supplied by the gateway is executed.
+This invokes the same built-in debug-command handler used by SMAPI's debug console route. The command type is selected from a runtime-discovered catalogue of vanilla monster classes that support the game's standard monster-command constructor. Tile coordinates are selected locally near the host player. Modded assemblies and gateway-supplied class names are never trusted.
 
-The initial allowlist follows the Stardew Valley Wiki's documented monster command types: Bat, DinoMonster, DustSpirit, Fly, Ghost, GreenSlime, Grub, LavaCrab, Mummy, RockCrab, RockGolem, Serpent, ShadowBrute, ShadowShaman, Skeleton and SquidKid. Duggy is excluded because its spawn depends on terrain. Higher-health monsters are intended to be less common, using approximate health values as weighting inputs; these are initial balancing estimates, not verified game data.
+The catalogue discovers every concrete monster class in Stardew Valley's own game assembly that exposes the same public `Vector2` constructor used by the built-in `monster Type X Y` debug command. This includes documented types and compatible vanilla additions (including terrain-dependent types such as Duggy when supported by the installed game version), without admitting modded monster classes. Known monsters use approximate health values for weighted random selection; newly discovered types receive a neutral fallback weight until balanced.
 
 SMAPI installs its bundled Console Commands component as part of the normal SMAPI installation. Players should not need to download a separate command mod. The Spectrum mod invokes the game's parser directly, so it does not need to automate typing into the SMAPI console or depend on an external console-command API.
 
@@ -45,7 +45,7 @@ The farm host is authoritative. Only the host's mod connection processes externa
 ## Repository contents
 
 - Gameplay/MonsterSpawner.cs — host-only command dispatch and safe tile selection.
-- Gameplay/MonsterCatalog.cs — allowlisted monster names and weighted random selection.
+- Gameplay/MonsterCatalog.cs — runtime-discovered vanilla monster names and weighted random selection.
 - ModEntry.cs — SMAPI entry point, local test commands and game-thread command processing.
 - Networking/GameModsClient.cs — authenticated WebSocket connection, typed command validation, reconnect and acknowledgements.
 - ModConfig.cs — local broadcaster ID and revocable host token.
@@ -83,7 +83,7 @@ The first command requests a Green Slime. The second selects from the weighted r
 
 The 0.4.0 integration writes compact redemption and spawn results to the SMAPI console, retaining each command ID for deduplication and tracing. Successful spawns are announced through Stardew's existing in-game chat with the Twitch redeemer, monster type and location. The announcement is only shown after the game reports that a character was added.
 
-The integration accepts six typed behaviours from the dashboard: difficulty-weighted random monster; chat-selected monster name (the Twitch reward must require user input); random quantity of random monsters; fixed quantity of random monsters; random quantity of a dashboard-selected monster; and fixed quantity of a dashboard-selected monster. Quantities are capped at 10 per redemption, and all monster names are checked against the local allowlist.
+The integration accepts six typed behaviours from the dashboard: difficulty-weighted random monster; chat-selected monster name (the Twitch reward must require user input); random quantity of random monsters; fixed quantity of random monsters; random quantity of a dashboard-selected monster; and fixed quantity of a dashboard-selected monster. Quantities are capped at 10 per redemption, and all monster names are checked against the locally discovered vanilla monster catalogue.
 
 ## Security
 
