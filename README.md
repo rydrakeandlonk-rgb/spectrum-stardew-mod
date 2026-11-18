@@ -46,7 +46,9 @@ The farm host is authoritative. Only the host's mod connection processes externa
 
 - Gameplay/MonsterSpawner.cs — host-only command dispatch and safe tile selection.
 - Gameplay/MonsterCatalog.cs — allowlisted monster names and weighted random selection.
-- ModEntry.cs — SMAPI entry point, local test commands and game-thread command processing.\n- Networking/GameModsClient.cs — authenticated WebSocket connection, typed command validation, reconnect and acknowledgements.\n- ModConfig.cs — local broadcaster ID and revocable host token.
+- ModEntry.cs — SMAPI entry point, local test commands and game-thread command processing.
+- Networking/GameModsClient.cs — authenticated WebSocket connection, typed command validation, reconnect and acknowledgements.
+- ModConfig.cs — local broadcaster ID and revocable host token.
 - manifest.json and SpectrumStardewMod.csproj — SMAPI project metadata.
 - docs/ — architecture, development and roadmap.
 
