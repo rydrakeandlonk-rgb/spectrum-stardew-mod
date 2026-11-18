@@ -162,7 +162,7 @@ internal static class MonsterCatalog
         {
             if (!pooledIds.Contains(candidate.Id))
                 issues.Add($"Definition isn't assigned to a location pool: {candidate.Id}");
-            if (ExcludedNames.Contains(candidate.DisplayName) || ExcludedNames.Contains(candidate.ClassName))
+            if (IsExcludedCandidate(candidate))
                 issues.Add($"Excluded monster entered the catalogue: {candidate.DisplayName}");
             if (!HasSupportedDefinition(candidate))
                 issues.Add($"Missing constructor or setup support: {candidate.DisplayName} ({candidate.ClassName})");
@@ -283,8 +283,7 @@ internal static class MonsterCatalog
         HashSet<string> ids = MonsterLocationPools.GetEligibleDefinitionIds(MonsterProgressionSnapshot.Read(Game1.player));
         return Candidates.Where(candidate =>
             ids.Contains(candidate.Id) &&
-            !ExcludedNames.Contains(candidate.DisplayName) &&
-            !ExcludedNames.Contains(candidate.ClassName))
+            !IsExcludedCandidate(candidate))
             .ToArray();
     }
 
@@ -310,6 +309,20 @@ internal static class MonsterCatalog
 
         // Avoid silently mapping ambiguous aliases such as "Sludge" to one slime colour.
         return aliases.Length == 1 ? aliases[0] : null;
+    }
+
+    private static bool IsExcludedCandidate(Candidate candidate)
+    {
+        // Dangerous forms inherit the exclusion of their base monster, except
+        // Dangerous Armored Bug, which is explicitly part of the approved roster.
+        if (candidate.Id == "dangerous-armored-bug")
+            return false;
+
+        string baseName = candidate.DisplayName.StartsWith("Dangerous ", StringComparison.Ordinal)
+            ? candidate.DisplayName.Substring("Dangerous ".Length)
+            : candidate.DisplayName;
+
+        return ExcludedNames.Contains(baseName) || ExcludedNames.Contains(candidate.ClassName);
     }
 
     private static bool HasSupportedDefinition(Candidate candidate)
