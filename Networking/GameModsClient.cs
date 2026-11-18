@@ -213,7 +213,30 @@ internal sealed class GameModsClient : IDisposable
                 return;
             }
 
-            this.commands.Enqueue(new GameCommand(commandId, game, name));
+            if (!root.TryGetProperty("payload", out JsonElement payload) || payload.ValueKind != JsonValueKind.Object)
+            {
+                this.monitor.Log("Ignored a Spectrum game command without a typed payload.", LogLevel.Warn);
+                return;
+            }
+
+            string behaviorKey = ReadString(payload, "behavior_key");
+            if (behaviorKey is not ("difficulty_random" or "chat_monster" or
+                "random_count_random_monsters" or "fixed_count_random_monsters" or
+                "random_count_specific_monster" or "fixed_count_specific_monster"))
+            {
+                this.monitor.Log("Ignored a Spectrum command with an unsupported spawn behaviour.", LogLevel.Warn);
+                return;
+            }
+
+            this.commands.Enqueue(new GameCommand(
+                commandId, game, name, behaviorKey,
+                ReadString(payload, "user_input"),
+                ReadString(payload, "monster_type"),
+                ReadString(payload, "difficulty"),
+                ReadInt(payload, "count", 1),
+                ReadInt(payload, "min_count", 1),
+                ReadInt(payload, "max_count", 3)
+            ));
         }
         catch (JsonException ex)
         {
@@ -227,6 +250,14 @@ internal sealed class GameModsClient : IDisposable
             value.ValueKind == JsonValueKind.String
                 ? value.GetString() ?? ""
                 : "";
+    }
+
+    private static int ReadInt(JsonElement element, string propertyName, int fallback)
+    {
+        return element.TryGetProperty(propertyName, out JsonElement value) &&
+            value.TryGetInt32(out int result)
+                ? result
+                : fallback;
     }
 
     public void Dispose()

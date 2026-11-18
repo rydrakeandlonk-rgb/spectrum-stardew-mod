@@ -10,7 +10,7 @@ Only Spectrum members explicitly enabled by an administrator in Spectrum Control
 2. They launch Stardew Valley and pair the host game with Spectrum Control Center.
 3. Control Center verifies the signed-in Twitch identity and administrator-controlled activation record.
 4. The streamer connects the Channel Point reward used for Random Monster Spawner.
-5. The host game connects to the Spectrum gateway and receives redemption requests.
+5. The host game connects to the Spectrum gateway and receives typed spawn-behaviour requests.
 6. The host selects a monster from the local allowlist and invokes Stardew Valley's built-in monster debug handler.
 
 No Twitch password, Twitch client secret, or long-lived Twitch token is stored in the mod.
@@ -79,6 +79,8 @@ After installing the GitHub Actions ZIP through SMAPI, enter these commands in t
     spectrum_spawn_random_test
 
 The first command requests a Green Slime. The second selects from the weighted random pool. Both are host-only.
+
+The 0.3.0 integration accepts six typed behaviours from the dashboard: difficulty-weighted random monster; chat-selected monster name (the Twitch reward must require user input); random quantity of random monsters; fixed quantity of random monsters; random quantity of a dashboard-selected monster; and fixed quantity of a dashboard-selected monster. Quantities are capped at 10 per redemption, and all monster names are checked against the local allowlist.
 
 ## Security
 

@@ -78,9 +78,8 @@ internal sealed class ModEntry : Mod
             while (this.processedCommandOrder.Count > 500)
                 this.processedCommandIds.Remove(this.processedCommandOrder.Dequeue());
 
-            bool spawned = this.monsterSpawner.TrySpawnRandomMonster();
-            if (!spawned)
-                this.Monitor.Log($"Spectrum command {command.CommandId} was received but could not spawn a monster in the current game state.", LogLevel.Warn);
+            bool spawned = this.monsterSpawner.TryExecute(command, out int spawnedCount, out string result);
+            this.Monitor.Log($"Spectrum command {command.CommandId}: {result}", spawned ? LogLevel.Info : LogLevel.Warn);
 
             // Acknowledge only after the game-thread handler has processed the command.
             _ = this.gameModsClient.AcknowledgeAsync(command.CommandId);

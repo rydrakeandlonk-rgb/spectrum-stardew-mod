@@ -9,7 +9,6 @@ internal static class MonsterCatalog
     private sealed record Candidate(string TypeName, double ExpectedHealth);
 
     // These are balancing estimates, not guaranteed in-game health values.
-    // Higher-health monsters receive a lower selection weight.
     private static readonly Candidate[] Candidates =
     {
         new("Bat", 15),
@@ -30,14 +29,24 @@ internal static class MonsterCatalog
         new("SquidKid", 120)
     };
 
-    public static string GetRandomType()
+    public static IReadOnlyList<string> AllTypes => Candidates.Select(candidate => candidate.TypeName).ToArray();
+
+    public static string GetRandomType(string difficulty = "normal")
     {
-        double totalWeight = Candidates.Sum(candidate => GetWeight(candidate.ExpectedHealth));
+        // Easy favours weaker monsters; hard makes tougher monsters more likely.
+        double exponent = difficulty.Trim().ToLowerInvariant() switch
+        {
+            "easy" => 1.8d,
+            "hard" => 0.9d,
+            _ => 1.35d
+        };
+
+        double totalWeight = Candidates.Sum(candidate => GetWeight(candidate.ExpectedHealth, exponent));
         double roll = Random.Shared.NextDouble() * totalWeight;
 
         foreach (Candidate candidate in Candidates)
         {
-            roll -= GetWeight(candidate.ExpectedHealth);
+            roll -= GetWeight(candidate.ExpectedHealth, exponent);
             if (roll <= 0)
                 return candidate.TypeName;
         }
@@ -45,8 +54,17 @@ internal static class MonsterCatalog
         return Candidates[^1].TypeName;
     }
 
-    private static double GetWeight(double health)
+    public static bool TryGetCanonicalType(string? value, out string monsterType)
     {
-        return 1d / Math.Pow(Math.Max(1d, health), 1.35d);
+        string requested = (value ?? "").Trim();
+        Candidate? match = Candidates.FirstOrDefault(candidate =>
+            string.Equals(candidate.TypeName, requested, StringComparison.OrdinalIgnoreCase));
+        monsterType = match?.TypeName ?? "";
+        return match is not null;
+    }
+
+    private static double GetWeight(double health, double exponent)
+    {
+        return 1d / Math.Pow(Math.Max(1d, health), exponent);
     }
 }
