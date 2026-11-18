@@ -47,7 +47,7 @@ After an administrator enables the member in Control Center, use the Mods page's
 1. Launch the mod once so SMAPI creates its local `config.json`.
 2. Open the generated config file in the mod folder.
 3. Set `BroadcasterUserId` to the numeric ID shown by Control Center.
-4. In the Mods page, use Set reward and enter the Twitch reward ID and exact title for the member.
+4. In the Stardew Valley dashboard, set the one shared **Spawn Random Monster** reward title used on every channel.
 5. Set `HostToken` to the one-time token shown by Control Center.
 6. Leave `GatewayUrl` at its default Spectrum Game Mods URL.
 7. Restart Stardew/SMAPI.
