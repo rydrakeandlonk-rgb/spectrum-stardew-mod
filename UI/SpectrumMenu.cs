@@ -207,7 +207,7 @@ internal sealed class SpectrumMenu : IClickableMenu
             this.getSafetyGate() ? Color.LightGreen : Color.OrangeRed);
 
         DrawButton(b, this.spawnBounds,
-            "Streamer preference: " + (settings.SpawnEnabled ? "Enabled" : "Disabled"),
+            settings.SpawnEnabled ? "Stop Spawns" : "Start Spawns",
             this.CanSyncSettings, settings.SpawnEnabled);
         DrawButton(b, this.difficultyBounds,
             "Difficulty: " + settings.Difficulty,
