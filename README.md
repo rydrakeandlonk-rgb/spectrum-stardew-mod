@@ -21,7 +21,7 @@ The existing Spectrum Cloudflare project owns identity, permissions, dashboard m
 
 Twitch Channel Points → Spectrum Event Hub → Stardew gateway → host SMAPI mod → Stardew Valley
 
-- Control Center: administrator-only Stardew Valley page, per-member activation, connection status and six independent spawn behaviour configurations. Each behaviour matches an exact Twitch Channel Point reward title (case-insensitive).
+- Control Center: administrator-only Stardew Valley page, per-member Mod access, live game connection, shared reward title, pending queue count and per-host Start/Stop Spawns control. Each behaviour matches an exact Twitch Channel Point reward title (case-insensitive).
 - Event Hub: receives and verifies Twitch Channel Point redemption notifications and routes approved redemptions.
 - Stardew gateway: owns short-lived game pairing, authenticated host connections, deduplication and request delivery.
 - SMAPI mod: runs in the host game, chooses a random monster from its allowlist, and invokes the game's own debug-command parser on the game thread.
