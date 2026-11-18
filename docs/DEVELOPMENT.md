@@ -34,11 +34,11 @@ The current reference-assembly snapshot is based on Stardew Valley 1.6.15 and SM
 5. Run `spectrum_spawn_monster_test <monster name or ID>` to test a specific progression-eligible catalogue entry; repeat for each variant and special setup.
 6. Run `spectrum_monster_pool_status` to inspect the save's progression stage, Mines 120 and Skull Cavern 100 milestones, Combat Level, current-area Shrine of Challenge difficulty, vanilla threat-data coverage, unlocked location groups, selectable variants, and unresolved constructor/setup definitions.
 7. Run `spectrum_connection_status` to inspect the gateway connection.
-8. Check the compact SMAPI log entries for the redeemer, reward, redemption time, command ID and confirmed spawn result. Failed attempts stay queued for retry; only successful spawns are acknowledged. The latest 500 successful redemption IDs are also saved with the active farm to prevent normal reconnect/restart replay.
+8. Check the compact SMAPI log entries for the redeemer, reward, redemption time, command ID and confirmed spawn result. Failed attempts stay queued for retry; only successful spawns are acknowledged. The latest 500 successful redemption IDs are also saved in the mod's local global data to prevent normal reconnect/restart replay.
 9. Confirm a successful redemption appears in Stardew's existing chat with the Twitch username, monster name and location. Failed spawns must not produce a success chat message.
 10. Repeat in a multiplayer farm with a farmhand connected; confirm exactly one monster appears for both players.
 
-The network client validates typed messages and queues them for the SMAPI update thread. It does not execute server-supplied command text or monster class names. The local catalogue filters explicit vanilla variant definitions through the active save's progression snapshot. See docs/MONSTER_POOLS.md for unlock rules, constructor mappings and dangerous-variant setup. Every entry still needs in-game validation.
+The network client validates typed messages and queues them for the SMAPI update thread. It does not execute server-supplied command text or monster class names. The local catalogue filters explicit vanilla variant definitions through the mod installation's progression snapshot. See docs/MONSTER_POOLS.md for unlock rules, constructor mappings and dangerous-variant setup. Every entry still needs in-game validation.
 
 Back up saves before early gameplay testing.
 
