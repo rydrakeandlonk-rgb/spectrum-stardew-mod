@@ -1,55 +1,56 @@
+using Microsoft.Xna.Framework;
+using StardewValley.Monsters;
+using System.Text.RegularExpressions;
+
 namespace SpectrumStardewMod.Gameplay;
 
 /// <summary>
-/// The allowlisted vanilla monster types accepted by Stardew Valley's built-in
-/// debug monster command, with approximate health values used for weighting.
+/// Discovers every vanilla monster type which the game's built-in
+/// "monster Type x y" debug command can construct using its standard
+/// Vector2-only constructor. Modded monster assemblies are never included.
 /// </summary>
 internal static class MonsterCatalog
 {
     private sealed record Candidate(string TypeName, double ExpectedHealth);
 
-    // These are balancing estimates, not guaranteed in-game health values.
-    private static readonly Candidate[] Candidates =
-    {
-        new("Bat", 15),
-        new("DinoMonster", 500),
-        new("DustSpirit", 40),
-        new("Fly", 30),
-        new("Ghost", 50),
-        new("GreenSlime", 24),
-        new("Grub", 30),
-        new("LavaCrab", 120),
-        new("Mummy", 140),
-        new("RockCrab", 60),
-        new("RockGolem", 80),
-        new("Serpent", 150),
-        new("ShadowBrute", 160),
-        new("ShadowShaman", 140),
-        new("Skeleton", 70),
-        new("SquidKid", 120)
-    };
+    // Approximate balancing values for familiar monsters. Newly discovered
+    // vanilla types use a neutral fallback until balancing data is added.
+    private static readonly IReadOnlyDictionary<string, double> ExpectedHealthByType =
+        new Dictionary<string, double>(StringComparer.Ordinal)
+        {
+            ["Bat"] = 15,
+            ["DinoMonster"] = 500,
+            ["DustSpirit"] = 40,
+            ["Fly"] = 30,
+            ["Ghost"] = 50,
+            ["GreenSlime"] = 24,
+            ["Grub"] = 30,
+            ["LavaCrab"] = 120,
+            ["Mummy"] = 140,
+            ["RockCrab"] = 60,
+            ["RockGolem"] = 80,
+            ["Serpent"] = 150,
+            ["ShadowBrute"] = 160,
+            ["ShadowShaman"] = 140,
+            ["Skeleton"] = 70,
+            ["SquidKid"] = 120
+        };
 
-    public static IReadOnlyList<string> AllTypes => Candidates.Select(candidate => candidate.TypeName).ToArray();
+    private static readonly Candidate[] Candidates = DiscoverVanillaMonsters();
+
+    public static IReadOnlyList<string> AllTypes =>
+        Candidates.Select(candidate => candidate.TypeName).ToArray();
 
     public static string GetDisplayName(string typeName)
     {
-        return typeName switch
-        {
-            "DinoMonster" => "Dino Monster",
-            "DustSpirit" => "Dust Spirit",
-            "GreenSlime" => "Green Slime",
-            "LavaCrab" => "Lava Crab",
-            "RockCrab" => "Rock Crab",
-            "RockGolem" => "Rock Golem",
-            "ShadowBrute" => "Shadow Brute",
-            "ShadowShaman" => "Shadow Shaman",
-            "SquidKid" => "Squid Kid",
-            _ => typeName
-        };
+        return Regex.Replace(typeName, "([a-z0-9])([A-Z])", "$1 $2");
     }
 
     public static string GetRandomType(string difficulty = "normal")
     {
+        if (Candidates.Length == 0)
+            throw new InvalidOperationException("No spawnable vanilla monster types were discovered.");
+
         // Easy favours weaker monsters; hard makes tougher monsters more likely.
         double exponent = difficulty.Trim().ToLowerInvariant() switch
         {
@@ -73,15 +74,39 @@ internal static class MonsterCatalog
 
     public static bool TryGetCanonicalType(string? value, out string monsterType)
     {
-        string requested = new string((value ?? "").Where(char.IsLetterOrDigit).ToArray());
+        string requested = Normalize(value);
         Candidate? match = Candidates.FirstOrDefault(candidate =>
-            string.Equals(
-                new string(candidate.TypeName.Where(char.IsLetterOrDigit).ToArray()),
-                requested,
-                StringComparison.OrdinalIgnoreCase
-            ));
+            string.Equals(Normalize(candidate.TypeName), requested, StringComparison.OrdinalIgnoreCase));
+
         monsterType = match?.TypeName ?? "";
         return match is not null;
+    }
+
+    private static Candidate[] DiscoverVanillaMonsters()
+    {
+        // Stardew's own debug handler resolves "StardewValley.Monsters.<type>"
+        // and calls Activator.CreateInstance(type, position). Match that exact
+        // constructor contract, and restrict discovery to the vanilla game DLL.
+        return typeof(Monster).Assembly
+            .GetTypes()
+            .Where(type =>
+                type.IsClass &&
+                !type.IsAbstract &&
+                !type.ContainsGenericParameters &&
+                type.Assembly == typeof(Monster).Assembly &&
+                type.Namespace == typeof(Monster).Namespace &&
+                typeof(Monster).IsAssignableFrom(type) &&
+                type.GetConstructor(new[] { typeof(Vector2) }) is not null)
+            .Select(type => new Candidate(
+                type.Name,
+                ExpectedHealthByType.TryGetValue(type.Name, out double health) ? health : 100d))
+            .OrderBy(candidate => candidate.TypeName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static string Normalize(string? value)
+    {
+        return new string((value ?? "").Where(char.IsLetterOrDigit).ToArray());
     }
 
     private static double GetWeight(double health, double exponent)
