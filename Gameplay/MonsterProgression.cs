@@ -74,6 +74,7 @@ internal sealed record MonsterProgressionSnapshot(
     public static bool TrySetTestPreset(string preset, Farmer farmer, out string error)
     {
         MonsterProgressionSnapshot actual = ReadActual(farmer);
+        MonsterProgressionSnapshot current = testOverride ?? actual;
         MonsterProgressionSnapshot early = actual with
         {
             MinesCompleted = false,
@@ -102,12 +103,12 @@ internal sealed record MonsterProgressionSnapshot(
             "danger-skull" => early with { DangerousSkullCavernUnlocked = true },
             "bug-lair" => early with { BugLairUnlocked = true },
             "volcano" => early with { VolcanoDungeonUnlocked = true },
-            "combat-0" => actual with { CombatLevel = 0 },
-            "combat-5" => actual with { CombatLevel = 5 },
-            "combat-10" => actual with { CombatLevel = 10 },
-            "shrine-0" => actual with { CurrentAreaDifficulty = 0 },
-            "shrine-1" => actual with { CurrentAreaDifficulty = 1 },
-            "shrine-2" => actual with { CurrentAreaDifficulty = 2 },
+            "combat-0" => current with { CombatLevel = 0 },
+            "combat-5" => current with { CombatLevel = 5 },
+            "combat-10" => current with { CombatLevel = 10 },
+            "shrine-0" => current with { CurrentAreaDifficulty = 0 },
+            "shrine-1" => current with { CurrentAreaDifficulty = 1 },
+            "shrine-2" => current with { CurrentAreaDifficulty = 2 },
             "all" => actual with
             {
                 MinesCompleted = true,
