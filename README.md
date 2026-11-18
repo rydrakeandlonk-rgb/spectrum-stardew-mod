@@ -78,7 +78,7 @@ After installing the GitHub Actions ZIP through SMAPI, enter these commands in t
 
 The first command requests a Green Slime. The second selects from the progression-eligible weighted random pool. The pool-status command reports unlocked progression groups, selectable variant definitions, and any definitions still missing constructor/setup support. All are host-only.
 
-The 0.4.0 integration writes compact redemption and spawn results to the SMAPI console, retaining each command ID for deduplication and tracing. Successful spawns are announced through Stardew's existing in-game chat with the Twitch redeemer, monster type and location. The announcement is only shown after the game reports that a character was added.
+The integration writes compact redemption and spawn results to the SMAPI console, retaining each command ID for deduplication and tracing. Successful spawns are announced through Stardew's existing in-game chat with the Twitch redeemer, monster type and location. The announcement is only shown after the game reports that a character was added.
 
 The integration currently accepts one typed behaviour: **Spawn Random Monster**. The mod chooses one progression-eligible vanilla variant locally from the explicit catalogue and constructs it using its supported vanilla setup. Spawn requests remain queued until Start Spawns is enabled in Control Center; each new connection defaults to stopped. Failed attempts remain pending and are retried rather than acknowledged.
 
