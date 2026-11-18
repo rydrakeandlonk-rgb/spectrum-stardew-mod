@@ -51,6 +51,7 @@ After an administrator enables the member in Control Center, use the Mods page's
 5. Set `HostToken` to the one-time token shown by Control Center.
 6. Leave `GatewayUrl` at its default Spectrum Game Mods URL.
 7. Restart Stardew/SMAPI.
+8. Once `spectrum_connection_status` confirms the host is connected, click **Start Spawns** in Control Center. Every fresh connection defaults to stopped.
 
 Use `spectrum_connection_status` in the SMAPI console to check the connection. Never commit the local config or share the host token. Re-pairing rotates the token and disconnects the previous host session.
 
