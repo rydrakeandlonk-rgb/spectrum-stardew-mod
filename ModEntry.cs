@@ -132,10 +132,35 @@ internal sealed class ModEntry : Mod
     {
         if (this.gameModsClient is null ||
             this.monsterSpawner is null ||
-            !this.gameModsClient.SpawnsEnabled ||
-            DateTime.UtcNow < this.retryCommandsAtUtc ||
             !Context.IsWorldReady ||
             !Context.IsMainPlayer)
+        {
+            return;
+        }
+
+        // One-shot world actions are independent of the spawn safety gate.
+        while (this.gameModsClient.TryDequeueAction(out GameAction? action) && action is not null)
+        {
+            if (action.Name != "stardew.clear_loaded_monsters")
+            {
+                _ = this.gameModsClient.AcknowledgeActionAsync(action.ActionId, false, 0, "Unsupported game action.");
+                continue;
+            }
+
+            int removed = this.monsterSpawner.ClearLoadedMonsters();
+            bool succeeded = removed >= 0;
+            if (this.gameModsClient.Settings.DebugMessages)
+                this.Monitor.Log($"[Spectrum] REMOTE ACTION | clear loaded monsters | {(succeeded ? $"removed {removed}" : "failed")}", succeeded ? LogLevel.Info : LogLevel.Warn);
+            _ = this.gameModsClient.AcknowledgeActionAsync(
+                action.ActionId,
+                succeeded,
+                Math.Max(0, removed),
+                succeeded ? null : "The host world was not ready."
+            );
+        }
+
+        if (!this.gameModsClient.SpawnsEnabled ||
+            DateTime.UtcNow < this.retryCommandsAtUtc)
         {
             return;
         }
@@ -192,7 +217,8 @@ internal sealed class ModEntry : Mod
             {
                 string redeemer = DisplayValue(command.TwitchUserName);
                 string spawnDescription = spawnedCount == 1 ? $"a {monsterSummary}" : monsterSummary;
-                Game1.chatBox?.addInfoMessage($"{redeemer} spawned {spawnDescription} in the {locationName}!");
+                if (this.gameModsClient.Settings.ChatResponses)
+                    Game1.chatBox?.addInfoMessage($"{redeemer} spawned {spawnDescription} in the {locationName}!");
 
                 // Persist before acknowledgement so a reconnect or game restart
                 // cannot normally replay a redemption that already spawned.
