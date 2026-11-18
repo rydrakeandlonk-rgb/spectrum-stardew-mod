@@ -21,6 +21,8 @@ internal sealed class ModEntry : Mod
     {
         this.monsterSpawner = new MonsterSpawner(this.Monitor);
 
+        this.LoadProcessedCommands(helper);
+
         ModConfig config = helper.ReadConfig<ModConfig>();
         if (!string.IsNullOrWhiteSpace(config.BroadcasterUserId) &&
             !string.IsNullOrWhiteSpace(config.HostToken))
@@ -32,8 +34,6 @@ internal sealed class ModEntry : Mod
             this.Monitor.Log("Spectrum Game Mods connection is not paired yet. Local test commands remain available.", LogLevel.Info);
         }
 
-        helper.Events.GameLoop.SaveLoaded += this.OnSaveLoaded;
-        helper.Events.GameLoop.ReturnedToTitle += this.OnReturnedToTitle;
         helper.Events.GameLoop.UpdateTicked += this.OnUpdateTicked;
 
         helper.ConsoleCommands.Add(
@@ -69,12 +69,9 @@ internal sealed class ModEntry : Mod
         this.Monitor.Log("Spectrum Stardew Mod loaded. Use 'spectrum_connection_status' to check the gateway connection.", LogLevel.Info);
     }
 
-    private void OnSaveLoaded(object? sender, SaveLoadedEventArgs e)
+    private void LoadProcessedCommands(IModHelper helper)
     {
-        this.processedCommandIds.Clear();
-        this.processedCommandOrder.Clear();
-
-        List<string> savedIds = this.Helper.Data.ReadSaveData<List<string>>(ProcessedCommandSaveKey) ?? new List<string>();
+        List<string> savedIds = helper.Data.ReadGlobalData<List<string>>(ProcessedCommandSaveKey) ?? new List<string>();
         foreach (string id in savedIds.Where(id => !string.IsNullOrWhiteSpace(id)).TakeLast(500))
         {
             if (this.processedCommandIds.Add(id))
@@ -83,13 +80,6 @@ internal sealed class ModEntry : Mod
 
         this.processedCommandsLoaded = true;
         this.Monitor.Log($"Loaded {this.processedCommandIds.Count} saved Spectrum redemption IDs for duplicate protection.", LogLevel.Trace);
-    }
-
-    private void OnReturnedToTitle(object? sender, ReturnedToTitleEventArgs e)
-    {
-        this.processedCommandIds.Clear();
-        this.processedCommandOrder.Clear();
-        this.processedCommandsLoaded = false;
     }
 
     private void RememberProcessedCommand(string commandId)
@@ -103,7 +93,7 @@ internal sealed class ModEntry : Mod
         while (this.processedCommandOrder.Count > 500)
             this.processedCommandIds.Remove(this.processedCommandOrder.Dequeue());
 
-        this.Helper.Data.WriteSaveData(ProcessedCommandSaveKey, this.processedCommandOrder.ToList());
+        this.Helper.Data.WriteGlobalData(ProcessedCommandSaveKey, this.processedCommandOrder.ToList());
     }
 
     private void OnUpdateTicked(object? sender, UpdateTickedEventArgs e)
