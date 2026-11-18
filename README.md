@@ -51,7 +51,7 @@ The farm host is authoritative. Only the host's mod connection processes externa
 
 ## Current implementation status
 
-The gameplay path now uses explicit vanilla monster variant definitions and their supported constructors instead of depending on the debug-command parser's narrower argument support. GitHub Actions now successfully compiles the SMAPI project and creates a ZIP artifact using the pinned community reference assemblies. This is a compile/package check only; the mod has not yet been tested in-game or in multiplayer.
+The gameplay path uses explicit vanilla monster variant definitions and their supported constructors. Version 0.7.3 has been installed and tested in Stardew Valley 1.6.15 with SMAPI 4.5.2: startup, gateway connection, catalogue validation, basic/random spawning, and the Twitch Channel Point flow (including appropriate monster selection, debug output, and in-game chat) passed. Version 0.7.4 adds memory-only progression simulation, progression-bypass local constructor testing, a full constructor/setup sweep, and corrected vanilla threat-data aliases. Its CI build and package checks passed; the new test commands and the remaining multiplayer/reliability edge cases still require in-game validation.
 
 The Control Center repository contains the admin-only Mods page, per-member activation API, pairing/revocation controls, one shared reward-title setting, and per-host spawn pause/resume controls. The Game Mods gateway keeps pending redemptions in its Durable Object until successful acknowledgement. Production deployment and live end-to-end validation remain separate from the successful source build.
 
