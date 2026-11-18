@@ -68,7 +68,7 @@ The catalogue now contains individual spawn definitions instead of one entry per
 
 - Bat subtypes use the vanilla integer constructor codes for Frost Bat, Lava Bat, Iridium Bat, Haunted Skull, Magma Sprite and Magma Sparker.
 - Blue, red and purple slimes use the vanilla GreenSlime mine-level constructor paths; the friendly display labels identify the Wiki colour names (Frost Jelly and Sludge are the corresponding internal names).
-- Copper and Iron Slimes use the one-argument GreenSlime constructor, then set their colour and load the matching vanilla monster data entry for stats and drops.
+- Copper and Iron Slimes use the one-argument GreenSlime constructor, retain its initialized vanilla stats, and then apply their custom name and colour. They do not load a custom `Data/Monsters` key because those names do not exist in vanilla data.
 - Carbon Ghost, Putrid Ghost, Royal Serpent, Lava Crab, Iridium Crab, Truffle Crab, False Magma Cap and Shadow Sniper use their named string constructor arguments.
 - Mutant Fly and Mutant Grub use the hard-mode boolean constructor option.
 - Skeleton Mage uses the Skeleton mage option; Spider maps to Stardew's Leaper class.
@@ -84,3 +84,22 @@ The dangerous stat step is deliberately fixed at one because these monsters can 
 A successful build proves the code compiles against the pinned Stardew Valley 1.6.15 reference assemblies. It does not prove every constructor behaves correctly in a live save. In-game validation must explicitly cover every named variant and post-construction setup; dangerous stats and optional textures; Copper/Iron Slime data and colour; Iridium Golem stats and sprite; all exclusions; random weighting and duplicate pool membership; and spawning from several map types.
 
 Use `spectrum_monster_pool_status` to inspect progression stages, current-area difficulty, selectable definitions, vanilla threat-data coverage and any missing constructor/setup support. Any unresolved data keys are listed and use the catalogue fallback score.
+
+
+## Developer progression test profiles
+
+The SMAPI console command `spectrum_progression_test` applies a temporary in-memory progression snapshot. It never writes to the save and is cleared when the mod/game process restarts or when `reset` is used.
+
+Available profiles:
+- `early`: no permanent milestones or optional pools unlocked.
+- `mines`: Mines floor 120 milestone only.
+- `skull100`: Mines and Skull Cavern floor 100 milestones, with Skull Cavern unlocked.
+- `danger-mines`, `quarry`, `skull-cavern`, `danger-skull`, `bug-lair`, `volcano`: individually unlock the named pool while leaving the other optional pools locked.
+- `all`: all milestones and optional pools unlocked.
+- `reset`: discard the temporary profile and read the actual save again.
+
+After applying a profile, `spectrum_monster_pool_status` reports the simulated state. Use `spectrum_spawn_random_test [easy|normal|hard]` to exercise each weighting mode under the selected progression stage.
+
+`spectrum_spawn_monster_force_test <name or ID>` bypasses progression eligibility for one local constructor/appearance test only. It does not bypass the catalogue exclusions or supported-constructor checks. It is a local console command; gateway redemptions always use real save progression.
+
+`spectrum_monster_catalog_test` executes every supported catalogue constructor and post-construction setup without adding the resulting monsters to the game world. This checks construction, not visual appearance or multiplayer replication; those still require targeted in-world tests.
