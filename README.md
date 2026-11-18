@@ -57,20 +57,22 @@ Version 0.7.5 is the last runtime-validated version. Its monster catalogue, prog
 
 Version 0.8.0 is the current development target. It adds a clickable HUD entry point and dedicated Spectrum menu; streamer preference, difficulty, chat-response and debug settings; host-only in-game controls; host-wide clearing of loaded hostile monsters; versioned settings synchronisation; administrator override modes; and Control Center remote actions. The gateway stores these settings in the existing per-host Durable Object rather than adding D1/KV writes. This development version still needs a successful CI build and in-game validation before installation. The in-game Connect button currently opens Control Center; the existing one-time host pairing/config setup is still required.
 
-## Pair the host
+## Connect the host in-game
 
-An administrator enables the member in Control Center, then uses **Pair / re-pair** on the Mods page. The dashboard displays the broadcaster's numeric Twitch user ID and a one-time host token.
+An administrator first enables the Spectrum member's Stardew access in Control Center. The streamer can then connect without manually copying a host token:
 
-1. Launch the mod once so SMAPI creates its local config file.
-2. Open the generated `config.json` in the mod folder.
-3. Set `BroadcasterUserId` to the numeric ID shown by Control Center.
-4. In the Stardew Valley page, set the shared **Spawn Random Monster** Channel Point reward title. Use the same title on each Spectrum channel's Twitch reward. No Twitch reward ID needs to be copied.
-5. Set `HostToken` to the one-time token shown by Control Center.
-6. Leave `GatewayUrl` at its default value and restart Stardew Valley.
-7. Once the host appears as Connected, use **Start Spawns** in the dashboard when you want queued redemptions to begin processing. New game connections always start paused.
+1. Load a Stardew save as the multiplayer host.
+2. Click the **Spectrum** HUD button and choose **Connect Twitch account**.
+3. The mod creates a short-lived pairing code and opens the Control Center approval page.
+4. Sign in using the Twitch account that owns the active Spectrum channel.
+5. Confirm the pairing request. Control Center only authorises the signed-in member's own account, and only if an administrator has enabled Stardew access.
+6. Return to Stardew. The mod receives its revocable host credential securely and writes it to its local SMAPI config automatically.
+7. The host connects to the gateway. Spawning remains stopped until the Control Center global safety gate is explicitly opened.
 
-The host token is stored locally as a revocable game-session credential. Never commit or share the local config. Re-pairing rotates the token and closes the previous host connection. Use `spectrum_connection_status` in the SMAPI console to check the connection.
+Pairing codes expire after ten minutes. The private device code is separate from the visible approval code and is never shown in the dashboard. The host credential is not displayed to the streamer or sent to browser JavaScript. Revoke access in Control Center before moving the connection to another Twitch account.
 
+The older administrator **Pair / re-pair** action and manual config setup remain available as a fallback. Never commit or share the local config or host token.
+ 
 ## In-game test commands
 
 After installing the GitHub Actions ZIP through SMAPI, enter these commands in the SMAPI in-game console:
