@@ -70,6 +70,7 @@ internal sealed class ModEntry : Mod
 
             if (!this.processedCommandIds.Add(command.CommandId))
             {
+                this.Monitor.Log($"[Spectrum] DUPLICATE | {command.CommandId}", LogLevel.Trace);
                 _ = this.gameModsClient.AcknowledgeAsync(command.CommandId);
                 continue;
             }
@@ -78,12 +79,54 @@ internal sealed class ModEntry : Mod
             while (this.processedCommandOrder.Count > 500)
                 this.processedCommandIds.Remove(this.processedCommandOrder.Dequeue());
 
-            bool spawned = this.monsterSpawner.TryExecute(command, out int spawnedCount, out string result);
-            this.Monitor.Log($"Spectrum command {command.CommandId}: {result}", spawned ? LogLevel.Info : LogLevel.Warn);
+            this.Monitor.Log(
+                $"[Spectrum] REDEEM | {DisplayValue(command.TwitchUserName)} | {DisplayValue(command.RewardTitle)} | {FormatRedeemedAt(command.RedeemedAt)} | {command.CommandId}",
+                LogLevel.Info
+            );
+
+            bool spawned = this.monsterSpawner.TryExecute(
+                command,
+                out int spawnedCount,
+                out int requestedCount,
+                out List<string> spawnedTypes,
+                out string locationName,
+                out string result
+            );
+
+            string monsterSummary = string.Join(", ", spawnedTypes
+                .GroupBy(type => type)
+                .Select(group =>
+                {
+                    string name = MonsterCatalog.GetDisplayName(group.Key);
+                    return group.Count() > 1 ? $"{name} x{group.Count()}" : name;
+                }));
+
+            this.Monitor.Log(
+                $"[Spectrum] SPAWN | {(string.IsNullOrWhiteSpace(monsterSummary) ? "none" : monsterSummary)} | {(string.IsNullOrWhiteSpace(locationName) ? "n/a" : locationName)} | {spawnedCount}/{requestedCount} | {result}",
+                spawned && result == "SUCCESS" ? LogLevel.Info : LogLevel.Warn
+            );
+
+            if (spawned)
+            {
+                string redeemer = DisplayValue(command.TwitchUserName);
+                Game1.chatBox?.addInfoMessage($"{redeemer} spawned {monsterSummary} in {locationName}!");
+            }
 
             // Acknowledge only after the game-thread handler has processed the command.
             _ = this.gameModsClient.AcknowledgeAsync(command.CommandId);
         }
+    }
+
+    private static string DisplayValue(string value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "Unknown" : value.Trim();
+    }
+
+    private static string FormatRedeemedAt(string value)
+    {
+        return DateTimeOffset.TryParse(value, out DateTimeOffset redeemedAt)
+            ? redeemedAt.ToLocalTime().ToString("HH:mm:ss")
+            : DateTimeOffset.Now.ToString("HH:mm:ss");
     }
 
     private void OnSpawnTestCommand(string command, string[] args)
