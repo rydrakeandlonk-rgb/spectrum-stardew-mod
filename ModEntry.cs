@@ -62,7 +62,7 @@ internal sealed class ModEntry : Mod
 
         helper.ConsoleCommands.Add(
             "spectrum_progression_test",
-            "Apply a temporary in-memory progression profile or reset to the real save. Usage: spectrum_progression_test <early|mines|skull100|danger-mines|quarry|skull-cavern|danger-skull|bug-lair|volcano|all|reset>",
+            "Apply a temporary in-memory progression profile or reset to the real save. Usage: spectrum_progression_test <early|mines|skull100|danger-mines|quarry|skull-cavern|danger-skull|bug-lair|volcano|combat-0|combat-5|combat-10|shrine-0|shrine-1|shrine-2|all|reset>",
             this.OnProgressionTestCommand
         );
 
@@ -279,7 +279,7 @@ internal sealed class ModEntry : Mod
 
         if (args.Length != 1)
         {
-            this.Monitor.Log("Usage: spectrum_progression_test <early|mines|skull100|danger-mines|quarry|skull-cavern|danger-skull|bug-lair|volcano|all|reset>", LogLevel.Warn);
+            this.Monitor.Log("Usage: spectrum_progression_test <early|mines|skull100|danger-mines|quarry|skull-cavern|danger-skull|bug-lair|volcano|combat-0|combat-5|combat-10|shrine-0|shrine-1|shrine-2|all|reset>", LogLevel.Warn);
             this.Monitor.Log("Profiles are temporary and memory-only. 'reset' restores the real save's progression checks.", LogLevel.Info);
             return;
         }
