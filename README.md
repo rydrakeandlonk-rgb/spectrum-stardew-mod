@@ -11,7 +11,7 @@ Only Spectrum members explicitly enabled by an administrator in Spectrum Control
 3. Control Center verifies the signed-in Twitch identity and administrator-controlled activation record.
 4. An administrator sets the shared **Spawn Random Monster** Channel Point reward title in Control Center.
 5. The host game connects to the Spectrum gateway and receives typed random-monster spawn requests.
-6. The host selects a monster from the local allowlist and invokes Stardew Valley's built-in monster debug handler.
+6. The host selects an explicit monster variant from the local allowlist and constructs it using its vanilla game constructor.
 
 No Twitch password, Twitch client secret, or long-lived Twitch token is stored in the mod.
 
@@ -24,20 +24,15 @@ Twitch Channel Points → Spectrum Event Hub → Stardew gateway → host SMAPI 
 - Control Center: administrator-only Stardew Valley page, per-member Mod access, live game connection, shared reward title, pending queue count and per-host Start/Stop Spawns control.
 - Event Hub: receives and verifies Twitch Channel Point redemption notifications and routes approved redemptions.
 - Stardew gateway: owns short-lived game pairing, authenticated host connections, deduplication and request delivery.
-- SMAPI mod: runs in the host game, chooses a random monster from its allowlist, and invokes the game's own debug-command parser on the game thread.
+- SMAPI mod: runs in the host game, chooses and constructs a random vanilla monster variant from its explicit allowlist on the game thread.
 
 ## Monster spawning
 
-The mod does not implement monster constructors or duplicate Stardew's spawn logic. It calls the game's Game1.parseDebugInput method with a locally generated command in the form:
+The mod uses an explicit, variant-aware allowlist. Each entry identifies the vanilla monster class, constructor arguments, any required vanilla post-construction setup, progression pools, and a balancing weight. This lets the catalogue distinguish normal and dangerous Rock Crabs, named Ghost and Serpent variants, Bat subtypes, Skeleton Mage, Stick Bug, Tiger Slime, and Volcano forms.
 
-    monster GreenSlime 24 18
+The spawner creates the selected vanilla monster on a valid nearby tile and adds it to the current location, following Stardew's own monster construction patterns. Dangerous entries receive an additional-difficulty stat step and use the matching `_dangerous` texture when the game provides one. The gateway never supplies a class name or constructor argument.
 
-This invokes the same built-in debug-command handler used by SMAPI's debug console route. The command type is selected from a runtime-discovered catalogue of vanilla monster classes that support the game's standard monster-command constructor. Tile coordinates are selected locally near the host player. Modded assemblies and gateway-supplied class names are never trusted.
-
-The catalogue discovers every concrete monster class in Stardew Valley's own game assembly that exposes the same public `Vector2` constructor used by the built-in `monster Type X Y` debug command. This includes documented types and compatible vanilla additions (including terrain-dependent types such as Duggy when supported by the installed game version), without admitting modded monster classes. Known monsters use approximate health values for weighted random selection; newly discovered types receive a neutral fallback weight until balanced.
-
-SMAPI installs its bundled Console Commands component as part of the normal SMAPI installation. Players should not need to download a separate command mod. The Spectrum mod invokes the game's parser directly, so it does not need to automate typing into the SMAPI console or depend on an external console-command API.
-
+The eight location groups are progression gates, not physical spawn restrictions. All unlocked groups contribute to one global pool; duplicate definition IDs are counted once. Farm entries are always unlocked and have no Combat Level gate. See [docs/MONSTER_POOLS.md](docs/MONSTER_POOLS.md) for the full pool list, unlock checks, exclusions and variant mapping.
 ## Multiplayer
 
 The farm host is authoritative. Only the host's mod connection processes external redemption requests and creates monsters. Farmhands do not need separate Twitch connections. Monster replication must be verified in a real host/farmhand test.
@@ -45,7 +40,7 @@ The farm host is authoritative. Only the host's mod connection processes externa
 ## Repository contents
 
 - Gameplay/MonsterSpawner.cs — host-only command dispatch and safe tile selection.
-- Gameplay/MonsterCatalog.cs — runtime-discovered vanilla monster classes and progression-filtered weighted random selection.
+- Gameplay/MonsterCatalog.cs — explicit vanilla monster variants, progression-filtered weighting and safe constructor dispatch.
 - Gameplay/MonsterProgression.cs and Gameplay/MonsterLocationPools.cs — vanilla save checks and location-group unlock rules.
 - docs/MONSTER_POOLS.md — complete progression rules, exclusions, and variant implementation requirements.
 - ModEntry.cs — SMAPI entry point, local test commands and game-thread command processing.
@@ -56,7 +51,7 @@ The farm host is authoritative. Only the host's mod connection processes externa
 
 ## Current implementation status
 
-The gameplay path delegates monster creation to Stardew's built-in debug-command parser instead of using reflection to construct monster classes. GitHub Actions now successfully compiles the SMAPI project and creates a ZIP artifact using the pinned community reference assemblies. This is a compile/package check only; the mod has not yet been tested in-game or in multiplayer.
+The gameplay path now uses explicit vanilla monster variant definitions and their supported constructors instead of depending on the debug-command parser's narrower argument support. GitHub Actions now successfully compiles the SMAPI project and creates a ZIP artifact using the pinned community reference assemblies. This is a compile/package check only; the mod has not yet been tested in-game or in multiplayer.
 
 The Control Center repository contains the admin-only Mods page, per-member activation API, pairing/revocation controls, one shared reward-title setting, and per-host spawn pause/resume controls. The Game Mods gateway keeps pending redemptions in its Durable Object until successful acknowledgement. Production deployment and live end-to-end validation remain separate from the successful source build.
 
@@ -81,11 +76,11 @@ After installing the GitHub Actions ZIP through SMAPI, enter these commands in t
     spectrum_spawn_test
     spectrum_spawn_random_test
 
-The first command requests a Green Slime. The second selects from the progression-eligible weighted random pool. The pool-status command reports unlocked progression groups, discovered selectable classes, and class families that still need explicit constructor/variant support. All are host-only.
+The first command requests a Green Slime. The second selects from the progression-eligible weighted random pool. The pool-status command reports unlocked progression groups, selectable variant definitions, and any definitions still missing constructor/setup support. All are host-only.
 
 The 0.4.0 integration writes compact redemption and spawn results to the SMAPI console, retaining each command ID for deduplication and tracing. Successful spawns are announced through Stardew's existing in-game chat with the Twitch redeemer, monster type and location. The announcement is only shown after the game reports that a character was added.
 
-The integration currently accepts one typed behaviour: **Spawn Random Monster**. The mod chooses one compatible vanilla monster locally from the runtime-discovered catalogue and invokes Stardew's built-in monster command. Spawn requests remain queued until Start Spawns is enabled in Control Center; each new connection defaults to stopped. Failed attempts remain pending and are retried rather than acknowledged.
+The integration currently accepts one typed behaviour: **Spawn Random Monster**. The mod chooses one progression-eligible vanilla variant locally from the explicit catalogue and constructs it using its supported vanilla setup. Spawn requests remain queued until Start Spawns is enabled in Control Center; each new connection defaults to stopped. Failed attempts remain pending and are retried rather than acknowledged.
 
 ## Security
 
