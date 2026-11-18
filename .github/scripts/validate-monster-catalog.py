@@ -133,6 +133,13 @@ if "ignoreProgression" not in spawner_source:
     errors.append("Progression-bypass spawn test path is missing.")
 if "useTestProgression: false" not in spawner_source:
     errors.append("Live redemption path must explicitly ignore local progression test overrides.")
+for live_default in (
+    "MonsterCatalog.GetRandomType(command.Difficulty);",
+    "MonsterCatalog.TryGetCanonicalType(command.UserInput, out candidateId)",
+    "MonsterCatalog.TryGetCanonicalType(command.MonsterType, out candidateId)"
+):
+    if live_default in spawner_source:
+        errors.append(f"Live redemption path accidentally uses test progression defaults: {live_default}")
 
 # Custom variants must use an existing vanilla threat-data key, not their display name.
 for expected in (
