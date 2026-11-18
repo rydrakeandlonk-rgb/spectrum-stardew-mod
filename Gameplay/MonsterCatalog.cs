@@ -21,6 +21,21 @@ internal static class MonsterCatalog
         "Mummy", "Armored Bug", "Lava Lurk", "Duggy", "Magma Duggy"
     };
 
+    // Keep the complete slime roster explicit so a future catalogue cleanup
+    // can't silently drop a colour or its dangerous counterpart.
+    private static readonly string[] RequiredSlimeDefinitionIds =
+    {
+        "green-slime", "blue-slime", "red-slime", "purple-slime",
+        "copper-slime", "iron-slime", "tiger-slime",
+        "dangerous-green-slime", "dangerous-blue-slime", "dangerous-red-slime",
+        "dangerous-purple-slime", "dangerous-copper-slime", "dangerous-iron-slime"
+    };
+
+    private static readonly string[] RequiredRestoredDefinitionIds =
+    {
+        "skeleton-mage", "dangerous-armored-bug"
+    };
+
     private static readonly Candidate[] Candidates =
     {
         C("green-slime", "Green Slime", "GreenSlime", 24, P(MonsterPool.Mines, MonsterPool.Farm)),
@@ -116,6 +131,14 @@ internal static class MonsterCatalog
 
         foreach (string id in pooledIds.Where(id => !CandidatesById.ContainsKey(id)))
             issues.Add($"Pool references missing definition: {id}");
+
+        foreach (string id in RequiredSlimeDefinitionIds.Concat(RequiredRestoredDefinitionIds))
+        {
+            if (!CandidatesById.ContainsKey(id))
+                issues.Add($"Required roster definition is missing: {id}");
+            else if (!pooledIds.Contains(id))
+                issues.Add($"Required roster definition has no location pool: {id}");
+        }
 
         foreach (Candidate candidate in Candidates)
         {
