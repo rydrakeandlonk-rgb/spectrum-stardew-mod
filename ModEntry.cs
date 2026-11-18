@@ -174,7 +174,7 @@ internal sealed class ModEntry : Mod
             return;
         }
 
-        MonsterProgressionSnapshot progression = MonsterProgression.Read(Game1.player);
+        MonsterProgressionSnapshot progression = MonsterProgressionSnapshot.Read(Game1.player);
         IReadOnlyList<MonsterPool> unlockedPools = MonsterLocationPools.GetUnlockedPools(progression);
         IReadOnlyList<string> eligibleTypes = MonsterCatalog.GetEligibleTypes();
         IReadOnlyList<string> unresolvedTypes = MonsterCatalog.GetUnresolvedEligibleClassNames();
