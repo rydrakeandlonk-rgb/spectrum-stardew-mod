@@ -45,9 +45,10 @@ After an administrator enables the member in Control Center, use the Mods page's
 1. Launch the mod once so SMAPI creates its local `config.json`.
 2. Open the generated config file in the mod folder.
 3. Set `BroadcasterUserId` to the numeric ID shown by Control Center.
-4. Set `HostToken` to the one-time token shown by Control Center.
-5. Leave `GatewayUrl` at its default Spectrum Game Mods URL.
-6. Restart Stardew/SMAPI.
+4. In the Mods page, use Set reward and enter the Twitch reward ID and exact title for the member.
+5. Set `HostToken` to the one-time token shown by Control Center.
+6. Leave `GatewayUrl` at its default Spectrum Game Mods URL.
+7. Restart Stardew/SMAPI.
 
 Use `spectrum_connection_status` in the SMAPI console to check the connection. Never commit the local config or share the host token. Re-pairing rotates the token and disconnects the previous host session.
 
@@ -75,5 +76,5 @@ The ZIP must contain the compiled DLL, `manifest.json`, and required dependencie
 - The SMAPI WebSocket client and built-in monster command dispatch are implemented in source but have not been compiled or verified against the target game installation.
 - The shared gateway, Control Center pairing/revocation controls and guarded Event Hub routing are committed but have not been deployed or tested end-to-end.
 - Migration 0028 has not been applied to production D1 and dashboard KV assets have not been synchronised.
-- Reward mapping management and live connection reporting are not implemented yet.
+- Live connection reporting is not implemented yet.
 - No tested ZIP, GitHub Release or Nexus release exists yet.
