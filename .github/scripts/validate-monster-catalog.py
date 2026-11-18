@@ -89,11 +89,11 @@ for monster_id, display_name in definitions:
     base_name = display_name.removeprefix("Dangerous ")
     if base_name in {"Mummy", "Lava Lurk", "Duggy", "Magma Duggy"}:
         errors.append(f"Excluded monster entered catalogue: {display_name}")
-    if base_name == "Armored Bug" and monster_id != "dangerous-armored-bug":
-        errors.append(f"Only Dangerous Armored Bug is allowed, found: {display_name}")
+    if base_name == "Armored Bug":
+        errors.append(f"Excluded monster entered catalogue: {display_name}")
 
-if "dangerous-armored-bug" not in catalogue_ids:
-    errors.append("Dangerous Armored Bug is missing.")
+if "dangerous-armored-bug" in catalogue_ids:
+    errors.append("Dangerous Armored Bug must remain excluded.")
 if "skeleton-mage" not in catalogue_ids:
     errors.append("Skeleton Mage is missing.")
 
@@ -145,8 +145,7 @@ for live_default in (
 for expected in (
     'return "Green Slime";',
     'return "Fly";',
-    'return "Grub";',
-    'return "Bug";'
+    'return "Grub";'
 ):
     if expected not in catalog:
         errors.append(f"Vanilla threat-data fallback mapping is missing: {expected}")
