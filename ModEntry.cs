@@ -1,8 +1,11 @@
+using System.Diagnostics;
+using Microsoft.Xna.Framework;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley;
 using SpectrumStardewMod.Gameplay;
 using SpectrumStardewMod.Networking;
+using SpectrumStardewMod.UI;
 
 namespace SpectrumStardewMod;
 
@@ -16,6 +19,7 @@ internal sealed class ModEntry : Mod
     private const string ProcessedCommandGlobalKey = "processed-spectrum-command-ids";
     private bool processedCommandsLoaded;
     private DateTime retryCommandsAtUtc = DateTime.MinValue;
+    private Rectangle spectrumHudButtonBounds;
 
     public override void Entry(IModHelper helper)
     {
@@ -35,6 +39,8 @@ internal sealed class ModEntry : Mod
         }
 
         helper.Events.GameLoop.UpdateTicked += this.OnUpdateTicked;
+        helper.Events.Display.RenderedHud += this.OnRenderedHud;
+        helper.Events.Input.ButtonPressed += this.OnButtonPressed;
 
         helper.ConsoleCommands.Add(
             "spectrum_spawn_test",
@@ -85,6 +91,91 @@ internal sealed class ModEntry : Mod
         );
 
         this.Monitor.Log("Spectrum Stardew Mod loaded. Use 'spectrum_connection_status' to check the gateway connection.", LogLevel.Info);
+    }
+
+    private void OnRenderedHud(object? sender, RenderedHudEventArgs e)
+    {
+        if (!Context.IsWorldReady || Game1.activeClickableMenu is not null)
+            return;
+
+        this.spectrumHudButtonBounds = new Rectangle(
+            Math.Max(12, Game1.uiViewport.Width - 172),
+            18,
+            154,
+            42
+        );
+        e.SpriteBatch.Draw(Game1.staminaRect, this.spectrumHudButtonBounds, new Color(67, 46, 98, 225));
+        const string label = "Spectrum";
+        Vector2 textSize = Game1.smallFont.MeasureString(label);
+        Vector2 textPosition = new(
+            this.spectrumHudButtonBounds.X + (this.spectrumHudButtonBounds.Width - textSize.X) / 2f,
+            this.spectrumHudButtonBounds.Y + (this.spectrumHudButtonBounds.Height - textSize.Y) / 2f
+        );
+        e.SpriteBatch.DrawString(Game1.smallFont, label, textPosition, Color.White);
+    }
+
+    private void OnButtonPressed(object? sender, ButtonPressedEventArgs e)
+    {
+        if (!Context.IsWorldReady || Game1.activeClickableMenu is not null || e.Button != SButton.MouseLeft)
+            return;
+
+        Vector2 cursor = e.Cursor.GetScaledScreenPixels();
+        if (!this.spectrumHudButtonBounds.Contains((int)cursor.X, (int)cursor.Y))
+            return;
+
+        this.Helper.Input.Suppress(e.Button);
+        this.OpenSpectrumMenu();
+    }
+
+    private void OpenSpectrumMenu()
+    {
+        Game1.activeClickableMenu = new SpectrumMenu(
+            () => this.gameModsClient?.IsConnected == true,
+            () => Context.IsMainPlayer,
+            () => this.gameModsClient?.Settings ?? new HostSettings(),
+            () => this.gameModsClient?.SpawnOverride ?? "follow",
+            () => this.gameModsClient?.SafetyGateEnabled == true,
+            () => this.gameModsClient?.SpawnsEnabled == true,
+            settings =>
+            {
+                if (this.gameModsClient is not null)
+                    _ = this.gameModsClient.UpdateSettingsAsync(settings);
+            },
+            () =>
+            {
+                int removed = this.monsterSpawner?.ClearLoadedMonsters() ?? -1;
+                if (removed >= 0)
+                {
+                    Game1.addHUDMessage(new HUDMessage(
+                        $"Spectrum cleared {removed} loaded monster(s).",
+                        Color.LightGreen,
+                        3000f
+                    ));
+                }
+            },
+            this.OpenControlCenter
+        );
+    }
+
+    private void OpenControlCenter()
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "https://spectrum-control-center.rydrakeandlonk.workers.dev/",
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            this.Monitor.Log($"Could not open Spectrum Control Center: {ex.Message}", LogLevel.Warn);
+            Game1.addHUDMessage(new HUDMessage(
+                "Open Spectrum Control Center in your browser to pair this host.",
+                Color.White,
+                4000f
+            ));
+        }
     }
 
     private void LoadProcessedCommands(IModHelper helper)
