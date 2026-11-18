@@ -21,10 +21,10 @@ The existing Spectrum Cloudflare project owns identity, permissions, dashboard m
 
 Twitch Channel Points → Spectrum Event Hub → Stardew gateway → host SMAPI mod → Stardew Valley
 
-- Control Center: administrator-only Stardew Valley page, per-member Mod access, live game connection, shared reward title, pending queue count and per-host Start/Stop Spawns control.
+- Control Center: administrator-only Stardew Valley page, per-member access, live game status, shared reward title, per-host safety gate, streamer preferences, administrator overrides and remote clear-monsters actions.
 - Event Hub: receives and verifies Twitch Channel Point redemption notifications and routes approved redemptions.
-- Stardew gateway: owns short-lived game pairing, authenticated host connections, deduplication and request delivery.
-- SMAPI mod: runs in the host game, chooses and constructs a random vanilla monster variant from its explicit allowlist on the game thread, saves the latest 500 successful redemption IDs in mod-global data, and acknowledges only after that history is persisted.
+- Stardew gateway: owns authenticated host sessions, versioned settings, administrator overrides, deduplication, pending requests and acknowledged remote actions.
+- SMAPI mod: provides a clickable in-game Spectrum menu, synchronises streamer settings, processes host-only world actions, chooses and constructs vanilla monsters on the game thread, and acknowledges completed actions.
 
 ## Monster spawning
 
@@ -43,17 +43,19 @@ The farm host is authoritative. Only the host's mod connection processes externa
 - Gameplay/MonsterCatalog.cs — explicit vanilla monster variants, progression-filtered weighting and safe constructor dispatch.
 - Gameplay/MonsterProgression.cs and Gameplay/MonsterLocationPools.cs — vanilla save checks and location-group unlock rules.
 - docs/MONSTER_POOLS.md — complete progression rules, exclusions, and variant implementation requirements.
-- ModEntry.cs — SMAPI entry point, local test commands and game-thread command processing.
-- Networking/GameModsClient.cs — authenticated WebSocket connection, typed command validation, reconnect and acknowledgements.
+- ModEntry.cs — SMAPI entry point, clickable HUD button, local test commands and game-thread command/action processing.
+- UI/SpectrumMenu.cs — in-game streamer settings, connection status, host-only controls and clear confirmation.
+- Networking/GameModsClient.cs — authenticated WebSocket connection, versioned settings sync, typed command/action validation, reconnect and acknowledgements.
+- Networking/HostSettings.cs and Networking/GameAction.cs — shared settings and typed remote action contracts.
 - ModConfig.cs — local broadcaster ID and revocable host token.
 - manifest.json and SpectrumStardewMod.csproj — SMAPI project metadata.
 - docs/ — architecture, development and roadmap.
 
 ## Current implementation status
 
-The gameplay path uses explicit vanilla monster variant definitions and their supported constructors. Version 0.7.3 has been installed and tested in Stardew Valley 1.6.15 with SMAPI 4.5.2: startup, gateway connection, catalogue validation, basic/random spawning, and the Twitch Channel Point flow (including appropriate monster selection, debug output, and in-game chat) passed. Version 0.7.4 adds memory-only progression simulation, progression-bypass local constructor testing, a full constructor/setup sweep, and corrected vanilla threat-data aliases. Its CI build and package checks passed; the new test commands and the remaining multiplayer/reliability edge cases still require in-game validation.
+Version 0.7.5 is the last runtime-validated version. Its monster catalogue, progression profiles, reconnect safety, Twitch redemption handling and retry/acknowledgement behaviour passed the user's single-player checks. Multiplayer remains untested.
 
-The Control Center repository contains the admin-only Mods page, per-member activation API, pairing/revocation controls, one shared reward-title setting, and per-host spawn pause/resume controls. The Game Mods gateway keeps pending redemptions in its Durable Object until successful acknowledgement. Production deployment and live end-to-end validation remain separate from the successful source build.
+Version 0.8.0 is the current development target. It adds a clickable HUD entry point and dedicated Spectrum menu; streamer preference, difficulty, chat-response and debug settings; host-only in-game controls; host-wide clearing of loaded hostile monsters; versioned settings synchronisation; administrator override modes; and Control Center remote actions. The gateway stores these settings in the existing per-host Durable Object rather than adding D1/KV writes. This development version still needs a successful CI build and in-game validation before installation. The in-game Connect button currently opens Control Center; the existing one-time host pairing/config setup is still required.
 
 ## Pair the host
 
