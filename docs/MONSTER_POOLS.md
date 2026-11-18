@@ -82,4 +82,4 @@ The dangerous stat step is deliberately fixed at one because these monsters can 
 
 A successful build proves the code compiles against the pinned Stardew Valley 1.6.15 reference assemblies. It does not prove every constructor behaves correctly in a live save. In-game validation must explicitly cover every named variant and post-construction setup; dangerous stats and optional textures; Copper/Iron Slime data and colour; Iridium Golem stats and sprite; all exclusions; random weighting and duplicate pool membership; and spawning from several map types.
 
-Use `spectrum_monster_pool_status` to inspect unlocked groups, selectable definitions and any missing constructor/setup support.
+Use `spectrum_monster_pool_status` to inspect progression stages, current-area difficulty, selectable definitions, vanilla threat-data coverage and any missing constructor/setup support. Any unresolved data keys are listed and use the catalogue fallback score.
