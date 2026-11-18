@@ -14,6 +14,15 @@ namespace SpectrumStardewMod.Networking;
 internal sealed class GameModsClient : IDisposable
 {
     private const int MaxMessageBytes = 32 * 1024;
+    private static readonly HashSet<string> SupportedBehaviorKeys = new(StringComparer.Ordinal)
+    {
+        "difficulty_random",
+        "chat_monster",
+        "random_count_random_monsters",
+        "fixed_count_random_monsters",
+        "random_count_specific_monster",
+        "fixed_count_specific_monster"
+    };
     private readonly ModConfig config;
     private readonly IMonitor monitor;
     private readonly ConcurrentQueue<GameCommand> commands = new();
@@ -244,7 +253,7 @@ internal sealed class GameModsClient : IDisposable
             }
 
             string behaviorKey = ReadString(payload, "behavior_key");
-            if (behaviorKey != "difficulty_random")
+            if (!SupportedBehaviorKeys.Contains(behaviorKey))
             {
                 this.monitor.Log("Ignored a Spectrum command with an unsupported spawn behaviour.", LogLevel.Warn);
                 return;
