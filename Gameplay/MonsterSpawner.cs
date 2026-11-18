@@ -35,6 +35,17 @@ internal sealed class MonsterSpawner
         MonsterCatalog.TryGetCanonicalType("Green Slime", out string id) &&
         this.TrySpawnCandidate(id, out _, out _);
 
+    public bool TrySpawnMonster(string monsterType)
+    {
+        if (!MonsterCatalog.TryGetCanonicalType(monsterType, out string candidateId))
+        {
+            this.monitor.Log($"[Spectrum] TEST SPAWN FAILED | unknown or progression-locked monster: {monsterType}", LogLevel.Warn);
+            return false;
+        }
+
+        return this.TrySpawnCandidate(candidateId, out _, out _);
+    }
+
     public bool TryExecute(
         GameCommand command,
         out int spawnedCount,
