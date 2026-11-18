@@ -17,11 +17,13 @@ internal sealed class GameModsClient : IDisposable
     private readonly ModConfig config;
     private readonly IMonitor monitor;
     private readonly ConcurrentQueue<GameCommand> commands = new();
+    private readonly ConcurrentDictionary<string, byte> queuedCommandIds = new(StringComparer.Ordinal);
     private readonly CancellationTokenSource cancellation = new();
     private readonly SemaphoreSlim sendLock = new(1, 1);
     private ClientWebSocket? socket;
     private readonly Task connectionTask;
     private volatile bool connected;
+    private volatile bool spawnsEnabled;
 
     public GameModsClient(ModConfig config, IMonitor monitor)
     {
@@ -31,10 +33,20 @@ internal sealed class GameModsClient : IDisposable
     }
 
     public bool IsConnected => this.connected;
+    public bool SpawnsEnabled => this.spawnsEnabled;
 
     public bool TryDequeueCommand(out GameCommand? command)
     {
-        return this.commands.TryDequeue(out command);
+        if (!this.commands.TryDequeue(out command) || command is null)
+            return false;
+        this.queuedCommandIds.TryRemove(command.CommandId, out _);
+        return true;
+    }
+
+    public void RequeueCommand(GameCommand command)
+    {
+        if (this.queuedCommandIds.TryAdd(command.CommandId, 0))
+            this.commands.Enqueue(command);
     }
 
     public async Task AcknowledgeAsync(string commandId)
@@ -108,7 +120,8 @@ internal sealed class GameModsClient : IDisposable
                 await current.ConnectAsync(gatewayUri, token);
                 this.socket = current;
                 this.connected = true;
-                this.monitor.Log("Connected to Spectrum Game Mods.", LogLevel.Info);
+                this.spawnsEnabled = false;
+                this.monitor.Log("Connected to Spectrum Game Mods. Spawning remains paused until enabled in Control Center.", LogLevel.Info);
 
                 await this.ReceiveLoopAsync(current, token);
             }
@@ -123,6 +136,7 @@ internal sealed class GameModsClient : IDisposable
             finally
             {
                 this.connected = false;
+                this.spawnsEnabled = false;
                 if (ReferenceEquals(this.socket, current))
                     this.socket = null;
 
@@ -198,6 +212,16 @@ internal sealed class GameModsClient : IDisposable
                 return;
             }
 
+            if (type == "spawns.state")
+            {
+                this.spawnsEnabled = root.TryGetProperty("enabled", out JsonElement enabled) &&
+                    enabled.ValueKind == JsonValueKind.True;
+                this.monitor.Log(this.spawnsEnabled
+                    ? "Spectrum monster spawns enabled by Control Center."
+                    : "Spectrum monster spawns paused by Control Center.", LogLevel.Info);
+                return;
+            }
+
             if (type != "game.command")
                 return;
 
@@ -220,15 +244,13 @@ internal sealed class GameModsClient : IDisposable
             }
 
             string behaviorKey = ReadString(payload, "behavior_key");
-            if (behaviorKey is not ("difficulty_random" or "chat_monster" or
-                "random_count_random_monsters" or "fixed_count_random_monsters" or
-                "random_count_specific_monster" or "fixed_count_specific_monster"))
+            if (behaviorKey != "difficulty_random")
             {
                 this.monitor.Log("Ignored a Spectrum command with an unsupported spawn behaviour.", LogLevel.Warn);
                 return;
             }
 
-            this.commands.Enqueue(new GameCommand(
+            GameCommand command = new(
                 commandId, game, name,
                 ReadString(payload, "user_name"),
                 ReadString(payload, "reward_title"),
@@ -240,7 +262,9 @@ internal sealed class GameModsClient : IDisposable
                 ReadInt(payload, "count", 1),
                 ReadInt(payload, "min_count", 1),
                 ReadInt(payload, "max_count", 3)
-            ));
+            );
+            if (this.queuedCommandIds.TryAdd(commandId, 0))
+                this.commands.Enqueue(command);
         }
         catch (JsonException ex)
         {
