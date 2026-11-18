@@ -22,16 +22,16 @@ The product is a private Spectrum integration. Control Center decides which acti
 - [ ] Apply migration 0028 to production D1 through the confirmation-gated workflow.
 - [ ] Deploy Control Center and sync dashboard KV assets.
 - [ ] Add streamer reward-mapping editor and connection detail view.
-- [ ] Connect access disable to active game-session revocation.
+- [x] Connect access disable to active game-session revocation.
 
 ## Phase 3 — Event Hub Twitch redemption integration
 
-- [ ] Add central EventSub subscription sync for channel.channel_points_custom_reward_redemption.add.
+- [x] Add guarded central EventSub subscription sync for channel.channel_points_custom_reward_redemption.add.
 - [ ] Restrict subscriptions to active Spectrum members with Stardew access enabled and channel:read:redemptions granted.
-- [ ] Validate broadcaster, configured reward ID, EventSub signature and redemption status.
-- [ ] Deduplicate EventSub message and redemption IDs.
-- [ ] Route only approved Random Monster Spawner redemptions to the gateway.
-- [ ] Ensure disabling a member removes or ignores their EventSub subscription.
+- [x] Validate broadcaster, configured reward ID, EventSub signature and redemption status.
+- [x] Deduplicate EventSub message and redemption IDs.
+- [x] Route only approved Random Monster Spawner redemptions to the gateway.
+- [x] Ensure disabling a member's access blocks delivery and revokes the host token.
 
 ## Phase 4 — Stardew gateway and pairing
 
@@ -45,7 +45,7 @@ The product is a private Spectrum integration. Control Center decides which acti
 
 ## Phase 5 — Packaging and release
 
-- [ ] Add a reproducible build/package script that creates a ready-to-install SMAPI ZIP.
+- [x] Add a reproducible build/package script that creates a ready-to-install SMAPI ZIP.
 - [ ] Verify the ZIP on a clean SMAPI installation.
 - [ ] Publish a versioned ZIP asset in GitHub Releases.
 - [ ] Decide whether the source repository remains public or private; the live service remains restricted either way.
