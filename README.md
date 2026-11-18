@@ -10,7 +10,7 @@ Only Spectrum members explicitly enabled by an administrator in Spectrum Control
 2. They launch Stardew Valley and pair the host game with Spectrum Control Center.
 3. Control Center verifies the signed-in Twitch identity and administrator-controlled activation record.
 4. An administrator sets the shared **Spawn Random Monster** Channel Point reward title in Control Center.
-5. The host game connects to the Spectrum gateway and receives typed spawn-behaviour requests.
+5. The host game connects to the Spectrum gateway and receives typed random-monster spawn requests.
 6. The host selects a monster from the local allowlist and invokes Stardew Valley's built-in monster debug handler.
 
 No Twitch password, Twitch client secret, or long-lived Twitch token is stored in the mod.
