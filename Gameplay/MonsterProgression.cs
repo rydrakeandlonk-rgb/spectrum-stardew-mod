@@ -1,4 +1,6 @@
 using StardewValley;
+using System.Collections;
+using System.Reflection;
 
 namespace SpectrumStardewMod.Gameplay;
 
@@ -62,8 +64,9 @@ internal sealed record MonsterProgressionSnapshot(
         return new MonsterProgressionSnapshot(
             MinesCompleted: farmer.deepestMineLevel >= 120,
             // Quest 30 is the completed Cryptic Note (Secret Note #10) story quest.
-            // Unlike an active quest or a consumable reward, this is permanent save history.
-            SkullCavern100Reached: farmer.questsCompleted.Contains(30),
+            // Quest history was added in Stardew 1.6.16, so read it reflectively to
+            // keep the source compatible with the pinned 1.6.15 build references.
+            SkullCavern100Reached: HasCompletedQuest(farmer, 30),
             CombatLevel: Math.Clamp(farmer.CombatLevel, 0, 10),
             DangerousMinesUnlocked: completedOrders.Contains("QiChallenge9"),
             QuarryMineUnlocked: farmer.mailReceived.Contains("gotGoldenScythe"),
@@ -71,5 +74,28 @@ internal sealed record MonsterProgressionSnapshot(
             DangerousSkullCavernUnlocked: completedOrders.Contains("QiChallenge10"),
             VolcanoDungeonUnlocked: farmer.hasOrWillReceiveMail("willyBoatFixed")
         );
+    }
+
+    private static bool HasCompletedQuest(Farmer farmer, int questId)
+    {
+        const BindingFlags Flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+        object? completed = typeof(Farmer).GetProperty("questsCompleted", Flags)?.GetValue(farmer)
+            ?? typeof(Farmer).GetField("questsCompleted", Flags)?.GetValue(farmer);
+
+        if (completed is IEnumerable<int> ids)
+            return ids.Contains(questId);
+
+        if (completed is IEnumerable values)
+        {
+            foreach (object? value in values)
+            {
+                if (value is int id && id == questId)
+                    return true;
+                if (int.TryParse(value?.ToString(), out id) && id == questId)
+                    return true;
+            }
+        }
+
+        return false;
     }
 }
