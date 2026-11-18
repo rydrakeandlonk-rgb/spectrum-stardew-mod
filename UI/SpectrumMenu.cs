@@ -18,6 +18,7 @@ internal sealed class SpectrumMenu : IClickableMenu
     private readonly Func<bool> getEffectiveSpawnState;
     private readonly Action<HostSettings> updateSettings;
     private readonly Action clearLoadedMonsters;
+    private readonly Func<string> getPairingStatus;
     private readonly Action openControlCenter;
     private bool confirmClear;
 
@@ -40,6 +41,7 @@ internal sealed class SpectrumMenu : IClickableMenu
         Func<bool> getEffectiveSpawnState,
         Action<HostSettings> updateSettings,
         Action clearLoadedMonsters,
+        Func<string> getPairingStatus,
         Action openControlCenter
     ) : base(0, 0, 720, 570)
     {
@@ -51,6 +53,7 @@ internal sealed class SpectrumMenu : IClickableMenu
         this.getEffectiveSpawnState = getEffectiveSpawnState;
         this.updateSettings = updateSettings;
         this.clearLoadedMonsters = clearLoadedMonsters;
+        this.getPairingStatus = getPairingStatus;
         this.openControlCenter = openControlCenter;
 
         this.xPositionOnScreen = Math.Max(16, (Game1.uiViewport.Width - this.width) / 2);
@@ -219,8 +222,9 @@ internal sealed class SpectrumMenu : IClickableMenu
             "Debug messages: " + (settings.DebugMessages ? "On" : "Off"),
             this.CanSyncSettings, settings.DebugMessages);
         DrawButton(b, this.clearBounds, "Clear all loaded monsters", this.CanControl, false);
+        string pairingStatus = this.getPairingStatus();
         DrawButton(b, this.connectBounds,
-            connected ? "Open Spectrum Control Center" : "Connect / pair through Control Center",
+            connected ? "Open Spectrum Control Center" : pairingStatus.Length > 0 ? "Open pairing approval" : "Connect Twitch account",
             true, false);
 
         if (this.confirmClear)
@@ -232,15 +236,17 @@ internal sealed class SpectrumMenu : IClickableMenu
         }
         else
         {
-            string status = !connected
-                ? "Pair this host in Control Center to enable shared controls."
-                : !host
-                    ? "Only the multiplayer host can change settings or clear the shared world."
-                    : this.getEffectiveSpawnState()
-                        ? "Spawning is currently permitted."
-                        : settings.SpawnEnabled && !this.getSafetyGate()
-                            ? "Your preference is enabled, but the Control Center safety gate is closed."
-                            : "Spawning is currently stopped.";
+            string status = pairingStatus.Length > 0
+                ? pairingStatus
+                : !connected
+                    ? "Connect this host to your Spectrum Twitch account to enable shared settings."
+                    : !host
+                        ? "Only the multiplayer host can change settings or clear the shared world."
+                        : this.getEffectiveSpawnState()
+                            ? "Spawning is currently permitted."
+                            : settings.SpawnEnabled && !this.getSafetyGate()
+                                ? "Your preference is enabled, but the Control Center safety gate is closed."
+                                : "Spawning is currently stopped.";
             b.DrawString(Game1.smallFont, status,
                 new Vector2(this.xPositionOnScreen + 52, this.yPositionOnScreen + 485), Game1.textColor);
         }
