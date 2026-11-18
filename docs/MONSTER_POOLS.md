@@ -50,7 +50,7 @@ Reading on selection means progression acquired during a running save can be rec
 
 These entries must never enter the candidate pool:
 - Mummy and Mummy (dangerous).
-- Armored Bug and Armored Bug (dangerous).
+- Armored Bug (normal only). Dangerous Armored Bug is eligible in Dangerous Skull Cavern.
 - Lava Lurk.
 - Duggy, Duggy (dangerous), and Magma Duggy.
 
@@ -58,7 +58,7 @@ Rock Crab and Rock Crab (dangerous) remain eligible. Other Rock Crab-family vari
 
 ## Explicit variant catalogue
 
-The catalogue now contains individual spawn definitions instead of one entry per reflected C# class. It maps the reference roster to vanilla constructors and post-construction setup. The Dangerous Mines pool includes the regular Lava Bat, as in the supplied roster; it does not add a separate Dangerous Lava Bat. Dangerous Copper Slime, Dangerous Iron Slime and Skeleton Mage are not part of the approved pool roster:
+The catalogue now contains individual spawn definitions instead of one entry per reflected C# class. It maps the reference roster to vanilla constructors and post-construction setup. The Dangerous Mines pool includes the regular Lava Bat, as in the supplied roster; it does not add a separate Dangerous Lava Bat. All six catalogue slime families (Green, Blue/Frost Jelly, Red/Purple Sludge, Copper, Iron and Tiger) remain represented where applicable. Dangerous Copper and Dangerous Iron Slimes are explicit mod variants using the corresponding vanilla slime setup followed by the dangerous stat treatment. Skeleton Mage is included in Dangerous Mines, and Dangerous Armored Bug is included in Dangerous Skull Cavern.
 
 - Bat subtypes use the vanilla integer constructor codes for Frost Bat, Lava Bat, Iridium Bat, Haunted Skull, Magma Sprite and Magma Sparker.
 - Blue, red and purple slimes use the vanilla GreenSlime mine-level constructor paths; the friendly display labels identify the Wiki colour names (Frost Jelly and Sludge are the corresponding internal names).
@@ -66,6 +66,7 @@ The catalogue now contains individual spawn definitions instead of one entry per
 - Carbon Ghost, Putrid Ghost, Royal Serpent, Lava Crab, Iridium Crab, Truffle Crab, False Magma Cap and Shadow Sniper use their named string constructor arguments.
 - Mutant Fly and Mutant Grub use the hard-mode boolean constructor option.
 - Skeleton Mage uses the Skeleton mage option; Spider maps to Stardew's Leaper class.
+- Armored Bug uses the vanilla Bug constructor's area type 121. This sets the isArmoredBug network flag and loads the Armored Bug texture; the dangerous form then receives the dangerous stat treatment and optional dangerous texture. The normal Armored Bug remains excluded.
 - Stick Bug and Tiger Slime use their vanilla post-construction methods.
 - Iridium Golem uses the RockGolem base constructor followed by the variant's vanilla name, data and stat setup.
 - Dangerous forms are separate definitions. They apply one additional-difficulty stat step and load the corresponding `_dangerous` texture when available.
