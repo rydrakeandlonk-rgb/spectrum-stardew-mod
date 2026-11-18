@@ -206,7 +206,6 @@ internal sealed class SpectrumMenu : IClickableMenu
             new Vector2(this.xPositionOnScreen + 372, this.yPositionOnScreen + 146),
             this.getSafetyGate() ? Color.LightGreen : Color.OrangeRed);
 
-        bool controlsEnabled = this.CanControl;
         DrawButton(b, this.spawnBounds,
             "Streamer preference: " + (settings.SpawnEnabled ? "Enabled" : "Disabled"),
             this.CanSyncSettings, settings.SpawnEnabled);
