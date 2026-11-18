@@ -1,13 +1,14 @@
 using Microsoft.Xna.Framework;
+using StardewValley;
 using StardewValley.Monsters;
 using System.Text.RegularExpressions;
 
 namespace SpectrumStardewMod.Gameplay;
 
 /// <summary>
-/// Discovers every vanilla monster type which the game's built-in
-/// "monster Type x y" debug command can construct using its standard
-/// Vector2-only constructor. Modded monster assemblies are never included.
+/// Discovers vanilla monster classes supported by the built-in Vector2
+/// constructor, then filters them through the active save's unlocked pools.
+/// Variant-specific construction is being added as a separate layer.
 /// </summary>
 internal static class MonsterCatalog
 {
@@ -25,14 +26,11 @@ internal static class MonsterCatalog
             ["Ghost"] = 50,
             ["GreenSlime"] = 24,
             ["Grub"] = 30,
-            ["LavaCrab"] = 120,
-            ["Mummy"] = 140,
             ["RockCrab"] = 60,
             ["RockGolem"] = 80,
             ["Serpent"] = 150,
             ["ShadowBrute"] = 160,
             ["ShadowShaman"] = 140,
-            ["Skeleton"] = 70,
             ["SquidKid"] = 120
         };
 
@@ -41,6 +39,36 @@ internal static class MonsterCatalog
     public static IReadOnlyList<string> AllTypes =>
         Candidates.Select(candidate => candidate.TypeName).ToArray();
 
+    public static IReadOnlyList<string> GetEligibleTypes()
+    {
+        if (Game1.player is null)
+            return Array.Empty<string>();
+
+        HashSet<string> eligibleClassNames =
+            MonsterLocationPools.GetEligibleClassNames(MonsterProgression.Read(Game1.player));
+
+        return Candidates
+            .Where(candidate => eligibleClassNames.Contains(candidate.TypeName))
+            .Select(candidate => candidate.TypeName)
+            .ToArray();
+    }
+
+    public static IReadOnlyList<string> GetUnresolvedEligibleClassNames()
+    {
+        if (Game1.player is null)
+            return Array.Empty<string>();
+
+        HashSet<string> eligibleClassNames =
+            MonsterLocationPools.GetEligibleClassNames(MonsterProgression.Read(Game1.player));
+        HashSet<string> discoveredClassNames =
+            Candidates.Select(candidate => candidate.TypeName).ToHashSet(StringComparer.Ordinal);
+
+        return eligibleClassNames
+            .Where(typeName => !discoveredClassNames.Contains(typeName))
+            .OrderBy(typeName => typeName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
     public static string GetDisplayName(string typeName)
     {
         return Regex.Replace(typeName, "([a-z0-9])([A-Z])", "$1 $2");
@@ -48,8 +76,17 @@ internal static class MonsterCatalog
 
     public static string GetRandomType(string difficulty = "normal")
     {
-        if (Candidates.Length == 0)
-            throw new InvalidOperationException("No spawnable vanilla monster types were discovered.");
+        if (Game1.player is null)
+            throw new InvalidOperationException("A save must be loaded before selecting a progression-eligible monster.");
+
+        HashSet<string> eligibleClassNames =
+            MonsterLocationPools.GetEligibleClassNames(MonsterProgression.Read(Game1.player));
+        Candidate[] eligibleCandidates = Candidates
+            .Where(candidate => eligibleClassNames.Contains(candidate.TypeName))
+            .ToArray();
+
+        if (eligibleCandidates.Length == 0)
+            throw new InvalidOperationException("No progression-eligible vanilla monster classes were discovered.");
 
         // Easy favours weaker monsters; hard makes tougher monsters more likely.
         double exponent = difficulty.Trim().ToLowerInvariant() switch
@@ -59,23 +96,28 @@ internal static class MonsterCatalog
             _ => 1.35d
         };
 
-        double totalWeight = Candidates.Sum(candidate => GetWeight(candidate.ExpectedHealth, exponent));
+        double totalWeight = eligibleCandidates.Sum(candidate => GetWeight(candidate.ExpectedHealth, exponent));
         double roll = Random.Shared.NextDouble() * totalWeight;
 
-        foreach (Candidate candidate in Candidates)
+        foreach (Candidate candidate in eligibleCandidates)
         {
             roll -= GetWeight(candidate.ExpectedHealth, exponent);
             if (roll <= 0)
                 return candidate.TypeName;
         }
 
-        return Candidates[^1].TypeName;
+        return eligibleCandidates[^1].TypeName;
     }
 
     public static bool TryGetCanonicalType(string? value, out string monsterType)
     {
         string requested = Normalize(value);
+        HashSet<string> eligibleClassNames = Game1.player is null
+            ? new HashSet<string>(StringComparer.Ordinal)
+            : MonsterLocationPools.GetEligibleClassNames(MonsterProgression.Read(Game1.player));
+
         Candidate? match = Candidates.FirstOrDefault(candidate =>
+            eligibleClassNames.Contains(candidate.TypeName) &&
             string.Equals(Normalize(candidate.TypeName), requested, StringComparison.OrdinalIgnoreCase));
 
         monsterType = match?.TypeName ?? "";
@@ -84,9 +126,8 @@ internal static class MonsterCatalog
 
     private static Candidate[] DiscoverVanillaMonsters()
     {
-        // Stardew's own debug handler resolves "StardewValley.Monsters.<type>"
-        // and calls Activator.CreateInstance(type, position). Match that exact
-        // constructor contract, and restrict discovery to the vanilla game DLL.
+        // Match the game's standard "monster Type x y" constructor contract.
+        // Modded assemblies are never included.
         return typeof(Monster).Assembly
             .GetTypes()
             .Where(type =>
@@ -97,6 +138,7 @@ internal static class MonsterCatalog
                 type.Namespace == typeof(Monster).Namespace &&
                 typeof(Monster).IsAssignableFrom(type) &&
                 type.GetConstructor(new[] { typeof(Vector2) }) is not null)
+            .Where(type => type.Name is not "Duggy" and not "LavaLurk" and not "Mummy")
             .Select(type => new Candidate(
                 type.Name,
                 ExpectedHealthByType.TryGetValue(type.Name, out double health) ? health : 100d))
