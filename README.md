@@ -83,7 +83,7 @@ The first command requests a Green Slime. The second selects from the weighted r
 
 The 0.4.0 integration writes compact redemption and spawn results to the SMAPI console, retaining each command ID for deduplication and tracing. Successful spawns are announced through Stardew's existing in-game chat with the Twitch redeemer, monster type and location. The announcement is only shown after the game reports that a character was added.
 
-The integration accepts six typed behaviours from the dashboard: difficulty-weighted random monster; chat-selected monster name (the Twitch reward must require user input); random quantity of random monsters; fixed quantity of random monsters; random quantity of a dashboard-selected monster; and fixed quantity of a dashboard-selected monster. Quantities are capped at 10 per redemption, and all monster names are checked against the locally discovered vanilla monster catalogue.
+The integration currently accepts one typed behaviour: **Spawn Random Monster**. The mod chooses one compatible vanilla monster locally from the runtime-discovered catalogue and invokes Stardew's built-in monster command. Spawn requests remain queued until Start Spawns is enabled in Control Center; each new connection defaults to stopped. Failed attempts remain pending and are retried rather than acknowledged.
 
 ## Security
 
