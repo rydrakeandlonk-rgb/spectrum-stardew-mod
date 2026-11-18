@@ -74,7 +74,8 @@ internal sealed class SpectrumMenu : IClickableMenu
         this.closeBounds = new Rectangle(this.xPositionOnScreen + this.width - 64, this.yPositionOnScreen + 20, 36, 36);
     }
 
-    private bool CanControl => this.isConnected() && this.isHost();
+    private bool CanControl => this.isHost();
+    private bool CanSyncSettings => this.isHost() && this.isConnected();
 
     private void Save(HostSettings settings)
     {
@@ -119,11 +120,13 @@ internal sealed class SpectrumMenu : IClickableMenu
         HostSettings settings = this.getSettings();
         if (this.spawnBounds.Contains(x, y))
         {
+            if (!this.CanSyncSettings) return;
             this.Save(settings with { SpawnEnabled = !settings.SpawnEnabled });
             Game1.playSound("smallSelect");
         }
         else if (this.difficultyBounds.Contains(x, y))
         {
+            if (!this.CanSyncSettings) return;
             string next = settings.Difficulty switch
             {
                 "easy" => "normal",
@@ -135,11 +138,13 @@ internal sealed class SpectrumMenu : IClickableMenu
         }
         else if (this.chatBounds.Contains(x, y))
         {
+            if (!this.CanSyncSettings) return;
             this.Save(settings with { ChatResponses = !settings.ChatResponses });
             Game1.playSound("smallSelect");
         }
         else if (this.debugBounds.Contains(x, y))
         {
+            if (!this.CanSyncSettings) return;
             this.Save(settings with { DebugMessages = !settings.DebugMessages });
             Game1.playSound("smallSelect");
         }
@@ -204,17 +209,17 @@ internal sealed class SpectrumMenu : IClickableMenu
         bool controlsEnabled = this.CanControl;
         DrawButton(b, this.spawnBounds,
             "Streamer preference: " + (settings.SpawnEnabled ? "Enabled" : "Disabled"),
-            controlsEnabled, settings.SpawnEnabled);
+            this.CanSyncSettings, settings.SpawnEnabled);
         DrawButton(b, this.difficultyBounds,
             "Difficulty: " + settings.Difficulty,
-            controlsEnabled, true);
+            this.CanSyncSettings, true);
         DrawButton(b, this.chatBounds,
             "Chat responses: " + (settings.ChatResponses ? "On" : "Off"),
-            controlsEnabled, settings.ChatResponses);
+            this.CanSyncSettings, settings.ChatResponses);
         DrawButton(b, this.debugBounds,
             "Debug messages: " + (settings.DebugMessages ? "On" : "Off"),
-            controlsEnabled, settings.DebugMessages);
-        DrawButton(b, this.clearBounds, "Clear all loaded monsters", controlsEnabled, false);
+            this.CanSyncSettings, settings.DebugMessages);
+        DrawButton(b, this.clearBounds, "Clear all loaded monsters", this.CanControl, false);
         DrawButton(b, this.connectBounds,
             connected ? "Open Spectrum Control Center" : "Connect / pair through Control Center",
             true, false);
@@ -223,7 +228,7 @@ internal sealed class SpectrumMenu : IClickableMenu
         {
             b.DrawString(Game1.smallFont, "This clears hostile monsters across all loaded locations.",
                 new Vector2(this.clearBounds.X, this.clearBounds.Y + 62), Color.OrangeRed);
-            DrawButton(b, this.confirmBounds, "Confirm clear", controlsEnabled, true);
+            DrawButton(b, this.confirmBounds, "Confirm clear", this.CanControl, true);
             DrawButton(b, this.cancelBounds, "Cancel", true, false);
         }
         else
