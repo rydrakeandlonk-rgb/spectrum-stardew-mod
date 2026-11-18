@@ -1,4 +1,7 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
@@ -21,6 +24,11 @@ internal sealed class ModEntry : Mod
     private bool processedCommandsLoaded;
     private DateTime retryCommandsAtUtc = DateTime.MinValue;
     private Rectangle spectrumHudButtonBounds;
+    private readonly ConcurrentQueue<PairingResult> pairingResults = new();
+    private CancellationTokenSource? pairingCancellation;
+    private volatile bool pairingInProgress;
+    private volatile string pairingStatus = "";
+    private volatile string pairingVerificationUri = "";
 
     public override void Entry(IModHelper helper)
     {
@@ -116,6 +124,12 @@ internal sealed class ModEntry : Mod
     {
         this.gameModsClient?.Dispose();
         this.gameModsClient = null;
+        this.pairingCancellation?.Cancel();
+        this.pairingCancellation?.Dispose();
+        this.pairingCancellation = null;
+        this.pairingInProgress = false;
+        this.pairingStatus = "";
+        this.pairingVerificationUri = "";
         this.retryCommandsAtUtc = DateTime.MinValue;
     }
 
@@ -175,8 +189,83 @@ internal sealed class ModEntry : Mod
                     Game1.chatBox?.addInfoMessage($"Spectrum cleared {removed} loaded monster(s).");
                 }
             },
-            this.OpenControlCenter
+            () => this.pairingStatus,
+            this.StartPairingOrOpenControlCenter
         );
+    }
+
+    private void StartPairingOrOpenControlCenter()
+    {
+        if (this.gameModsClient?.IsConnected == true)
+        {
+            this.OpenControlCenter();
+            return;
+        }
+
+        if (!Context.IsMainPlayer)
+        {
+            Game1.chatBox?.addInfoMessage("Only the multiplayer host can connect the Spectrum game session.");
+            return;
+        }
+
+        if (this.pairingInProgress)
+        {
+            this.OpenPairingApprovalPage();
+            return;
+        }
+
+        this.config ??= new ModConfig();
+        this.pairingCancellation?.Cancel();
+        this.pairingCancellation?.Dispose();
+        this.pairingCancellation = new CancellationTokenSource();
+        CancellationToken cancellationToken = this.pairingCancellation.Token;
+        this.pairingInProgress = true;
+        this.pairingStatus = "Requesting a secure pairing code…";
+        this.pairingVerificationUri = "";
+
+        _ = Task.Run(async () =>
+        {
+            using var pairingClient = new StardewPairingClient();
+            try
+            {
+                PairingStart pairing = await pairingClient.StartAsync(this.config.GatewayUrl, cancellationToken);
+                this.pairingVerificationUri = pairing.VerificationUri;
+                this.pairingStatus = $"Waiting for approval · Code {pairing.UserCode}";
+                this.OpenPairingApprovalPage();
+                PairingResult result = await pairingClient.WaitForApprovalAsync(this.config.GatewayUrl, pairing, cancellationToken);
+                this.pairingResults.Enqueue(result);
+            }
+            catch (OperationCanceledException)
+            {
+                this.pairingStatus = "Pairing cancelled.";
+            }
+            catch (Exception ex)
+            {
+                this.pairingStatus = "Pairing failed · " + ex.Message;
+                this.Monitor.Log("Spectrum device pairing failed: " + ex.Message, LogLevel.Warn);
+            }
+            finally
+            {
+                this.pairingInProgress = false;
+            }
+        });
+    }
+
+    private void OpenPairingApprovalPage()
+    {
+        string url = this.pairingVerificationUri;
+        if (string.IsNullOrWhiteSpace(url))
+            return;
+
+        try
+        {
+            Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            this.Monitor.Log($"Could not open the Spectrum pairing page: {ex.Message}", LogLevel.Warn);
+            this.pairingStatus = "Open Control Center manually · " + this.pairingStatus;
+        }
     }
 
     private void OpenControlCenter()
@@ -239,6 +328,18 @@ internal sealed class ModEntry : Mod
 
     private void OnUpdateTicked(object? sender, UpdateTickedEventArgs e)
     {
+        while (this.pairingResults.TryDequeue(out PairingResult? pairingResult) && pairingResult is not null)
+        {
+            this.config ??= new ModConfig();
+            this.config.BroadcasterUserId = pairingResult.BroadcasterUserId;
+            this.config.HostToken = pairingResult.HostToken;
+            this.Helper.WriteConfig(this.config);
+            this.gameModsClient?.Dispose();
+            this.gameModsClient = new GameModsClient(this.config, this.Monitor);
+            this.pairingStatus = "Twitch account authorised · connecting…";
+            Game1.chatBox?.addInfoMessage("Spectrum Twitch connection authorised. Spawning remains paused until Control Center opens the safety gate.");
+        }
+
         if (this.gameModsClient is null ||
             this.monsterSpawner is null ||
             !Context.IsWorldReady ||
