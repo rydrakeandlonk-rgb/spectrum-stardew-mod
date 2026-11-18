@@ -45,7 +45,9 @@ The farm host is authoritative. Only the host's mod connection processes externa
 ## Repository contents
 
 - Gameplay/MonsterSpawner.cs — host-only command dispatch and safe tile selection.
-- Gameplay/MonsterCatalog.cs — runtime-discovered vanilla monster names and weighted random selection.
+- Gameplay/MonsterCatalog.cs — runtime-discovered vanilla monster classes and progression-filtered weighted random selection.
+- Gameplay/MonsterProgression.cs and Gameplay/MonsterLocationPools.cs — vanilla save checks and location-group unlock rules.
+- docs/MONSTER_POOLS.md — complete progression rules, exclusions, and variant implementation requirements.
 - ModEntry.cs — SMAPI entry point, local test commands and game-thread command processing.
 - Networking/GameModsClient.cs — authenticated WebSocket connection, typed command validation, reconnect and acknowledgements.
 - ModConfig.cs — local broadcaster ID and revocable host token.
@@ -79,7 +81,7 @@ After installing the GitHub Actions ZIP through SMAPI, enter these commands in t
     spectrum_spawn_test
     spectrum_spawn_random_test
 
-The first command requests a Green Slime. The second selects from the weighted random pool. Both are host-only.
+The first command requests a Green Slime. The second selects from the progression-eligible weighted random pool. The pool-status command reports unlocked progression groups, discovered selectable classes, and class families that still need explicit constructor/variant support. All are host-only.
 
 The 0.4.0 integration writes compact redemption and spawn results to the SMAPI console, retaining each command ID for deduplication and tracing. Successful spawns are announced through Stardew's existing in-game chat with the Twitch redeemer, monster type and location. The announcement is only shown after the game reports that a character was added.
 
