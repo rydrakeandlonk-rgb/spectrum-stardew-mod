@@ -196,7 +196,8 @@ internal sealed class ModEntry : Mod
 
     private void StartPairingOrOpenControlCenter()
     {
-        if (this.gameModsClient?.IsConnected == true)
+        if (this.gameModsClient?.IsConnected == true ||
+            this.pairingStatus.StartsWith("Twitch account authorised", StringComparison.OrdinalIgnoreCase))
         {
             this.OpenControlCenter();
             return;
@@ -241,6 +242,7 @@ internal sealed class ModEntry : Mod
             }
             catch (Exception ex)
             {
+                this.pairingVerificationUri = "";
                 this.pairingStatus = "Pairing failed · " + ex.Message;
                 this.Monitor.Log("Spectrum device pairing failed: " + ex.Message, LogLevel.Warn);
             }
@@ -338,6 +340,13 @@ internal sealed class ModEntry : Mod
             this.gameModsClient = new GameModsClient(this.config, this.Monitor);
             this.pairingStatus = "Twitch account authorised · connecting…";
             Game1.chatBox?.addInfoMessage("Spectrum Twitch connection authorised. Spawning remains paused until Control Center opens the safety gate.");
+        }
+
+        if (this.gameModsClient?.IsConnected == true &&
+            this.pairingStatus.StartsWith("Twitch account authorised", StringComparison.OrdinalIgnoreCase))
+        {
+            this.pairingStatus = "";
+            this.pairingVerificationUri = "";
         }
 
         if (this.gameModsClient is null ||
