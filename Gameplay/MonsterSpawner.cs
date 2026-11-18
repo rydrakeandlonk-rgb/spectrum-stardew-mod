@@ -20,8 +20,16 @@ internal sealed class MonsterSpawner
 
     public MonsterSpawner(IMonitor monitor) => this.monitor = monitor;
 
-    public bool TrySpawnRandomMonster() =>
-        this.TrySpawnCandidate(MonsterCatalog.GetRandomType(), out _, out _);
+    public bool TrySpawnRandomMonster()
+    {
+        if (!Context.IsWorldReady || Game1.player is null)
+        {
+            this.monitor.Log("[Spectrum] SPAWN FAILED | load a save before selecting a random monster", LogLevel.Warn);
+            return false;
+        }
+
+        return this.TrySpawnCandidate(MonsterCatalog.GetRandomType(), out _, out _);
+    }
 
     public bool TrySpawnGreenSlime() =>
         MonsterCatalog.TryGetCanonicalType("Green Slime", out string id) &&
