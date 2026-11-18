@@ -13,6 +13,8 @@ The product is a private Spectrum integration. Control Center decides which acti
 - [ ] Compile against the target Stardew Valley installation.
 - [ ] Verify the command route and every candidate type in-game.
 - [ ] Verify multiplayer replication with a host and farmhand.
+- [x] Add compact one-line SMAPI redemption and spawn-result logs with command IDs.
+- [x] Announce confirmed successful spawns through Stardew's existing in-game chat with the Twitch redeemer, monster and location.
 
 ## Phase 2 — Control Center Mods management
 
