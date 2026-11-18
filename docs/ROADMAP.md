@@ -6,16 +6,17 @@ The product is a private Spectrum integration. Control Center decides which acti
 
 - [x] Create the SMAPI project and host-only Green Slime test command.
 - [x] Discover all vanilla monster subclasses supported by the built-in monster command, validate canonical names and use inverse-health weighted random selection.
-- [x] Dispatch monster creation through Stardew's built-in debug command parser instead of custom constructors.
+- [x] Add direct, explicit vanilla constructor dispatch for named monster variants.
 - [x] Add a local random monster test command.
 - [x] Add first-pass location-group progression checks using vanilla save flags and completed Special Order history.
 - [x] Add an in-game diagnostic command for unlocked pools and unresolved class families.
-- [ ] Add explicit spawn definitions for every non-excluded monster and named variant in the reference roster.
-- [ ] Implement and validate dangerous monster setup, including additional-difficulty stats and dangerous textures.
+- [x] Add explicit spawn definitions for the reference roster's non-excluded named variants and location pools.
+- [x] Implement first-pass dangerous monster setup with an additional-difficulty stat step and optional dangerous textures.
+- [ ] Validate dangerous scaling and visuals in-game; compare the fixed global stat step with vanilla mine-specific scaling.
 - [x] Add an authenticated WebSocket client, reconnect loop and typed command validation.
 - [x] Queue remote commands for processing on the SMAPI update thread and acknowledge after handling.
 - [ ] Compile against the target Stardew Valley installation.
-- [ ] Verify the command route and every runtime-discovered vanilla candidate type in-game.
+- [ ] Verify every explicit monster variant, its post-construction behaviour and its spawn compatibility in-game.
 - [ ] Verify multiplayer replication with a host and farmhand.
 - [x] Add compact one-line SMAPI redemption and spawn-result logs with command IDs.
 - [x] Announce confirmed successful spawns through Stardew's existing in-game chat with the Twitch redeemer, monster and location.
