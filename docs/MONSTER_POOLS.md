@@ -54,7 +54,7 @@ Reading on selection means progression acquired during a running save can be rec
 ## Exclusions
 
 These entries must never enter the candidate pool:
-- Mummy and Mummy (dangerous).
+- The following are excluded from the catalogue: Mummy, normal Armored Bug, Lava Lurk, Duggy and Magma Duggy. The exclusions apply to dangerous forms too, so all Duggy variants and both Mummy forms remain out. Dangerous Armored Bug is the one intentional exception: it is included in Dangerous Skull Cavern while normal Armored Bug remains excluded.
 - Armored Bug (normal only). Dangerous Armored Bug is eligible in Dangerous Skull Cavern.
 - Lava Lurk.
 - Duggy, Duggy (dangerous), and Magma Duggy.
