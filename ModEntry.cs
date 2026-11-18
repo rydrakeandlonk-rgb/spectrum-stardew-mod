@@ -52,7 +52,7 @@ internal sealed class ModEntry : Mod
 
         helper.ConsoleCommands.Add(
             "spectrum_monster_pool_status",
-            "Show progression-unlocked monster pools and class families not yet supported by the current constructor catalogue.",
+            "Show unlocked location pools, selectable monster variants, and unresolved constructors.",
             this.OnMonsterPoolStatusCommand
         );
 
@@ -180,11 +180,11 @@ internal sealed class ModEntry : Mod
         IReadOnlyList<string> unresolvedTypes = MonsterCatalog.GetUnresolvedEligibleClassNames();
 
         this.Monitor.Log($"Unlocked monster pools: {string.Join(", ", unlockedPools)}", LogLevel.Info);
-        this.Monitor.Log($"Currently selectable discovered classes ({eligibleTypes.Count}): {string.Join(", ", eligibleTypes)}", LogLevel.Info);
+        this.Monitor.Log($"Currently selectable monster variants ({eligibleTypes.Count}): {string.Join(", ", eligibleTypes)}", LogLevel.Info);
         this.Monitor.Log(
             unresolvedTypes.Count == 0
-                ? "All configured class families are present in the current constructor catalogue."
-                : $"Class families awaiting explicit variant/constructor support ({unresolvedTypes.Count}): {string.Join(", ", unresolvedTypes)}",
+                ? "All unlocked spawn definitions have supported constructors and setup methods."
+                : $"Spawn definitions awaiting constructor/setup support ({unresolvedTypes.Count}): {string.Join(", ", unresolvedTypes)}",
             unresolvedTypes.Count == 0 ? LogLevel.Info : LogLevel.Warn
         );
     }
