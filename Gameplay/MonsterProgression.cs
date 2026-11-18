@@ -30,6 +30,7 @@ internal sealed record MonsterProgressionSnapshot(
     bool DangerousMinesUnlocked,
     bool QuarryMineUnlocked,
     bool SkullCavernUnlocked,
+    bool BugLairUnlocked,
     bool DangerousSkullCavernUnlocked,
     bool VolcanoDungeonUnlocked)
 {
@@ -51,7 +52,7 @@ internal sealed record MonsterProgressionSnapshot(
             MonsterPool.QuarryMine => this.QuarryMineUnlocked,
             MonsterPool.SkullCavern => this.SkullCavernUnlocked,
             MonsterPool.DangerousSkullCavern => this.DangerousSkullCavernUnlocked,
-            MonsterPool.BugLair => true,
+            MonsterPool.BugLair => this.BugLairUnlocked,
             MonsterPool.Farm => true,
             MonsterPool.VolcanoDungeon => this.VolcanoDungeonUnlocked,
             _ => false
@@ -97,8 +98,12 @@ internal sealed record MonsterProgressionSnapshot(
             CurrentAreaName: currentAreaName,
             CurrentAreaDifficulty: currentAreaDifficulty,
             DangerousMinesUnlocked: completedOrders.Contains("QiChallenge9"),
-            QuarryMineUnlocked: farmer.mailReceived.Contains("gotGoldenScythe"),
+            // Quarry Mine access comes from repairing the Quarry bridge, not
+            // collecting the Golden Scythe at the end of the mine.
+            QuarryMineUnlocked: farmer.hasOrWillReceiveMail("ccCraftsRoom") ||
+                farmer.hasOrWillReceiveMail("jojaCraftsRoom"),
             SkullCavernUnlocked: farmer.hasSkullKey,
+            BugLairUnlocked: farmer.mailReceived.Contains("krobusUnseal"),
             DangerousSkullCavernUnlocked: completedOrders.Contains("QiChallenge10"),
             VolcanoDungeonUnlocked: farmer.hasOrWillReceiveMail("willyBoatFixed")
         );
