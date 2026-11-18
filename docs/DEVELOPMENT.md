@@ -26,12 +26,12 @@ ModBuildConfig uses the Stardew Valley installation detected on the development 
 
 1. Load a disposable test save as the host.
 2. Open the SMAPI console.
-3. Run spectrum_spawn_test to spawn a Green Slime.
-4. Run spectrum_spawn_random_test to exercise the weighted random candidate pool.
-5. Check the SMAPI log for the selected monster and spawn result.
+3. Run spectrum_spawn_test to request a Green Slime through Stardew's built-in debug command parser.
+4. Run spectrum_spawn_random_test to exercise the weighted random monster allowlist.
+5. Check the SMAPI log for the selected monster and command result.
 6. Repeat in a multiplayer farm with a farmhand connected; confirm exactly one monster appears for both players.
 
-The random pool uses inverse-health weighting. Candidate constructors are discovered from the installed Stardew assembly; unavailable candidates are skipped. Confirm the actual candidate pool and balance in-game before release.
+The mod invokes Game1.parseDebugInput with a generated monster command. Stardew's own DebugCommands handler performs monster construction. The mod does not reflect over monster constructors. The monster type is selected from a fixed allowlist; approximate health estimates are used only to weight selection.
 
 Back up saves before early gameplay testing.
 
@@ -54,7 +54,7 @@ The ZIP must contain the mod's compiled DLL, manifest.json, and required depende
 
 ## Current limitations
 
-- Weighted random monster selection is implemented in source but has not been compiled or verified against the target game installation.
+- Built-in monster command dispatch and weighted selection are implemented in source but have not been compiled or verified against the target game installation.
 - Twitch EventSub redemption subscription/routing, gateway, pairing, and remote connection are not implemented yet.
 - Control Center Mods page and D1 migration are committed in the Spectrum Cloudflare repository but have not been deployed/applied.
 - Reward mapping UI and live connection reporting are not implemented yet.
