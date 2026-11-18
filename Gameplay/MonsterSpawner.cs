@@ -49,6 +49,37 @@ internal sealed class MonsterSpawner
         return this.TrySpawnCandidate(candidateId, out _, out _, ignoreProgression);
     }
 
+    /// <summary>
+    /// Removes every currently loaded hostile Monster from the host's loaded
+    /// locations. NPCs, farm animals and other non-monster characters remain.
+    /// </summary>
+    public int ClearLoadedMonsters()
+    {
+        if (!Context.IsWorldReady || !Context.IsMainPlayer)
+        {
+            this.monitor.Log("[Spectrum] CLEAR FAILED | the host world is not ready", LogLevel.Warn);
+            return -1;
+        }
+
+        var locations = new HashSet<GameLocation>(Game1.locations);
+        if (Game1.currentLocation is not null)
+            locations.Add(Game1.currentLocation);
+
+        int removed = 0;
+        foreach (GameLocation location in locations)
+        {
+            List<Monster> monsters = location.characters.OfType<Monster>().ToList();
+            foreach (Monster monster in monsters)
+            {
+                if (location.characters.Remove(monster))
+                    removed++;
+            }
+        }
+
+        this.monitor.Log($"[Spectrum] CLEAR | removed {removed} hostile monster(s) across {locations.Count} loaded location(s).", LogLevel.Info);
+        return removed;
+    }
+
     public bool TryExecute(
         GameCommand command,
         out int spawnedCount,
