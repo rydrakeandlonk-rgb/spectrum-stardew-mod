@@ -36,7 +36,7 @@ The current reference-assembly snapshot is based on Stardew Valley 1.6.15 and SM
 7. Confirm a successful redemption appears in Stardew's existing chat with the Twitch username, monster name and location. Failed spawns must not produce a success chat message.
 8. Repeat in a multiplayer farm with a farmhand connected; confirm exactly one monster appears for both players.
 
-The network client validates typed messages and queues them for the SMAPI update thread. It does not execute server-supplied command text or monster class names. The local monster catalogue selects the type and tile coordinate.
+The network client validates typed messages and queues them for the SMAPI update thread. It does not execute server-supplied command text or monster class names. The local catalogue discovers eligible vanilla monster classes from the game's own assembly and selects the type and tile coordinate. In-game validation should exercise each discovered candidate, including terrain-dependent monsters.
 
 Back up saves before early gameplay testing.
 
