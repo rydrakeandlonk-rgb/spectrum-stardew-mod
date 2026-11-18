@@ -131,6 +131,16 @@ internal static class MonsterCatalog
     public static IReadOnlyList<string> AllTypes => Candidates.Select(candidate => candidate.DisplayName).ToArray();
     public static IReadOnlyList<string> GetEligibleTypes() => GetEligibleCandidates().Select(candidate => candidate.DisplayName).ToArray();
 
+    public static IReadOnlyList<string> GetThreatDataFallbacks()
+    {
+        EnsureThreatProfilesLoaded();
+        return Candidates
+            .Where(candidate => ThreatProfiles is null || !ThreatProfiles.ContainsKey(GetMonsterDataName(candidate)))
+            .Select(candidate => $"{candidate.DisplayName} -> {GetMonsterDataName(candidate)}")
+            .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
     public static IReadOnlyList<string> GetCatalogValidationIssues()
     {
         var issues = new List<string>();
