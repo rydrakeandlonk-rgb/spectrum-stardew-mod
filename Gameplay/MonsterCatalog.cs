@@ -56,9 +56,13 @@ internal static class MonsterCatalog
 
     public static bool TryGetCanonicalType(string? value, out string monsterType)
     {
-        string requested = (value ?? "").Trim();
+        string requested = new string((value ?? "").Where(char.IsLetterOrDigit).ToArray());
         Candidate? match = Candidates.FirstOrDefault(candidate =>
-            string.Equals(candidate.TypeName, requested, StringComparison.OrdinalIgnoreCase));
+            string.Equals(
+                new string(candidate.TypeName.Where(char.IsLetterOrDigit).ToArray()),
+                requested,
+                StringComparison.OrdinalIgnoreCase
+            ));
         monsterType = match?.TypeName ?? "";
         return match is not null;
     }
