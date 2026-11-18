@@ -9,7 +9,7 @@ The product is a private Spectrum integration. Control Center decides which acti
 - [x] Add direct, explicit vanilla constructor dispatch for named monster variants.
 - [x] Add a local random monster test command.
 - [x] Add first-pass location-group progression checks using vanilla save flags and completed Special Order history.
-- [x] Add an in-game diagnostic command for unlocked pools and unresolved class families.
+- [x] Add an in-game diagnostic command for unlocked pools, full catalogue mappings and constructor/setup support.
 - [x] Add explicit spawn definitions for the reference roster's non-excluded named variants and location pools.
 - [x] Implement first-pass dangerous monster setup with an additional-difficulty stat step and optional dangerous textures.
 - [ ] Validate dangerous scaling and visuals in-game; compare the fixed global stat step with vanilla mine-specific scaling.
