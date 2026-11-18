@@ -1,14 +1,13 @@
 using Microsoft.Xna.Framework;
 using StardewModdingAPI;
 using StardewValley;
-using StardewValley.Monsters;
 
 namespace SpectrumStardewMod.Gameplay;
 
-/// <summary>Creates vanilla monsters in the current game world.</summary>
+/// <summary>Routes approved monster types through Stardew's built-in debug command parser.</summary>
 /// <remarks>
-/// All world mutations must happen on the game thread and on the host.
-/// Network callbacks will enqueue requests for a later game tick; they must never
+/// All command execution must happen on the game thread and on the host.
+/// Network callbacks must enqueue requests for a later game tick; they must never
 /// call this class directly from a background thread.
 /// </remarks>
 internal sealed class MonsterSpawner
@@ -29,50 +28,15 @@ internal sealed class MonsterSpawner
 
     public bool TrySpawnRandomMonster()
     {
-        if (!Context.IsWorldReady)
-        {
-            this.monitor.Log("Random spawn rejected: no save is currently loaded.", LogLevel.Warn);
-            return false;
-        }
-
-        if (!Context.IsMainPlayer)
-        {
-            this.monitor.Log("Random spawn rejected: only the multiplayer host can create monsters.", LogLevel.Warn);
-            return false;
-        }
-
-        if (Game1.eventUp || Game1.currentLocation is null || Game1.player is null)
-        {
-            this.monitor.Log("Random spawn rejected: the current game state isn't suitable for a spawn.", LogLevel.Warn);
-            return false;
-        }
-
-        GameLocation location = Game1.currentLocation;
-        Vector2 playerTile = Game1.player.Tile;
-
-        foreach (Point offset in NearbyTileOffsets)
-        {
-            Vector2 tile = new(playerTile.X + offset.X, playerTile.Y + offset.Y);
-            if (!location.isTileLocationTotallyClearAndPlaceable(tile))
-                continue;
-
-            Vector2 pixelPosition = tile * 64f;
-            if (!MonsterCatalog.TryCreateRandom(pixelPosition, out Monster? monster) || monster is null)
-            {
-                this.monitor.Log("Random spawn rejected: no compatible vanilla monsters could be created. Check the installed Stardew version.", LogLevel.Error);
-                return false;
-            }
-
-            location.characters.Add(monster);
-            this.monitor.Log($"Spawned random monster {monster.GetType().Name} in {location.Name} near {Game1.player.Name}.", LogLevel.Info);
-            return true;
-        }
-
-        this.monitor.Log("Random spawn rejected: couldn't find a clear tile near the player.", LogLevel.Warn);
-        return false;
+        return this.TryRunMonsterCommand(MonsterCatalog.GetRandomType(), "Random monster");
     }
 
     public bool TrySpawnGreenSlime()
+    {
+        return this.TryRunMonsterCommand("GreenSlime", "Test Green Slime");
+    }
+
+    private bool TryRunMonsterCommand(string monsterType, string description)
     {
         if (!Context.IsWorldReady)
         {
@@ -86,7 +50,7 @@ internal sealed class MonsterSpawner
             return false;
         }
 
-        if (Game1.eventUp || Game1.currentLocation is null || Game1.player is null)
+        if (Game1.eventUp || Game1.currentLocation is null || Game1.player is null || Game1.game1 is null)
         {
             this.monitor.Log("Spawn rejected: the current game state isn't suitable for a spawn.", LogLevel.Warn);
             return false;
@@ -98,15 +62,25 @@ internal sealed class MonsterSpawner
         foreach (Point offset in NearbyTileOffsets)
         {
             Vector2 tile = new(playerTile.X + offset.X, playerTile.Y + offset.Y);
-
             if (!location.isTileLocationTotallyClearAndPlaceable(tile))
                 continue;
 
-            Vector2 pixelPosition = tile * 64f;
-            var slime = new GreenSlime(pixelPosition, 0);
-            location.characters.Add(slime);
+            int tileX = (int)tile.X;
+            int tileY = (int)tile.Y;
 
-            this.monitor.Log($"Spawned a test Green Slime in {location.Name} near {Game1.player.Name}.", LogLevel.Info);
+            // The game owns monster construction. parseDebugInput invokes the same
+            // built-in DebugCommands handler used by SMAPI's "debug" console route.
+            // The type comes only from our local allowlist; coordinates are integers.
+            string command = $"monster {monsterType} {tileX} {tileY}";
+            bool handled = Game1.game1.parseDebugInput(command);
+
+            if (!handled)
+            {
+                this.monitor.Log($"Stardew rejected the monster command: {command}", LogLevel.Warn);
+                return false;
+            }
+
+            this.monitor.Log($"{description} ({monsterType}) requested at {location.Name}, tile {tileX},{tileY}.", LogLevel.Info);
             return true;
         }
 
