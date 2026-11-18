@@ -23,7 +23,8 @@ The product is a private Spectrum integration. Control Center decides which acti
 - [x] Revoke host credentials when access is disabled.
 - [ ] Apply migration 0028 to production D1 through the confirmation-gated workflow.
 - [ ] Deploy Control Center and sync dashboard KV assets.
-- [x] Add administrator reward-mapping controls.\n- [ ] Add live connection detail view.
+- [x] Add administrator reward-mapping controls.
+- [ ] Add live connection detail view.
 
 ## Phase 3 — Event Hub Twitch redemption integration
 
