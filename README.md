@@ -46,7 +46,7 @@ The farm host is authoritative. Only the host's mod connection processes externa
 
 - Gameplay/MonsterSpawner.cs — host-only command dispatch and safe tile selection.
 - Gameplay/MonsterCatalog.cs — allowlisted monster names and weighted random selection.
-- ModEntry.cs — SMAPI entry point and local test commands.
+- ModEntry.cs — SMAPI entry point, local test commands and game-thread command processing.\n- Networking/GameModsClient.cs — authenticated WebSocket connection, typed command validation, reconnect and acknowledgements.\n- ModConfig.cs — local broadcaster ID and revocable host token.
 - manifest.json and SpectrumStardewMod.csproj — SMAPI project metadata.
 - docs/ — architecture, development and roadmap.
 
@@ -54,7 +54,7 @@ The farm host is authoritative. Only the host's mod connection processes externa
 
 The local gameplay path now delegates monster creation to Stardew's built-in debug-command parser instead of using reflection to construct monster classes. This code has not yet been compiled or tested in-game.
 
-The Control Center repository contains an admin-only Mods page, per-member activation API, and additive D1 migration. The live gateway, browser pairing, Twitch redemption EventSub subscription/routing, remote game connection, reward mapping UI, release ZIP packaging, and Nexus distribution are not complete. The migration has not been applied and the dashboard has not been deployed.
+The Control Center repository contains an admin-only Mods page, per-member activation API, and additive D1 migration. The shared Game Mods gateway, Event Hub's guarded redemption route, Control Center pairing/revocation APIs and Mods dashboard controls, and the SMAPI WebSocket client are now implemented in source. They have not yet been compiled, deployed, or tested end-to-end. Reward mapping UI, live connection reporting, release ZIP verification, and distribution remain outstanding. The migration has not been applied and the dashboard has not been deployed.
 
 ## Local test commands
 
@@ -70,7 +70,7 @@ The first command requests a Green Slime. The second selects from the weighted r
 - Only approved, active Spectrum members with an explicit enabled record can pair.
 - A valid Twitch login alone does not grant access.
 - Never ship service credentials or Twitch tokens in the mod ZIP.
-- Use revocable game-session credentials, one-time pairing codes, redemption IDs, expiry, deduplication, rate limits and spawn caps.
+- Use revocable game-session credentials, one-time host tokens, redemption IDs, expiry, deduplication and spawn caps.
 - Network callbacks must enqueue typed requests; game state is changed only on the SMAPI game thread.
 - Never accept arbitrary C# types, commands, or executable content from the service.
 
