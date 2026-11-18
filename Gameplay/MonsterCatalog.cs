@@ -226,12 +226,25 @@ internal static class MonsterCatalog
     private static Candidate? FindCandidate(string? value)
     {
         string normalized = Normalize(value);
-        return Candidates.FirstOrDefault(candidate =>
+        if (normalized.Length == 0)
+            return null;
+
+        Candidate? exact = Candidates.FirstOrDefault(candidate =>
             Normalize(candidate.Id) == normalized ||
             Normalize(candidate.DisplayName) == normalized ||
             Normalize(candidate.DisplayName.Split('(')[0].Trim()) == normalized ||
-            Normalize(GetParentheticalAlias(candidate.DisplayName)) == normalized ||
             Normalize(candidate.ClassName) == normalized);
+        if (exact is not null)
+            return exact;
+
+        Candidate[] aliases = Candidates.Where(candidate =>
+        {
+            string alias = Normalize(GetParentheticalAlias(candidate.DisplayName));
+            return alias.Length > 0 && alias == normalized;
+        }).ToArray();
+
+        // Avoid silently mapping ambiguous aliases such as "Sludge" to one slime colour.
+        return aliases.Length == 1 ? aliases[0] : null;
     }
 
     private static bool HasSupportedDefinition(Candidate candidate)
