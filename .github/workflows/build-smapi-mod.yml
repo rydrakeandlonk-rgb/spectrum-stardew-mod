@@ -1,0 +1,79 @@
+name: Build Stardew SMAPI Mod
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**/*.cs"
+      - "*.csproj"
+      - "manifest.json"
+      - ".github/workflows/build-smapi-mod.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "**/*.cs"
+      - "*.csproj"
+      - "manifest.json"
+      - ".github/workflows/build-smapi-mod.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stardew-smapi-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Compile and package SMAPI mod
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out mod source
+        uses: actions/checkout@v4
+
+      - name: Check out Stardew reference assemblies
+        uses: actions/checkout@v4
+        with:
+          repository: StardewModders/mod-reference-assemblies
+          ref: 0141355fecb8536715ecff22f99374b5e632cbed
+          path: ref-assemblies
+
+      - name: Set up .NET 6
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 6.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore SpectrumStardewMod.csproj
+
+      - name: Compile and create release ZIP
+        run: >-
+          dotnet build SpectrumStardewMod.csproj
+          --configuration Release
+          --no-restore
+          -p:GamePath=${{ github.workspace }}/ref-assemblies
+          -p:EnableModDeploy=false
+          -p:EnableModZip=true
+          -p:ModZipPath=${{ github.workspace }}/dist
+
+      - name: Verify build outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          dll="$(find bin/Release -type f -name 'SpectrumStardewMod.dll' -print -quit)"
+          zip="$(find dist -type f -name '*.zip' -print -quit)"
+          test -n "$dll" || { echo "::error::Compiled mod DLL was not produced."; exit 1; }
+          test -n "$zip" || { echo "::error::Release ZIP was not produced."; exit 1; }
+          echo "Compiled assembly: $dll"
+          echo "Release package: $zip"
+
+      - name: Upload build package
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: spectrum-stardew-mod-${{ github.sha }}
+          path: dist/*.zip
+          if-no-files-found: error
+          retention-days: 14
