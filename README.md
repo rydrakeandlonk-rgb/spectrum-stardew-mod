@@ -6,12 +6,12 @@ Only Spectrum members explicitly enabled by an administrator in Spectrum Control
 
 ## Intended experience
 
-1. An enabled Spectrum streamer installs the mod through SMAPI.
+1. An enabled Spectrum streamer installs the Spectrum mod through SMAPI.
 2. They launch Stardew Valley and pair the host game with Spectrum Control Center.
 3. Control Center verifies the signed-in Twitch identity and administrator-controlled activation record.
 4. The streamer connects the Channel Point reward used for Random Monster Spawner.
 5. The host game connects to the Spectrum gateway and receives redemption requests.
-6. The host chooses a random supported monster using inverse-health weighting and spawns it near the player.
+6. The host selects a monster from the local allowlist and invokes Stardew Valley's built-in monster debug handler.
 
 No Twitch password, Twitch client secret, or long-lived Twitch token is stored in the mod.
 
@@ -24,33 +24,37 @@ Twitch Channel Points → Spectrum Event Hub → Stardew gateway → host SMAPI 
 - Control Center: administrator-only Mods page, Spectrum member activation, connection status and reward configuration.
 - Event Hub: receives and verifies Twitch Channel Point redemption notifications and routes approved redemptions.
 - Stardew gateway: owns short-lived game pairing, authenticated host connections, deduplication and request delivery.
-- SMAPI mod: runs in the host game, chooses a random monster from its safe allowlist, and creates it on the game thread.
+- SMAPI mod: runs in the host game, chooses a random monster from its allowlist, and invokes the game's own debug-command parser on the game thread.
 
-The live service is centrally operated. Spectrum streamers do not deploy Workers or manage Twitch developer credentials.
+## Monster spawning
 
-## Random monster selection
+The mod does not implement monster constructors or duplicate Stardew's spawn logic. It calls the game's Game1.parseDebugInput method with a locally generated command in the form:
 
-The redemption is always a random monster; viewers do not choose a monster ID. The mod uses an allowlist of vanilla monsters and inverse-health weighting: higher-health monsters have a lower selection weight. Monster types whose constructors are unavailable on the installed game version are skipped safely.
+    monster GreenSlime 24 18
 
-The initial allowlist follows the Stardew Valley Wiki's documented monster command types: Bat, DinoMonster, DustSpirit, Fly, Ghost, GreenSlime, Grub, LavaCrab, Mummy, RockCrab, RockGolem, Serpent, ShadowBrute, ShadowShaman, Skeleton and SquidKid. Duggy is excluded because its spawn depends on terrain. The wiki documents these names for the Console Commands debug command; this mod does not require that separate mod and instead attempts to construct the allowlisted game types directly. Constructor compatibility still needs in-game verification. Higher-health candidates receive lower selection weights.
+This invokes the same built-in debug-command handler used by SMAPI's debug console route. The command type is selected from a hard-coded allowlist, and tile coordinates are selected locally near the host player. No command text or monster type supplied by the gateway is executed.
+
+The initial allowlist follows the Stardew Valley Wiki's documented monster command types: Bat, DinoMonster, DustSpirit, Fly, Ghost, GreenSlime, Grub, LavaCrab, Mummy, RockCrab, RockGolem, Serpent, ShadowBrute, ShadowShaman, Skeleton and SquidKid. Duggy is excluded because its spawn depends on terrain. Higher-health monsters are intended to be less common, using approximate health values as weighting inputs; these are initial balancing estimates, not verified game data.
+
+SMAPI installs its bundled Console Commands component as part of the normal SMAPI installation. Players should not need to download a separate command mod. The Spectrum mod invokes the game's parser directly, so it does not need to automate typing into the SMAPI console or depend on an external console-command API.
 
 ## Multiplayer
 
-The farm host is authoritative. Only the host's mod connection processes external redemption requests and creates monsters. Farmhands do not need separate Twitch connections. Monster replication must be verified in a real host/farmhand test before release.
+The farm host is authoritative. Only the host's mod connection processes external redemption requests and creates monsters. Farmhands do not need separate Twitch connections. Monster replication must be verified in a real host/farmhand test.
 
 ## Repository contents
 
-- Gameplay/MonsterSpawner.cs — host-only world spawning.
-- Gameplay/MonsterCatalog.cs — allowlisted random monster pool and weighted selection.
+- Gameplay/MonsterSpawner.cs — host-only command dispatch and safe tile selection.
+- Gameplay/MonsterCatalog.cs — allowlisted monster names and weighted random selection.
 - ModEntry.cs — SMAPI entry point and local test commands.
 - manifest.json and SpectrumStardewMod.csproj — SMAPI project metadata.
 - docs/ — architecture, development and roadmap.
 
 ## Current implementation status
 
-Gameplay prototype + Control Center management foundation. The mod now contains a weighted random monster selection prototype and local SMAPI test command. The Control Center repository contains an admin-only Mods page, per-member activation API, and additive D1 migration.
+The local gameplay path now delegates monster creation to Stardew's built-in debug-command parser instead of using reflection to construct monster classes. This code has not yet been compiled or tested in-game.
 
-The live gateway, browser pairing, Twitch redemption EventSub subscription/routing, remote game connection, reward mapping UI, release ZIP packaging, and Nexus distribution are not complete. The migration has not been applied and the dashboard has not been deployed. The C# project has not yet been compiled or tested in-game.
+The Control Center repository contains an admin-only Mods page, per-member activation API, and additive D1 migration. The live gateway, browser pairing, Twitch redemption EventSub subscription/routing, remote game connection, reward mapping UI, release ZIP packaging, and Nexus distribution are not complete. The migration has not been applied and the dashboard has not been deployed.
 
 ## Local test commands
 
@@ -59,7 +63,7 @@ After building and installing through SMAPI:
     spectrum_spawn_test
     spectrum_spawn_random_test
 
-The first command spawns a Green Slime. The second selects from the weighted random pool. Both are host-only.
+The first command requests a Green Slime. The second selects from the weighted random pool. Both are host-only.
 
 ## Security
 
