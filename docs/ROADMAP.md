@@ -14,6 +14,7 @@ The product is a private Spectrum integration. Control Center decides which acti
 - [x] Add first-pass progression-based threat targeting without directly changing vanilla monster stats.
 - [x] Derive monster threat scores from vanilla `Data/Monsters` stats with a fallback for unresolved entries.
 - [x] Add an in-game diagnostic command for unlocked pools, full catalogue mappings and constructor/setup support.
+- [x] Add a static GitHub Actions check for catalogue IDs, pool references, required assignments and excluded variants.
 - [x] Add explicit spawn definitions for the reference roster's named variants and location pools, including restored Skeleton Mage, Dangerous Copper/Iron Slimes and Dangerous Armored Bug.
 - [x] Implement first-pass dangerous monster setup with an additional-difficulty stat step and optional dangerous textures.
 - [ ] Validate dangerous scaling and visuals in-game; compare the fixed global stat step with vanilla mine-specific scaling.
