@@ -8,6 +8,10 @@ The product is a private Spectrum integration. Control Center decides which acti
 - [x] Discover all vanilla monster subclasses supported by the built-in monster command, validate canonical names and use inverse-health weighted random selection.
 - [x] Dispatch monster creation through Stardew's built-in debug command parser instead of custom constructors.
 - [x] Add a local random monster test command.
+- [x] Add first-pass location-group progression checks using vanilla save flags and completed Special Order history.
+- [x] Add an in-game diagnostic command for unlocked pools and unresolved class families.
+- [ ] Add explicit spawn definitions for every non-excluded monster and named variant in the reference roster.
+- [ ] Implement and validate dangerous monster setup, including additional-difficulty stats and dangerous textures.
 - [x] Add an authenticated WebSocket client, reconnect loop and typed command validation.
 - [x] Queue remote commands for processing on the SMAPI update thread and acknowledge after handling.
 - [ ] Compile against the target Stardew Valley installation.
