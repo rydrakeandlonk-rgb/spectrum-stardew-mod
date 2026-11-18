@@ -52,23 +52,28 @@ A dedicated service in the Spectrum Cloudflare repository.
 - Maintains an authenticated outbound gateway connection.
 - Queues the single typed random-monster spawn request and processes it on the SMAPI game thread only while the dashboard-controlled spawn state is enabled.
 - Checks that the world is ready and the local player is the multiplayer host.
-- Discovers eligible vanilla monster classes from the Stardew game assembly, selects a local canonical monster type and tile coordinate, and excludes third-party mod assemblies.
-- Calls Game1.parseDebugInput with a generated monster command so Stardew's own DebugCommands handler creates the monster.
+- Uses an explicit allowlist of vanilla monster variants, constructor arguments and post-construction setup; progression filters the global candidate pool.
+- Constructs the selected vanilla Monster through its known constructor, applies required variant setup and dangerous-mode treatment, then adds it to the current location on a valid tile.
 - Confirms the location's character count increases before reporting success, writes compact one-line redemption/spawn logs, and posts successful results through the existing in-game chat.
 - Farmhands do not connect to Twitch or independently process redemption requests.
 
 ## Random monster selection
 
-The redemption type is fixed: Random Monster Spawner.
+The redemption type is fixed: Random Monster Spawner. The SMAPI client owns final candidate selection so the gateway never needs to know or trust a game class name.
 
-The SMAPI client owns the final random selection so the gateway never needs to know or trust a game class name. The candidate catalogue is discovered from the vanilla `StardewValley.Monsters` namespace in the game's own assembly. It includes concrete monster subclasses with the public `Vector2` constructor used by the built-in `monster Type X Y` debug command. This covers the documented command types and other compatible vanilla monster classes present in the installed game version, while excluding mod-added assemblies. Terrain-dependent monsters such as Duggy are included when they satisfy that constructor contract; the game's own behavior may still impose location or terrain requirements.
+The catalogue is an explicit list of variant definitions rather than reflection-discovered class names. Each definition includes a stable local ID and display name, a vanilla class and exact constructor argument where required, post-construction setup for special forms, the location pools which unlock it, an approximate health value, and whether it is a dangerous variant.
 
-Monster construction is delegated to the game's own DebugCommands.Monster handler through Game1.parseDebugInput. The generated command is limited to a locally discovered vanilla type and integer tile coordinates. This avoids reflection-based constructor guessing and keeps the Spectrum mod independent of monster implementation details. Candidate selection uses approximate health values and the weight formula:
+Unlocked location pools are combined into a single global candidate set. A definition appearing in multiple unlocked pools is included once. Farm entries are always available without a Combat Level gate. Progression is read from the active save only when selecting or validating a candidate.
 
-    weight = 1 / health ^ 1.35
+Dangerous candidates are separate entries. They receive one additional-difficulty stat application and load a matching `_dangerous` texture if that asset exists. This is a consistent global-spawn approximation: vanilla mine generation can apply a different additional-difficulty amount depending on the mine floor and state, which isn't available when spawning in arbitrary locations.
 
-Higher-health candidates are less common. The health values are initial balancing estimates, not verified values or final spawn-rate guarantees.
+The definitions use known vanilla constructor patterns for named variants: Bat subtype integer codes; Ghost, Serpent, RockCrab and Shooter name arguments; Fly, Grub and Skeleton boolean options; and explicit setup methods for Stick Bug and Tiger Slime. Copper/Iron Slimes and Iridium Golem require post-construction setup based on vanilla data and constructor behaviour. These paths compile-check against the pinned Stardew 1.6.15 reference assemblies but still require in-game validation.
 
+The weighting formula remains:
+
+    weight = 1 / expectedHealth ^ 1.35
+
+Dangerous entries use a higher effective health estimate so they are less likely to dominate selection. These values are balancing estimates, not guaranteed encounter difficulty. Progression gates and weighting remain separate so the global pool can grow without making every unlocked monster equally likely.
 ## Control Center data
 
 Migration 0028_stardew_mod_access.sql creates:
@@ -101,14 +106,14 @@ Implemented in source:
 - SMAPI prototype, local Green Slime test command and weighted random monster test command.
 - Authenticated WebSocket client with reconnect, typed command validation and command acknowledgements.
 - Game-thread queue processing and host-only execution guard.
-- Built-in debug-command dispatch for monster creation.
-- Runtime discovery of vanilla monster classes supported by the built-in command, canonical name validation and inverse-health weighted random selection.
+- Explicit variant-aware vanilla monster construction and dangerous-variant setup.
+- Explicit variant definitions, progression-aware global candidate selection, canonical display-name validation and inverse-health weighted random selection.
 - Control Center admin Mods page and per-member activation API.
 - Additive D1 schema migration for member access and reward mappings.
 
 Not yet implemented or verified:
-- Compile and test the built-in command route and WebSocket client against the target Stardew/SMAPI installation.
-- Verify every allowlisted monster type is accepted by the installed Stardew version.
+- Install and test explicit variant constructors and the WebSocket client against the target Stardew/SMAPI installation.
+- Verify every allowlisted monster variant constructs, behaves and synchronises correctly in the installed Stardew version.
 - Apply migration 0028 to production D1 through the confirmation-gated workflow.
 - Deploy Control Center and synchronise dashboard KV assets; deploy Event Hub and Game Mods through their connected Workers Builds.
 - Verify live connection/last-seen reporting against a connected SMAPI host.
