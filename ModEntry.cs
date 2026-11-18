@@ -72,7 +72,7 @@ internal sealed class ModEntry : Mod
                 !this.gameModsClient.TryDequeueCommand(out GameCommand? command) || command is null)
                 break;
 
-            if (!this.processedCommandIds.Add(command.CommandId))
+            if (this.processedCommandIds.Contains(command.CommandId))
             {
                 this.Monitor.Log($"[Spectrum] DUPLICATE | {command.CommandId}", LogLevel.Trace);
                 _ = this.gameModsClient.AcknowledgeAsync(command.CommandId);
