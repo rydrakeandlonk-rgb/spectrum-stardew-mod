@@ -31,12 +31,13 @@ The current reference-assembly snapshot is based on Stardew Valley 1.6.15 and SM
 2. Open the SMAPI console.
 3. Run `spectrum_spawn_test` to request a Green Slime through Stardew's built-in debug command parser.
 4. Run `spectrum_spawn_random_test` to exercise the weighted random monster allowlist.
-5. Run `spectrum_connection_status` to inspect the gateway connection.
+5. Run `spectrum_monster_pool_status` to inspect the save's unlocked location groups, selectable discovered classes, and unresolved class families.
+6. Run `spectrum_connection_status` to inspect the gateway connection.
 6. Check the compact SMAPI log entries for the redeemer, reward, redemption time, command ID and confirmed spawn result. Failed attempts stay queued for retry; only successful spawns are acknowledged.
 7. Confirm a successful redemption appears in Stardew's existing chat with the Twitch username, monster name and location. Failed spawns must not produce a success chat message.
 8. Repeat in a multiplayer farm with a farmhand connected; confirm exactly one monster appears for both players.
 
-The network client validates typed messages and queues them for the SMAPI update thread. It does not execute server-supplied command text or monster class names. The local catalogue discovers eligible vanilla monster classes from the game's own assembly and selects the type and tile coordinate. In-game validation should exercise each discovered candidate, including terrain-dependent monsters.
+The network client validates typed messages and queues them for the SMAPI update thread. It does not execute server-supplied command text or monster class names. The local catalogue filters discovered vanilla class families through the active save's progression snapshot. See docs/MONSTER_POOLS.md for the unlock rules and the remaining variant-aware constructor work. In-game validation must cover each explicit spawn definition, including dangerous variants and location-sensitive behaviours.
 
 Back up saves before early gameplay testing.
 
