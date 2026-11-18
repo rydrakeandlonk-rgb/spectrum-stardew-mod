@@ -315,8 +315,14 @@ internal sealed class ModEntry : Mod
         int failed = 0;
         foreach (string displayName in MonsterCatalog.GetAllTestableTypes())
         {
-            if (!MonsterCatalog.TryGetCanonicalType(displayName, out string id, ignoreProgression: true) ||
-                !MonsterCatalog.TryCreateMonster(id, Game1.player.Position, out _, out string error, ignoreProgression: true))
+            if (!MonsterCatalog.TryGetCanonicalType(displayName, out string id, ignoreProgression: true))
+            {
+                failed++;
+                this.Monitor.Log($"[Spectrum] CATALOG TEST FAILED | {displayName} | definition could not be resolved.", LogLevel.Error);
+                continue;
+            }
+
+            if (!MonsterCatalog.TryCreateMonster(id, Game1.player.Position, out _, out string error, ignoreProgression: true))
             {
                 failed++;
                 this.Monitor.Log($"[Spectrum] CATALOG TEST FAILED | {displayName} | {error}", LogLevel.Error);
