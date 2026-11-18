@@ -223,9 +223,17 @@ internal sealed class SpectrumMenu : IClickableMenu
             this.CanSyncSettings, settings.DebugMessages);
         DrawButton(b, this.clearBounds, "Clear all loaded monsters", this.CanControl, false);
         string pairingStatus = this.getPairingStatus();
+        bool requestingPairing = pairingStatus.StartsWith("Requesting", StringComparison.OrdinalIgnoreCase);
+        bool awaitingApproval = pairingStatus.StartsWith("Waiting for approval", StringComparison.OrdinalIgnoreCase);
         DrawButton(b, this.connectBounds,
-            connected ? "Open Spectrum Control Center" : pairingStatus.Length > 0 ? "Open pairing approval" : "Connect Twitch account",
-            true, false);
+            connected || pairingStatus.StartsWith("Twitch account authorised", StringComparison.OrdinalIgnoreCase)
+                ? "Open Spectrum Control Center"
+                : requestingPairing
+                    ? "Pairing…"
+                    : awaitingApproval
+                        ? "Open pairing approval"
+                        : "Connect Twitch account",
+            !requestingPairing, false);
 
         if (this.confirmClear)
         {
