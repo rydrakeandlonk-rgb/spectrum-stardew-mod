@@ -76,8 +76,8 @@ Before any distribution, verify the ZIP on a clean SMAPI installation. It must c
 
 ## Current limitations
 
-- The SMAPI project has compiled successfully and a ZIP artifact has been produced through GitHub Actions using the pinned community reference assemblies. The artifact has not yet been installed and verified against the target game/SMAPI installation.
+- Version 0.7.3 was installed and tested on Stardew Valley 1.6.15 / SMAPI 4.5.2. Startup, gateway connection, catalogue validation, basic/random spawning, and the Twitch Channel Point flow passed. Version 0.7.4 adds the developer test harness and threat-data alias corrections; its compiled artifact still needs the consolidated in-game test.
 - The shared gateway, Control Center pairing/revocation controls and guarded Event Hub routing are committed but production deployment and end-to-end delivery remain unverified.
 - Migration 0028 has not been applied to production D1 and dashboard KV assets have not been synchronised.
 - Live connection reporting is implemented in the gateway and Control Center API source, but its deployed behaviour remains unverified.
-- No in-game-tested ZIP, GitHub Release or public mod release exists yet.
+- No final in-game-tested 0.7.4 ZIP, GitHub Release or public mod release exists yet. Multiplayer replication and redemption retry/reconnect edge cases remain unverified.
