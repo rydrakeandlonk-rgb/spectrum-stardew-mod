@@ -162,17 +162,36 @@ internal static class MonsterCatalog
         if (eligible.Length == 0)
             throw new InvalidOperationException("No progression-eligible monster definitions are available.");
 
-        double exponent = difficulty.Trim().ToLowerInvariant() switch
+        MonsterProgressionSnapshot progression = MonsterProgressionSnapshot.Read(Game1.player!);
+        string selectedDifficulty = difficulty.Trim().ToLowerInvariant();
+        double exponent = selectedDifficulty switch
         {
             "easy" => 1.8d,
             "hard" => 0.9d,
             _ => 1.35d
         };
-        double totalWeight = eligible.Sum(candidate => GetWeight(candidate.WeightingHealth * (candidate.Dangerous ? 1.5d : 1d), exponent));
+
+        // Progression milestones establish the main threat target. Combat Level
+        // is a smaller adjustment within that stage, not a substitute for progress.
+        double targetThreat = progression.ProgressionStage switch
+        {
+            0 => 75d,
+            1 => 155d,
+            _ => 260d
+        };
+        targetThreat *= 1d + progression.CombatLevel * 0.025d;
+        targetThreat *= selectedDifficulty switch
+        {
+            "easy" => 0.75d,
+            "hard" => 1.35d,
+            _ => 1d
+        };
+
+        double totalWeight = eligible.Sum(candidate => GetThreatWeight(candidate, targetThreat, exponent));
         double roll = Random.Shared.NextDouble() * totalWeight;
         foreach (Candidate candidate in eligible)
         {
-            roll -= GetWeight(candidate.WeightingHealth * (candidate.Dangerous ? 1.5d : 1d), exponent);
+            roll -= GetThreatWeight(candidate, targetThreat, exponent);
             if (roll <= 0)
                 return candidate.Id;
         }
@@ -378,5 +397,12 @@ internal static class MonsterCatalog
     }
 
     private static string Normalize(string? value) => new((value ?? "").Where(char.IsLetterOrDigit).ToArray());
-    private static double GetWeight(double health, double exponent) => 1d / Math.Pow(Math.Max(1d, health), exponent);
+    private static double GetThreatWeight(Candidate candidate, double targetThreat, double exponent)
+    {
+        // WeightingHealth is the catalogue's balancing estimate, not a runtime
+        // stat override. Dangerous variants carry a higher threat estimate.
+        double threat = Math.Max(1d, candidate.WeightingHealth * (candidate.Dangerous ? 1.5d : 1d));
+        double distance = Math.Abs(Math.Log(threat / Math.Max(1d, targetThreat)));
+        return 1d / Math.Pow(1d + distance, exponent);
+    }
 }
