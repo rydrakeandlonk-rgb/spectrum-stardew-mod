@@ -112,7 +112,8 @@ else:
 # Progression test profiles must be temporary and must never persist to save data.
 for preset in (
     '"early"', '"mines"', '"skull100"', '"danger-mines"', '"quarry"',
-    '"skull-cavern"', '"danger-skull"', '"bug-lair"', '"volcano"', '"all"'
+    '"skull-cavern"', '"danger-skull"', '"bug-lair"', '"volcano"',
+    '"combat-0"', '"combat-5"', '"combat-10"', '"shrine-0"', '"shrine-1"', '"shrine-2"', '"all"'
 ):
     if preset not in progression_source:
         errors.append(f"Progression test preset is missing: {preset}")
