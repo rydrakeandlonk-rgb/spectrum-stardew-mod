@@ -22,10 +22,10 @@ Progression eligibility and difficulty weighting are separate:
 |---|---|
 | Mines | Always |
 | Dangerous Mines | First successful completion of Danger in the Deep |
-| Quarry Mine | Golden Scythe obtained |
+| Quarry Mine | Quarry bridge repaired via Community Center Crafts Room or Joja bridge project |
 | Skull Cavern | Skull Key obtained |
 | Dangerous Skull Cavern | First successful completion of Skull Cavern Invasion |
-| Bug Lair | Always |
+| Bug Lair | Krobus opens the passage during the Dark Talisman quest (`krobusUnseal`) |
 | Farm | Always |
 | Volcano Dungeon | Ginger Island unlocked |
 
@@ -39,7 +39,8 @@ The progression reader uses existing save state:
 | Skull Cavern floor 100 story reached | reflection lookup of `Farmer.questsCompleted` for quest ID `30` (completed Cryptic Note story quest; the API was added in Stardew 1.6.16) |
 | Danger in the Deep completed | `Game1.player.team.completedSpecialOrders.Contains("QiChallenge9")` |
 | Skull Cavern Invasion completed | `Game1.player.team.completedSpecialOrders.Contains("QiChallenge10")` |
-| Golden Scythe obtained | `Game1.player.mailReceived.Contains("gotGoldenScythe")` |
+| Quarry bridge repaired | `Game1.player.hasOrWillReceiveMail("ccCraftsRoom") || Game1.player.hasOrWillReceiveMail("jojaCraftsRoom")` |
+| Mutant Bug Lair opened | `Game1.player.mailReceived.Contains("krobusUnseal")` |
 | Skull Key obtained | `Game1.player.hasSkullKey` |
 | Ginger Island unlocked | `Game1.player.hasOrWillReceiveMail("willyBoatFixed")` |
 
