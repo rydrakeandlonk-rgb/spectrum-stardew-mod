@@ -7,22 +7,23 @@ This repository contains the SMAPI game client and its release packaging. Spectr
 ## Requirements
 
 - Stardew Valley 1.6.14 or later
-- SMAPI 4.5.0 or later (development baseline: 4.5.2)
-- .NET 6 SDK
-- Visual Studio 2022 or another .NET-capable editor
+- SMAPI 4.5.0 or later
 
-The root-level project uses Pathoschild's Stardew ModBuildConfig package to reference local Stardew Valley and SMAPI assemblies.
+No local SDK, editor, terminal, dependency installation, or build is required. The repository's GitHub Actions workflow performs compilation and packaging in the cloud.
 
 ## Build the mod
 
-From the repository root:
+The `.github/workflows/build-smapi-mod.yml` workflow builds the mod when relevant source files are pushed to `main`, on pull requests, or when manually dispatched.
 
-```sh
-dotnet restore
-dotnet build
-```
+The workflow:
+1. Checks out the mod source.
+2. Checks out the pinned community reference assemblies used for automated builds.
+3. Restores the project dependencies.
+4. Compiles the SMAPI project in Release mode.
+5. Creates and verifies a release ZIP.
+6. Uploads the ZIP as a GitHub Actions artifact for 14 days.
 
-ModBuildConfig uses the Stardew Valley installation detected on the development machine. If detection fails, configure the game path according to the ModBuildConfig documentation.
+The current reference-assembly snapshot is based on Stardew Valley 1.6.15 and SMAPI 4.4.0. This provides a repeatable compile check, but does not replace testing against the installed Stardew Valley and SMAPI versions required by the mod.
 
 ## Local gameplay tests
 
@@ -52,17 +53,11 @@ After an administrator enables the member in Control Center, use the Mods page's
 
 Use `spectrum_connection_status` in the SMAPI console to check the connection. Never commit the local config or share the host token. Re-pairing rotates the token and disconnects the previous host session.
 
-## Build a distributable ZIP
+## Build artifact and installation
 
-Run from the repository root in PowerShell:
+Download the ZIP from the successful **Build Stardew SMAPI Mod** workflow run's Artifacts section. The artifact is a build output, not a public release. Do not publish it to a public mod directory until the private beta and multiplayer tests are complete.
 
-```powershell
-.\packaging\Build-Release.ps1
-```
-
-The script restores and builds the project in Release mode, stages the compiled output and manifest, and creates a versioned ZIP under `dist/`. It does not publish a GitHub Release or Nexus page automatically. Inspect and test the ZIP on a clean SMAPI installation before uploading it.
-
-The ZIP must contain the compiled DLL, `manifest.json`, and required dependencies/assets at its root. It must not contain source-only files, Twitch client secrets, service credentials, or private gateway configuration.
+Before any distribution, verify the ZIP on a clean SMAPI installation. It must contain the compiled DLL, `manifest.json`, and required dependencies/assets at its root. It must not contain source-only files, Twitch client secrets, service credentials, or private gateway configuration.
 
 ## Secrets and configuration
 
