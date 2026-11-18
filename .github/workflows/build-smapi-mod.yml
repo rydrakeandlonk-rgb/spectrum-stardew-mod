@@ -40,6 +40,9 @@ jobs:
           ref: 0141355fecb8536715ecff22f99374b5e632cbed
           path: ref-assemblies
 
+      - name: Validate monster catalogue and progression pools
+        run: python3 .github/scripts/validate-monster-catalog.py
+
       - name: Set up .NET 6
         uses: actions/setup-dotnet@v4
         with:
