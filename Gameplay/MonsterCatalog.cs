@@ -4,6 +4,7 @@ using StardewValley;
 using StardewValley.Monsters;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Globalization;
 
 namespace SpectrumStardewMod.Gameplay;
 
@@ -15,6 +16,10 @@ internal static class MonsterCatalog
         string Id, string DisplayName, string ClassName, double WeightingHealth,
         object? ConstructorArgument = null, bool Dangerous = false,
         PostConstruction Post = PostConstruction.None);
+
+    private sealed record MonsterThreatProfile(
+        double Health, double Damage, double Defense, double Speed,
+        double Experience, double MissChance, bool IsGlider);
 
     private static readonly HashSet<string> ExcludedNames = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -119,6 +124,9 @@ internal static class MonsterCatalog
 
     private static readonly IReadOnlyDictionary<string, Candidate> CandidatesById =
         Candidates.ToDictionary(candidate => candidate.Id, StringComparer.Ordinal);
+
+    private static Dictionary<string, MonsterThreatProfile>? ThreatProfiles;
+    private static bool ThreatProfilesLoaded;
 
     public static IReadOnlyList<string> AllTypes => Candidates.Select(candidate => candidate.DisplayName).ToArray();
     public static IReadOnlyList<string> GetEligibleTypes() => GetEligibleCandidates().Select(candidate => candidate.DisplayName).ToArray();
@@ -401,10 +409,101 @@ internal static class MonsterCatalog
     private static string Normalize(string? value) => new((value ?? "").Where(char.IsLetterOrDigit).ToArray());
     private static double GetThreatWeight(Candidate candidate, double targetThreat, double exponent)
     {
-        // WeightingHealth is the catalogue's balancing estimate, not a runtime
-        // stat override. Dangerous variants carry a higher threat estimate.
-        double threat = Math.Max(1d, candidate.WeightingHealth * (candidate.Dangerous ? 1.5d : 1d));
-        double distance = Math.Abs(Math.Log(threat / Math.Max(1d, targetThreat)));
+        double threat = GetThreatScore(candidate) * (candidate.Dangerous ? 1.5d : 1d);
+        double distance = Math.Abs(Math.Log(Math.Max(1d, threat) / Math.Max(1d, targetThreat)));
         return 1d / Math.Pow(1d + distance, exponent);
+    }
+
+    private static double GetThreatScore(Candidate candidate)
+    {
+        EnsureThreatProfilesLoaded();
+        string dataName = GetMonsterDataName(candidate);
+        if (ThreatProfiles is not null && ThreatProfiles.TryGetValue(dataName, out MonsterThreatProfile? profile))
+        {
+            // Health, attack, defense, speed, experience, miss chance and glider
+            // behaviour all contribute. This is a selection score, not a stat edit.
+            return Math.Max(1d,
+                profile.Health * 0.30d +
+                profile.Damage * 4d +
+                profile.Defense * 5d +
+                profile.Speed * 4d +
+                profile.Experience * 2d +
+                profile.MissChance * 20d +
+                (profile.IsGlider ? 10d : 0d));
+        }
+
+        // Keep entries selectable if a game update renames or reshapes its data.
+        return Math.Max(1d, candidate.WeightingHealth * 2d);
+    }
+
+    private static void EnsureThreatProfilesLoaded()
+    {
+        if (ThreatProfilesLoaded)
+            return;
+
+        ThreatProfilesLoaded = true;
+        try
+        {
+            Dictionary<string, string> data = Game1.content.Load<Dictionary<string, string>>("Data/Monsters");
+            var profiles = new Dictionary<string, MonsterThreatProfile>(StringComparer.OrdinalIgnoreCase);
+            foreach ((string name, string raw) in data)
+            {
+                string[] fields = raw.Split('/');
+                if (fields.Length < 14 ||
+                    !TryReadNumber(fields, 0, out double health) ||
+                    !TryReadNumber(fields, 1, out double damage) ||
+                    !TryReadNumber(fields, 7, out double defense) ||
+                    !TryReadNumber(fields, 10, out double speed) ||
+                    !TryReadNumber(fields, 11, out double missChance) ||
+                    !TryReadNumber(fields, 13, out double experience))
+                    continue;
+
+                bool isGlider = fields[4].Equals("true", StringComparison.OrdinalIgnoreCase);
+                profiles[name] = new MonsterThreatProfile(
+                    health, damage, defense, speed, experience, missChance, isGlider);
+            }
+
+            ThreatProfiles = profiles;
+        }
+        catch
+        {
+            // The catalogue's estimates remain a safe fallback if the data asset changes.
+            ThreatProfiles = new Dictionary<string, MonsterThreatProfile>(StringComparer.OrdinalIgnoreCase);
+        }
+    }
+
+    private static bool TryReadNumber(string[] fields, int index, out double value) =>
+        double.TryParse(fields[index], NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+
+    private static string GetMonsterDataName(Candidate candidate)
+    {
+        string alias = GetParentheticalAlias(candidate.DisplayName);
+        if (alias.Length > 0)
+            return alias;
+
+        if (candidate.Id.EndsWith("blue-slime", StringComparison.Ordinal))
+            return "Frost Jelly";
+        if (candidate.Id.EndsWith("red-slime", StringComparison.Ordinal) ||
+            candidate.Id.EndsWith("purple-slime", StringComparison.Ordinal))
+            return "Sludge";
+        if (candidate.Id.EndsWith("copper-slime", StringComparison.Ordinal))
+            return "Copper Slime";
+        if (candidate.Id.EndsWith("iron-slime", StringComparison.Ordinal))
+            return "Iron Slime";
+        if (candidate.Id.EndsWith("cave-fly", StringComparison.Ordinal))
+            return "Fly";
+        if (candidate.Id.EndsWith("dust-spirit", StringComparison.Ordinal))
+            return "Dust Spirit";
+
+        string name = candidate.DisplayName.StartsWith("Dangerous ", StringComparison.Ordinal)
+            ? candidate.DisplayName.Substring("Dangerous ".Length)
+            : candidate.DisplayName;
+
+        return name switch
+        {
+            "Dust Sprite" => "Dust Spirit",
+            "Cave Fly" => "Fly",
+            _ => name
+        };
     }
 }
