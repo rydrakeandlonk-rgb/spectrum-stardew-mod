@@ -180,6 +180,8 @@ internal static class MonsterCatalog
             _ => 260d
         };
         targetThreat *= 1d + progression.CombatLevel * 0.025d;
+        // Shrine difficulty affects selection only inside its matching generated area.
+        targetThreat *= 1d + progression.CurrentAreaDifficulty * 0.12d;
         targetThreat *= selectedDifficulty switch
         {
             "easy" => 0.75d,
