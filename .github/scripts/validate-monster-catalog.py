@@ -131,6 +131,16 @@ for command in (
 if "ignoreProgression" not in spawner_source:
     errors.append("Progression-bypass spawn test path is missing.")
 
+# Custom variants must use an existing vanilla threat-data key, not their display name.
+for expected in (
+    'return "Green Slime";',
+    'return "Fly";',
+    'return "Grub";',
+    'return "Bug";'
+):
+    if expected not in catalog:
+        errors.append(f"Vanilla threat-data fallback mapping is missing: {expected}")
+
 if errors:
     print("Monster catalogue validation failed:")
     for error in errors:
