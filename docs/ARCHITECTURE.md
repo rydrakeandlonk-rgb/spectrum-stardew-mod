@@ -41,7 +41,7 @@ A dedicated service in the Spectrum Cloudflare repository.
 - Issues a revocable, game-session-only credential.
 - Maintains the host's persistent outbound connection.
 - Accepts authenticated, typed redemption requests from Event Hub.
-- Stores live connection and pending-command state in the per-broadcaster Durable Object; connect, disconnect and revocation status is reported to the authenticated Control Center API.
+- Stores live connection, spawn-enabled state and pending-command state in the per-broadcaster Durable Object; new connections and disconnects default spawning to stopped. The dashboard can pause or resume delivery without deleting queued redemptions.
 - Enforces request expiry, deduplication, reconnect handling and rate limits.
 - Never accepts a client-supplied monster type; the game client chooses from its local allowlist.
 
