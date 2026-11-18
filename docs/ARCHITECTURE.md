@@ -52,18 +52,21 @@ A dedicated service in the Spectrum Cloudflare repository.
 - Maintains an authenticated outbound gateway connection.
 - Queues typed spawn requests and processes them on the SMAPI game thread.
 - Checks that the world is ready and the local player is the multiplayer host.
-- Spawns exactly one monster per accepted redemption.
+- Selects a local allowlisted monster type and tile coordinate.
+- Calls Game1.parseDebugInput with a generated monster command so Stardew's own DebugCommands handler creates the monster.
 - Farmhands do not connect to Twitch or independently process redemption requests.
 
 ## Random monster selection
 
 The redemption type is fixed: Random Monster Spawner.
 
-The SMAPI client owns the final random selection so the gateway never needs to know or trust a game class name. The initial candidate list follows the Stardew Valley Wiki's documented monster command allowlist: Bat, DinoMonster, DustSpirit, Fly, Ghost, GreenSlime, Grub, LavaCrab, Mummy, RockCrab, RockGolem, Serpent, ShadowBrute, ShadowShaman, Skeleton and SquidKid. Duggy is excluded because its spawn depends on terrain. That wiki syntax belongs to the separate Console Commands debug tooling; this mod does not depend on that mod. It attempts to instantiate the listed vanilla game types directly. Each candidate has an expected-health fallback; where possible, the constructed monster's initial health is read from the game object. The selection weight is:
+The SMAPI client owns the final random selection so the gateway never needs to know or trust a game class name. The initial candidate list follows the Stardew Valley Wiki's documented monster command allowlist: Bat, DinoMonster, DustSpirit, Fly, Ghost, GreenSlime, Grub, LavaCrab, Mummy, RockCrab, RockGolem, Serpent, ShadowBrute, ShadowShaman, Skeleton and SquidKid. Duggy is excluded because its spawn depends on terrain.
+
+Monster construction is delegated to the game's own DebugCommands.Monster handler through Game1.parseDebugInput. The generated command is limited to a local allowlisted type and integer tile coordinates. This avoids reflection-based constructor guessing and keeps the Spectrum mod independent of monster implementation details. Candidate selection uses approximate health values and the weight formula:
 
     weight = 1 / health ^ 1.35
 
-A weighted draw from the available candidates makes high-HP monsters less common without making them impossible. Candidate constructors are discovered from the installed Stardew game assembly. A candidate that cannot be constructed is skipped. This reflection-based construction is a prototype and must be verified against the target Stardew version; the wiki's command list establishes valid command names, not necessarily compatible .NET constructor signatures. This is an initial balancing model, not a final promise about exact game spawn rates.
+Higher-health candidates are less common. The health values are initial balancing estimates, not verified values or final spawn-rate guarantees.
 
 ## Control Center data
 
@@ -95,16 +98,17 @@ Only the host creates monster entities. Stardew's multiplayer world synchronisat
 
 Implemented in source:
 - SMAPI prototype and local Green Slime test command.
-- Reflection-based allowlisted monster catalogue and inverse-health weighted selection.
-- Local random-spawn test command.
+- Built-in debug-command dispatch for monster creation.
+- Allowlisted monster names and inverse-health weighted random selection.
 - Control Center admin Mods page and per-member activation API.
 - Additive D1 schema migration for member access and reward mappings.
 
 Not yet implemented or verified:
+- Compile and test the built-in command route against the target Stardew installation.
+- Verify every allowlisted type is accepted by the installed Stardew version.
 - Apply migration 0028 to production D1.
 - Deploy Control Center Worker and sync dashboard KV assets.
 - Event Hub Channel Point EventSub subscription and redemption route.
 - Stardew gateway, pairing, persistent host connection and revocation.
 - Reward mapping editor and end-to-end configuration.
-- Build/compile against the user's Stardew installation.
 - In-game spawn, multiplayer replication, and clean ZIP install tests.
