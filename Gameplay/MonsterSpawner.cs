@@ -29,25 +29,27 @@ internal sealed class MonsterSpawner
 
     public bool TrySpawnRandomMonster()
     {
-        return this.TryRunMonsterCommand(MonsterCatalog.GetRandomType(), "Random monster");
+        return this.TryRunMonsterCommand(MonsterCatalog.GetRandomType(), out _);
     }
 
     public bool TrySpawnGreenSlime()
     {
-        return this.TryRunMonsterCommand("GreenSlime", "Test Green Slime");
+        return this.TryRunMonsterCommand("GreenSlime", out _);
     }
 
-    public bool TryExecute(GameCommand command, out int spawnedCount, out string result)
+    public bool TryExecute(
+        GameCommand command,
+        out int spawnedCount,
+        out int requestedCount,
+        out List<string> spawnedTypes,
+        out string locationName,
+        out string result)
     {
         spawnedCount = 0;
-        result = "Unsupported spawn behaviour.";
-
-        if (!Context.IsWorldReady || !Context.IsMainPlayer)
-        {
-            result = "Only the multiplayer host can spawn monsters in a loaded save.";
-            this.monitor.Log(result, LogLevel.Warn);
-            return false;
-        }
+        requestedCount = 0;
+        spawnedTypes = new List<string>();
+        locationName = "";
+        result = "FAILED: unsupported spawn behaviour";
 
         int count;
         string monsterType;
@@ -58,74 +60,75 @@ internal sealed class MonsterSpawner
             case "difficulty_random":
                 count = 1;
                 chooseMonster = () => MonsterCatalog.GetRandomType(command.Difficulty);
-                result = "Difficulty-weighted random monster";
                 break;
 
             case "chat_monster":
                 if (!MonsterCatalog.TryGetCanonicalType(command.UserInput, out monsterType))
                 {
-                    result = "Chat selection was not a supported vanilla monster name.";
-                    this.monitor.Log(result, LogLevel.Warn);
+                    result = "FAILED: unsupported chat monster";
                     return false;
                 }
                 count = 1;
                 chooseMonster = () => monsterType;
-                result = "Chat-selected monster";
                 break;
 
             case "random_count_random_monsters":
                 count = GetRandomCount(command.MinCount, command.MaxCount);
                 chooseMonster = () => MonsterCatalog.GetRandomType(command.Difficulty);
-                result = "Random number of random monsters";
                 break;
 
             case "fixed_count_random_monsters":
                 count = ClampCount(command.Count, 1);
                 chooseMonster = () => MonsterCatalog.GetRandomType(command.Difficulty);
-                result = "Fixed number of random monsters";
                 break;
 
             case "random_count_specific_monster":
                 if (!MonsterCatalog.TryGetCanonicalType(command.MonsterType, out monsterType))
                 {
-                    result = "The configured monster is not supported.";
-                    this.monitor.Log(result, LogLevel.Warn);
+                    result = "FAILED: unsupported configured monster";
                     return false;
                 }
                 count = GetRandomCount(command.MinCount, command.MaxCount);
                 chooseMonster = () => monsterType;
-                result = "Random number of a specific monster";
                 break;
 
             case "fixed_count_specific_monster":
                 if (!MonsterCatalog.TryGetCanonicalType(command.MonsterType, out monsterType))
                 {
-                    result = "The configured monster is not supported.";
-                    this.monitor.Log(result, LogLevel.Warn);
+                    result = "FAILED: unsupported configured monster";
                     return false;
                 }
                 count = ClampCount(command.Count, 1);
                 chooseMonster = () => monsterType;
-                result = "Fixed number of a specific monster";
                 break;
 
             default:
-                result = "Unknown spawn behaviour.";
-                this.monitor.Log(result, LogLevel.Warn);
                 return false;
         }
 
-        count = Math.Clamp(count, 1, MaximumMonstersPerRedemption);
-        for (int i = 0; i < count; i++)
+        if (!Context.IsWorldReady || !Context.IsMainPlayer)
         {
-            if (!this.TryRunMonsterCommand(chooseMonster(), result))
-                break;
-            spawnedCount++;
+            result = "FAILED: host world not ready";
+            return false;
         }
 
-        result = spawnedCount == count
-            ? $"{result}: {spawnedCount} monster(s) spawned."
-            : $"{result}: {spawnedCount} of {count} monster(s) spawned.";
+        requestedCount = Math.Clamp(count, 1, MaximumMonstersPerRedemption);
+        for (int i = 0; i < requestedCount; i++)
+        {
+            string selectedType = chooseMonster();
+            if (!this.TryRunMonsterCommand(selectedType, out string spawnedLocation))
+                break;
+
+            spawnedCount++;
+            spawnedTypes.Add(selectedType);
+            locationName = spawnedLocation;
+        }
+
+        result = spawnedCount == requestedCount
+            ? "SUCCESS"
+            : spawnedCount > 0
+                ? "PARTIAL"
+                : "FAILED";
         return spawnedCount > 0;
     }
 
@@ -141,23 +144,19 @@ internal sealed class MonsterSpawner
         return Math.Clamp(value <= 0 ? fallback : value, 1, MaximumMonstersPerRedemption);
     }
 
-    private bool TryRunMonsterCommand(string monsterType, string description)
+    private bool TryRunMonsterCommand(string monsterType, out string locationName)
     {
-        if (!Context.IsWorldReady)
-        {
-            this.monitor.Log("Spawn rejected: no save is currently loaded.", LogLevel.Warn);
-            return false;
-        }
+        locationName = "";
 
-        if (!Context.IsMainPlayer)
+        if (!Context.IsWorldReady || !Context.IsMainPlayer)
         {
-            this.monitor.Log("Spawn rejected: only the multiplayer host can create monsters.", LogLevel.Warn);
+            this.monitor.Log("[Spectrum] SPAWN FAILED | host world not ready", LogLevel.Warn);
             return false;
         }
 
         if (Game1.eventUp || Game1.currentLocation is null || Game1.player is null || Game1.game1 is null)
         {
-            this.monitor.Log("Spawn rejected: the current game state isn't suitable for a spawn.", LogLevel.Warn);
+            this.monitor.Log("[Spectrum] SPAWN FAILED | game state unavailable", LogLevel.Warn);
             return false;
         }
 
@@ -172,20 +171,24 @@ internal sealed class MonsterSpawner
 
             int tileX = (int)tile.X;
             int tileY = (int)tile.Y;
-            string command = $"monster {monsterType} {tileX} {tileY}";
-            bool handled = Game1.game1.parseDebugInput(command);
+            string debugCommand = $"monster {monsterType} {tileX} {tileY}";
+            int charactersBefore = location.characters.Count;
+            bool handled = Game1.game1.parseDebugInput(debugCommand);
+            int charactersAfter = location.characters.Count;
 
-            if (!handled)
+            // A handled parser command isn't enough: confirm the location gained
+            // a character before reporting a successful spawn to the player.
+            if (!handled || charactersAfter <= charactersBefore)
             {
-                this.monitor.Log($"Stardew rejected the monster command: {command}", LogLevel.Warn);
+                this.monitor.Log($"[Spectrum] SPAWN FAILED | {MonsterCatalog.GetDisplayName(monsterType)} | {location.Name}", LogLevel.Warn);
                 return false;
             }
 
-            this.monitor.Log($"{description} ({monsterType}) requested at {location.Name}, tile {tileX},{tileY}.", LogLevel.Info);
+            locationName = location.Name;
             return true;
         }
 
-        this.monitor.Log("Spawn rejected: couldn't find a clear tile near the player.", LogLevel.Warn);
+        this.monitor.Log($"[Spectrum] SPAWN FAILED | {MonsterCatalog.GetDisplayName(monsterType)} | no clear tile", LogLevel.Warn);
         return false;
     }
 }
