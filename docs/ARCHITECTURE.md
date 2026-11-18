@@ -97,18 +97,20 @@ Only the host creates monster entities. Stardew's multiplayer world synchronisat
 ## Implementation status
 
 Implemented in source:
-- SMAPI prototype, local Green Slime test command and weighted random monster test command.\n- Authenticated WebSocket client with reconnect, typed command validation and command acknowledgements.\n- Game-thread queue processing and host-only execution guard.
+- SMAPI prototype, local Green Slime test command and weighted random monster test command.
+- Authenticated WebSocket client with reconnect, typed command validation and command acknowledgements.
+- Game-thread queue processing and host-only execution guard.
 - Built-in debug-command dispatch for monster creation.
 - Allowlisted monster names and inverse-health weighted random selection.
 - Control Center admin Mods page and per-member activation API.
 - Additive D1 schema migration for member access and reward mappings.
 
 Not yet implemented or verified:
-- Compile and test the built-in command route against the target Stardew installation.
-- Verify every allowlisted type is accepted by the installed Stardew version.
-- Apply migration 0028 to production D1.
-- Deploy Control Center Worker and sync dashboard KV assets.
-- Event Hub Channel Point EventSub subscription and redemption route.
-- Stardew gateway, pairing, persistent host connection and revocation.
-- Reward mapping editor and end-to-end configuration.
-- In-game spawn, multiplayer replication, and clean ZIP install tests.
+- Compile and test the built-in command route and WebSocket client against the target Stardew/SMAPI installation.
+- Verify every allowlisted monster type is accepted by the installed Stardew version.
+- Apply migration 0028 to production D1 through the confirmation-gated workflow.
+- Deploy Control Center and synchronise dashboard KV assets; deploy Event Hub and Game Mods through their connected Workers Builds.
+- Add reward mapping management and live connection/last-seen reporting.
+- Complete end-to-end EventSub delivery, command acknowledgement and host/farmhand multiplayer tests.
+- Verify clean ZIP installation and release packaging.
+
