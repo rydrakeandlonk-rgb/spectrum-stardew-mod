@@ -38,7 +38,7 @@ internal static class MonsterCatalog
 
     private static readonly string[] RequiredRestoredDefinitionIds =
     {
-        "skeleton-mage", "dangerous-armored-bug"
+        "skeleton-mage"
     };
 
     private static readonly (string Id, MonsterPool Pool)[] RequiredPoolAssignments =
@@ -57,7 +57,6 @@ internal static class MonsterCatalog
         ("dangerous-copper-slime", MonsterPool.DangerousMines),
         ("dangerous-iron-slime", MonsterPool.DangerousMines),
         ("skeleton-mage", MonsterPool.DangerousMines),
-        ("dangerous-armored-bug", MonsterPool.DangerousSkullCavern),
         ("dangerous-squid-kid", MonsterPool.DangerousMines)
     };
 
@@ -132,7 +131,6 @@ internal static class MonsterCatalog
         C("dangerous-bat", "Dangerous Bat", "Bat", 300, null, PostConstruction.None, true),
         C("dangerous-haunted-skull", "Dangerous Haunted Skull", "Bat", 350, 77377, PostConstruction.None, true),
         C("dangerous-bug", "Dangerous Bug", "Bug", 300, 0, PostConstruction.None, true),
-        C("dangerous-armored-bug", "Dangerous Armored Bug", "Bug", 400, 121, PostConstruction.None, true),
         C("dangerous-cave-fly", "Dangerous Cave Fly", "Fly", 300, false, PostConstruction.None, true),
         C("dangerous-grub", "Dangerous Grub", "Grub", 300, false, PostConstruction.None, true),
         C("dangerous-dust-spirit", "Dangerous Dust Sprite", "DustSpirit", 300, null, PostConstruction.None, true),
@@ -360,11 +358,6 @@ internal static class MonsterCatalog
 
     private static bool IsExcludedCandidate(Candidate candidate)
     {
-        // Dangerous forms inherit the exclusion of their base monster, except
-        // Dangerous Armored Bug, which is explicitly part of the approved roster.
-        if (candidate.Id == "dangerous-armored-bug")
-            return false;
-
         string baseName = candidate.DisplayName.StartsWith("Dangerous ", StringComparison.Ordinal)
             ? candidate.DisplayName.Substring("Dangerous ".Length)
             : candidate.DisplayName;
@@ -571,8 +564,6 @@ internal static class MonsterCatalog
             return "Fly";
         if (candidate.Id is "mutant-grub" or "dangerous-grub")
             return "Grub";
-        if (candidate.Id == "dangerous-armored-bug")
-            return "Bug";
 
         string name = candidate.DisplayName.StartsWith("Dangerous ", StringComparison.Ordinal)
             ? candidate.DisplayName.Substring("Dangerous ".Length)
