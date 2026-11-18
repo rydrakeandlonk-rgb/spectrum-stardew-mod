@@ -61,7 +61,7 @@ A dedicated service in the Spectrum Cloudflare repository.
 
 The redemption type is fixed: Random Monster Spawner. The SMAPI client owns final candidate selection so the gateway never needs to know or trust a game class name.
 
-The catalogue is an explicit list of variant definitions rather than reflection-discovered class names. Each definition includes a stable local ID and display name, a vanilla class and exact constructor argument where required, post-construction setup for special forms, the location pools which unlock it, an approximate health value, and whether it is a dangerous variant.
+The catalogue is an explicit list of variant definitions rather than reflection-discovered class names. Each definition includes a stable local ID and display name, a vanilla class and exact constructor argument where required, post-construction setup for special forms, the location pools which unlock it, an balancing-only weighting-health value, and whether it is a dangerous variant.
 
 Unlocked location pools are combined into a single global candidate set. A definition appearing in multiple unlocked pools is included once. Farm entries are always available without a Combat Level gate. Progression is read from the active save only when selecting or validating a candidate.
 
@@ -71,7 +71,7 @@ The definitions use known vanilla constructor patterns for named variants: Bat s
 
 The weighting formula remains:
 
-    weight = 1 / expectedHealth ^ 1.35
+    weight = 1 / weightingHealth ^ 1.35
 
 Dangerous entries use a higher effective health estimate so they are less likely to dominate selection. These values are balancing estimates, not guaranteed encounter difficulty. Progression gates and weighting remain separate so the global pool can grow without making every unlocked monster equally likely.
 ## Control Center data
