@@ -15,16 +15,28 @@ internal enum MonsterPool
 }
 
 /// <summary>
-/// A lightweight snapshot of the active save's permanent progression.
-/// This is read only when a spawn is selected, never polled in the update loop.
+/// A lightweight snapshot of the active host player's permanent progression.
+/// This is read only when a monster is selected, never polled in the update loop.
 /// </summary>
 internal sealed record MonsterProgressionSnapshot(
+    bool MinesCompleted,
+    bool SkullCavern100Reached,
+    int CombatLevel,
     bool DangerousMinesUnlocked,
     bool QuarryMineUnlocked,
     bool SkullCavernUnlocked,
     bool DangerousSkullCavernUnlocked,
     bool VolcanoDungeonUnlocked)
 {
+    public int ProgressionStage => this.SkullCavern100Reached ? 2 : this.MinesCompleted ? 1 : 0;
+
+    public string ProgressionStageName => this.ProgressionStage switch
+    {
+        0 => "Early game (Mines 120 not reached)",
+        1 => "Mines complete (Skull Cavern 100 not reached)",
+        _ => "Advanced (Skull Cavern 100 reached)"
+    };
+
     public bool IsUnlocked(MonsterPool pool)
     {
         return pool switch
@@ -48,6 +60,11 @@ internal sealed record MonsterProgressionSnapshot(
         var completedOrders = farmer.team.completedSpecialOrders;
 
         return new MonsterProgressionSnapshot(
+            MinesCompleted: farmer.deepestMineLevel >= 120,
+            // Quest 30 is the completed Cryptic Note (Secret Note #10) story quest.
+            // Unlike an active quest or a consumable reward, this is permanent save history.
+            SkullCavern100Reached: farmer.questsCompleted.Contains(30),
+            CombatLevel: Math.Clamp(farmer.CombatLevel, 0, 10),
             DangerousMinesUnlocked: completedOrders.Contains("QiChallenge9"),
             QuarryMineUnlocked: farmer.mailReceived.Contains("gotGoldenScythe"),
             SkullCavernUnlocked: farmer.hasSkullKey,
