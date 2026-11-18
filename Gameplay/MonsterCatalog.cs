@@ -481,7 +481,9 @@ internal static class MonsterCatalog
                     !TryReadNumber(fields, 13, out double experience))
                     continue;
 
-                bool isGlider = fields[4].Equals("true", StringComparison.OrdinalIgnoreCase);
+                // Ghost subclasses override the raw data flag and glide in-game.
+                bool isGlider = fields[4].Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                    name.Contains("Ghost", StringComparison.OrdinalIgnoreCase);
                 profiles[name] = new MonsterThreatProfile(
                     health, damage, defense, speed, experience, missChance, isGlider);
             }
