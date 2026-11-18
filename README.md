@@ -64,7 +64,8 @@ An administrator enables the member in Control Center, then uses **Pair / re-pai
 
 1. Launch the mod once so SMAPI creates its local config file.
 2. Open the generated `config.json` in the mod folder.
-3. Set `BroadcasterUserId` to the numeric ID shown by Control Center.\n4. In the Mods page, use Set reward and enter the Twitch reward ID and exact title for the member.
+3. Set `BroadcasterUserId` to the numeric ID shown by Control Center.
+4. In the Mods page, use Set reward and enter the Twitch reward ID and exact title for the member.
 5. Set `HostToken` to the one-time token shown by Control Center.
 6. Leave `GatewayUrl` at its default value and restart Stardew Valley.
 
