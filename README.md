@@ -54,9 +54,9 @@ The farm host is authoritative. Only the host's mod connection processes externa
 
 ## Current implementation status
 
-The local gameplay path now delegates monster creation to Stardew's built-in debug-command parser instead of using reflection to construct monster classes. This code has not yet been compiled or tested in-game.
+The gameplay path delegates monster creation to Stardew's built-in debug-command parser instead of using reflection to construct monster classes. GitHub Actions now successfully compiles the SMAPI project and creates a ZIP artifact using the pinned community reference assemblies. This is a compile/package check only; the mod has not yet been tested in-game or in multiplayer.
 
-The Control Center repository contains an admin-only Mods page, per-member activation API, and additive D1 migration. The shared Game Mods gateway, Event Hub's guarded redemption route, Control Center pairing/revocation APIs and Mods dashboard controls, and the SMAPI WebSocket client are now implemented in source. They have not yet been compiled, deployed, or tested end-to-end. Live connection reporting, release ZIP verification, and distribution remain outstanding. The migration has not been applied and the dashboard has not been deployed.
+The Control Center repository contains the admin-only Mods page, per-member activation API, additive D1 migration, pairing/revocation controls, and reward mapping UI. The shared Game Mods gateway and guarded Event Hub redemption route are implemented. Live connection reporting is now implemented in source. Production migration, deployment, Twitch subscription sync, host pairing, redemption delivery, in-game behaviour and multiplayer replication still require end-to-end verification.
 
 ## Pair the host
 
@@ -71,9 +71,9 @@ An administrator enables the member in Control Center, then uses **Pair / re-pai
 
 The host token is stored locally as a revocable game-session credential. Never commit or share the local config. Re-pairing rotates the token and closes the previous host connection. Use `spectrum_connection_status` in the SMAPI console to check the connection.
 
-## Local test commands
+## In-game test commands
 
-After building and installing through SMAPI:
+After installing the GitHub Actions ZIP through SMAPI, enter these commands in the SMAPI in-game console:
 
     spectrum_spawn_test
     spectrum_spawn_random_test
