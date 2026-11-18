@@ -18,10 +18,11 @@ The `.github/workflows/build-smapi-mod.yml` workflow builds the mod when relevan
 The workflow:
 1. Checks out the mod source.
 2. Checks out the pinned community reference assemblies used for automated builds.
-3. Restores the project dependencies.
-4. Compiles the SMAPI project in Release mode.
-5. Creates and verifies a release ZIP.
-6. Uploads the ZIP as a GitHub Actions artifact for 14 days.
+3. Runs static roster and pool validation before compiling.
+4. Restores the project dependencies.
+5. Compiles the SMAPI project in Release mode.
+6. Creates and verifies a release ZIP.
+7. Uploads the ZIP as a GitHub Actions artifact for 14 days.
 
 The current reference-assembly snapshot is based on Stardew Valley 1.6.15 and SMAPI 4.4.0. This provides a repeatable compile check, but does not replace testing against the installed Stardew Valley and SMAPI versions required by the mod.
 
