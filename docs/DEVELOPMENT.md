@@ -31,7 +31,7 @@ The current reference-assembly snapshot is based on Stardew Valley 1.6.15 and SM
 2. Open the SMAPI console.
 3. Run `spectrum_spawn_test` to request a Green Slime through its explicit vanilla constructor definition.
 4. Run `spectrum_spawn_random_test` to exercise the weighted random monster allowlist.
-5. Run `spectrum_monster_pool_status` to inspect the save's unlocked location groups, selectable variants, and unresolved constructor/setup definitions.
+5. Run `spectrum_monster_pool_status` to inspect the save's progression stage, Mines 120 and Skull Cavern 100 milestones, Combat Level, unlocked location groups, selectable variants, and unresolved constructor/setup definitions.
 6. Run `spectrum_connection_status` to inspect the gateway connection.
 7. Check the compact SMAPI log entries for the redeemer, reward, redemption time, command ID and confirmed spawn result. Failed attempts stay queued for retry; only successful spawns are acknowledged.
 7. Confirm a successful redemption appears in Stardew's existing chat with the Twitch username, monster name and location. Failed spawns must not produce a success chat message.
