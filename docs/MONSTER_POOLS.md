@@ -35,14 +35,14 @@ The progression reader uses existing save state:
 | Progression | Vanilla value |
 |---|---|
 | Mines floor 120 reached | `Game1.player.deepestMineLevel >= 120` |
-| Skull Cavern floor 100 story reached | `Game1.player.questsCompleted.Contains(30)` (completed Cryptic Note quest) |
+| Skull Cavern floor 100 story reached | reflection lookup of `Farmer.questsCompleted` for quest ID `30` (completed Cryptic Note story quest; the API was added in Stardew 1.6.16) (completed Cryptic Note quest) |
 | Danger in the Deep completed | `Game1.player.team.completedSpecialOrders.Contains("QiChallenge9")` |
 | Skull Cavern Invasion completed | `Game1.player.team.completedSpecialOrders.Contains("QiChallenge10")` |
 | Golden Scythe obtained | `Game1.player.mailReceived.Contains("gotGoldenScythe")` |
 | Skull Key obtained | `Game1.player.hasSkullKey` |
 | Ginger Island unlocked | `Game1.player.hasOrWillReceiveMail("willyBoatFixed")` |
 
-The Skull Cavern milestone uses the completed Cryptic Note story quest (quest ID 30), not an active quest or the consumable Iridium Snake Milk item. The Mines milestone uses the save's deepest regular-mine floor. The Qi challenges are repeatable Special Orders, so their permanent completion history is read from `completedSpecialOrders`, not the active quest list or `questsCompleted`. The Skull Key property is used instead of checking whether the door was opened.
+The Skull Cavern milestone uses the completed Cryptic Note story quest (quest ID 30), read through reflection because the completed-quest collection was added in Stardew 1.6.16. It does not use an active quest or the consumable Iridium Snake Milk item. On older game versions where that collection is unavailable, the milestone remains false. The Mines milestone uses the save's deepest regular-mine floor. The Qi challenges are repeatable Special Orders, so their permanent completion history is read from `completedSpecialOrders`, not the active quest list or `questsCompleted`. The Skull Key property is used instead of checking whether the door was opened.
 
 ## Efficiency
 
