@@ -62,7 +62,7 @@ internal sealed class ModEntry : Mod
 
         helper.ConsoleCommands.Add(
             "spectrum_monster_pool_status",
-            "Show unlocked location pools, selectable monster variants, and unresolved constructors.",
+            "Show progression, area difficulty, threat-data coverage, selectable variants, and catalogue validation.",
             this.OnMonsterPoolStatusCommand
         );
 
