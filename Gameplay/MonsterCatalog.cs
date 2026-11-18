@@ -61,6 +61,11 @@ internal static class MonsterCatalog
         ("dangerous-squid-kid", MonsterPool.DangerousMines)
     };
 
+    private static readonly (string Id, MonsterPool Pool)[] ForbiddenPoolAssignments =
+    {
+        ("dangerous-squid-kid", MonsterPool.DangerousSkullCavern)
+    };
+
     private static readonly Candidate[] Candidates =
     {
         C("green-slime", "Green Slime", "GreenSlime", 24),
@@ -182,6 +187,12 @@ internal static class MonsterCatalog
         {
             if (!pools.TryGetValue(expectedPool, out string[]? assignedIds) || !assignedIds.Contains(id, StringComparer.Ordinal))
                 issues.Add($"Required roster definition is missing from {expectedPool}: {id}");
+        }
+
+        foreach ((string id, MonsterPool forbiddenPool) in ForbiddenPoolAssignments)
+        {
+            if (pools.TryGetValue(forbiddenPool, out string[]? assignedIds) && assignedIds.Contains(id, StringComparer.Ordinal))
+                issues.Add($"Roster definition is assigned to an unapproved pool {forbiddenPool}: {id}");
         }
 
         foreach (Candidate candidate in Candidates)
