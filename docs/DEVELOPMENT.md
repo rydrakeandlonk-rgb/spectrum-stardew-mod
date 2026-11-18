@@ -45,7 +45,7 @@ The script restores and builds the project in Release mode, stages the compiled 
 
 The ZIP must contain the mod's compiled DLL, manifest.json, and required dependencies/assets at its root. It must not contain source-only files, Twitch client secrets, service credentials, or private gateway configuration.
 
-## Secrets and configuration
+## Gateway configuration\n\nAfter an administrator enables the member in Control Center, use the Mods page's Pair / re-pair action. It displays the broadcaster's numeric Twitch user ID and a one-time host token. On the host computer, launch the mod once so SMAPI creates its config file, then set:\n\n- `BroadcasterUserId`: the numeric ID shown by Control Center.\n- `HostToken`: the one-time token shown by Control Center.\n- `GatewayUrl`: leave the default Spectrum Game Mods HTTPS URL unless the service endpoint changes.\n\nRestart Stardew/SMAPI after editing the config. Use `spectrum_connection_status` in the SMAPI console to check the connection. Never commit the local config or share the host token. Re-pairing rotates the token and disconnects the previous host session.\n\n## Secrets and configuration
 
 - Never commit Twitch client secrets, OAuth tokens, signing keys, or production service credentials.
 - The game mod must never store Twitch access or refresh tokens.
@@ -55,7 +55,7 @@ The ZIP must contain the mod's compiled DLL, manifest.json, and required depende
 ## Current limitations
 
 - Built-in monster command dispatch and weighted selection are implemented in source but have not been compiled or verified against the target game installation.
-- Twitch EventSub redemption subscription/routing, gateway, pairing, and remote connection are not implemented yet.
-- Control Center Mods page and D1 migration are committed in the Spectrum Cloudflare repository but have not been deployed/applied.
+- Gateway and SMAPI WebSocket client are implemented in source but have not been compiled or deployed.
+- Control Center pairing/revocation controls and Event Hub routing are committed in the Spectrum Cloudflare repository; production deployment, migration 0028 and dashboard KV sync still need separate verification.
 - Reward mapping UI and live connection reporting are not implemented yet.
 - No tested ZIP, GitHub Release or Nexus release exists yet.
