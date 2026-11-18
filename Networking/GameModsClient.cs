@@ -316,10 +316,10 @@ internal sealed class GameModsClient : IDisposable
             if (type == "game.action")
             {
                 string actionId = ReadString(root, "action_id");
-                string game = ReadString(root, "game");
-                string name = ReadString(root, "name");
-                if (string.IsNullOrWhiteSpace(actionId) || game != "stardew-valley" ||
-                    name != "stardew.clear_loaded_monsters")
+                string actionGame = ReadString(root, "game");
+                string actionName = ReadString(root, "name");
+                if (string.IsNullOrWhiteSpace(actionId) || actionGame != "stardew-valley" ||
+                    actionName != "stardew.clear_loaded_monsters")
                 {
                     this.monitor.Log("Ignored an unsupported Spectrum game action.", LogLevel.Warn);
                     return;
