@@ -56,14 +56,24 @@ These entries must never enter the candidate pool:
 
 Rock Crab and Rock Crab (dangerous) remain eligible. Other Rock Crab-family variants such as Lava Crab, Iridium Crab, Truffle Crab, Stick Bug, and False Magma Cap are not excluded by this rule.
 
-## Variant implementation status
+## Explicit variant catalogue
 
-The first progression layer now groups vanilla monster *class families* and gates those groups using the save checks above. The existing runtime catalogue still discovers only classes with a public `Vector2` constructor, so it does not yet represent every named monster variant in the roster.
+The catalogue now contains individual spawn definitions instead of one entry per reflected C# class. It maps the reference roster to vanilla constructors and post-construction setup:
 
-The next implementation step is an explicit variant-aware spawn definition. It must cover:
-- Named variants which use additional constructor arguments (for example Carbon Ghost, Putrid Ghost, Royal Serpent, Iridium Crab, and Truffle Crab).
-- Variants which use a different constructor overload or setup method (for example Skeleton Mage, Stick Bug, Tiger Slime, and the Bat subtypes).
-- Dangerous variants, which Stardew creates by applying `BuffForAdditionalDifficulty` and loading a matching `_dangerous` texture where available.
-- Types whose vanilla constructor requires a location or mine-area argument.
+- Bat subtypes use the vanilla integer constructor codes for Frost Bat, Lava Bat, Iridium Bat, Haunted Skull, Magma Sprite and Magma Sparker.
+- Blue, red and purple slimes use the vanilla GreenSlime mine-level constructor paths; the friendly display labels identify the Wiki colour names (Frost Jelly and Sludge are the corresponding internal names).
+- Copper and Iron Slimes use the GreenSlime colour constructor, then load the matching vanilla monster data entry for stats and drops.
+- Carbon Ghost, Putrid Ghost, Royal Serpent, Lava Crab, Iridium Crab, Truffle Crab, False Magma Cap and Shadow Sniper use their named string constructor arguments.
+- Mutant Fly and Mutant Grub use the hard-mode boolean constructor option.
+- Skeleton Mage uses the Skeleton mage option; Spider maps to Stardew's Leaper class.
+- Stick Bug and Tiger Slime use their vanilla post-construction methods.
+- Iridium Golem uses the RockGolem base constructor followed by the variant's vanilla name, data and stat setup.
+- Dangerous forms are separate definitions. They apply one additional-difficulty stat step and load the corresponding `_dangerous` texture when available.
 
-Do not treat the roster as complete until every non-excluded entry has an explicit spawn definition and has been validated in-game. Use `spectrum_monster_pool_status` to inspect unlocked groups, currently selectable discovered classes, and class families still missing from the simple constructor catalogue.
+The dangerous stat step is deliberately fixed at one because these monsters can spawn in any location. Vanilla mine generation may use a different additional-difficulty amount based on floor and mine state. We should revisit the dangerous multiplier after observing the first in-game encounters and difficulty scaling.
+
+## Validation status
+
+A successful build proves the code compiles against the pinned Stardew Valley 1.6.15 reference assemblies. It does not prove every constructor behaves correctly in a live save. In-game validation must explicitly cover every named variant and post-construction setup; dangerous stats and optional textures; Copper/Iron Slime data and colour; Iridium Golem stats and sprite; all exclusions; random weighting and duplicate pool membership; and spawning from several map types.
+
+Use `spectrum_monster_pool_status` to inspect unlocked groups, selectable definitions and any missing constructor/setup support.
