@@ -29,6 +29,8 @@ internal static class MonsterCatalog
         C("purple-slime", "Purple Slime (Sludge)", "GreenSlime", 410, P(MonsterPool.SkullCavern, MonsterPool.Farm), 121),
         C("copper-slime", "Copper Slime", "GreenSlime", 102, P(MonsterPool.QuarryMine), new Color(184, 115, 51), PostConstruction.CopperSlime),
         C("iron-slime", "Iron Slime", "GreenSlime", 205, P(MonsterPool.QuarryMine), new Color(170, 175, 185), PostConstruction.IronSlime),
+        C("dangerous-copper-slime", "Dangerous Copper Slime", "GreenSlime", 360, P(MonsterPool.DangerousMines), new Color(184, 115, 51), PostConstruction.CopperSlime, true),
+        C("dangerous-iron-slime", "Dangerous Iron Slime", "GreenSlime", 520, P(MonsterPool.DangerousMines), new Color(170, 175, 185), PostConstruction.IronSlime, true),
 
         C("bat", "Bat", "Bat", 24, P(MonsterPool.Mines, MonsterPool.Farm)),
         C("frost-bat", "Frost Bat", "Bat", 36, P(MonsterPool.Mines, MonsterPool.Farm), 40),
@@ -60,6 +62,7 @@ internal static class MonsterCatalog
         C("carbon-ghost", "Carbon Ghost", "Ghost", 100, P(MonsterPool.DangerousMines, MonsterPool.SkullCavern), "Carbon Ghost"),
         C("putrid-ghost", "Putrid Ghost", "Ghost", 200, P(MonsterPool.DangerousMines), "Putrid Ghost"),
         C("skeleton", "Skeleton", "Skeleton", 70, P(MonsterPool.Mines), false),
+        C("skeleton-mage", "Skeleton Mage", "Skeleton", 95, P(MonsterPool.DangerousMines), true),
 
         C("spider", "Spider", "Leaper", 150, P(MonsterPool.DangerousMines)),
         C("shadow-brute", "Shadow Brute", "ShadowBrute", 160, P(MonsterPool.Mines, MonsterPool.Farm)),
@@ -84,6 +87,7 @@ internal static class MonsterCatalog
         C("dangerous-bat", "Dangerous Bat", "Bat", 300, P(MonsterPool.DangerousMines), null, PostConstruction.None, true),
         C("dangerous-haunted-skull", "Dangerous Haunted Skull", "Bat", 350, P(MonsterPool.DangerousMines), 77377, PostConstruction.None, true),
         C("dangerous-bug", "Dangerous Bug", "Bug", 300, P(MonsterPool.DangerousMines), 0, PostConstruction.None, true),
+        C("dangerous-armored-bug", "Dangerous Armored Bug", "Bug", 400, P(MonsterPool.DangerousSkullCavern), 121, PostConstruction.None, true),
         C("dangerous-cave-fly", "Dangerous Cave Fly", "Fly", 300, P(MonsterPool.DangerousMines), false, PostConstruction.None, true),
         C("dangerous-grub", "Dangerous Grub", "Grub", 300, P(MonsterPool.DangerousMines), false, PostConstruction.None, true),
         C("dangerous-dust-spirit", "Dangerous Dust Sprite", "DustSpirit", 300, P(MonsterPool.DangerousMines), null, PostConstruction.None, true),
