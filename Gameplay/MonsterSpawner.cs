@@ -20,7 +20,7 @@ internal sealed class MonsterSpawner
 
     public MonsterSpawner(IMonitor monitor) => this.monitor = monitor;
 
-    public bool TrySpawnRandomMonster()
+    public bool TrySpawnRandomMonster(string difficulty = "normal")
     {
         if (!Context.IsWorldReady || Game1.player is null)
         {
@@ -28,22 +28,25 @@ internal sealed class MonsterSpawner
             return false;
         }
 
-        return this.TrySpawnCandidate(MonsterCatalog.GetRandomType(), out _, out _);
+        return this.TrySpawnCandidate(MonsterCatalog.GetRandomType(difficulty), out _, out _);
     }
 
     public bool TrySpawnGreenSlime() =>
         MonsterCatalog.TryGetCanonicalType("Green Slime", out string id) &&
         this.TrySpawnCandidate(id, out _, out _);
 
-    public bool TrySpawnMonster(string monsterType)
+    public bool TrySpawnMonster(string monsterType, bool ignoreProgression = false)
     {
-        if (!MonsterCatalog.TryGetCanonicalType(monsterType, out string candidateId))
+        if (!MonsterCatalog.TryGetCanonicalType(monsterType, out string candidateId, ignoreProgression))
         {
-            this.monitor.Log($"[Spectrum] TEST SPAWN FAILED | unknown or progression-locked monster: {monsterType}", LogLevel.Warn);
+            this.monitor.Log($"[Spectrum] TEST SPAWN FAILED | unknown, excluded, unsupported, or progression-locked monster: {monsterType}", LogLevel.Warn);
             return false;
         }
 
-        return this.TrySpawnCandidate(candidateId, out _, out _);
+        if (ignoreProgression)
+            this.monitor.Log($"[Spectrum] TEST OVERRIDE | spawning {MonsterCatalog.GetDisplayName(candidateId)} without progression gating; save data is unchanged.", LogLevel.Warn);
+
+        return this.TrySpawnCandidate(candidateId, out _, out _, ignoreProgression);
     }
 
     public bool TryExecute(
@@ -159,7 +162,7 @@ internal sealed class MonsterSpawner
     private static int ClampCount(int value, int fallback) =>
         Math.Clamp(value <= 0 ? fallback : value, 1, MaximumMonstersPerRedemption);
 
-    private bool TrySpawnCandidate(string candidateId, out string locationName, out Monster? spawnedMonster)
+    private bool TrySpawnCandidate(string candidateId, out string locationName, out Monster? spawnedMonster, bool ignoreProgression = false)
     {
         locationName = "";
         spawnedMonster = null;
@@ -183,7 +186,7 @@ internal sealed class MonsterSpawner
                 continue;
 
             int before = location.characters.Count;
-            if (!MonsterCatalog.TryCreateMonster(candidateId, tile * 64f, out Monster? monster, out string error) || monster is null)
+            if (!MonsterCatalog.TryCreateMonster(candidateId, tile * 64f, out Monster? monster, out string error, ignoreProgression) || monster is null)
             {
                 this.monitor.Log($"[Spectrum] SPAWN FAILED | {MonsterCatalog.GetDisplayName(candidateId)} | {error}", LogLevel.Warn);
                 return false;
