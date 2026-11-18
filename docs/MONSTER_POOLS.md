@@ -42,7 +42,7 @@ The Qi challenges are repeatable Special Orders, so their permanent completion h
 
 ## Efficiency
 
-`MonsterProgression.Read` runs when a monster is selected, not from the update-tick loop. It performs a small number of local save-state lookups and does not create a new saved flag, database record, or background polling task.
+`MonsterProgressionSnapshot.Read` runs when a monster is selected, not from the update-tick loop. It performs a small number of local save-state lookups and does not create a new saved flag, database record, or background polling task.
 
 Reading on selection means progression acquired during a running save can be recognised on the next spawn request. The current save's `Farmer` is the source of truth, so loading a different save naturally uses that save's progress.
 
