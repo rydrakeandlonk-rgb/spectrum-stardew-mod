@@ -5,10 +5,11 @@ The product is a private Spectrum integration. Control Center decides which acti
 ## Phase 1 — Gameplay foundation
 
 - [x] Create the SMAPI project and host-only Green Slime test command.
-- [x] Add an allowlisted vanilla monster catalogue with inverse-health weighted random selection.
+- [x] Add an allowlisted monster type catalogue with inverse-health weighted random selection.
+- [x] Dispatch monster creation through Stardew's built-in debug command parser instead of custom constructors.
 - [x] Add a local random monster test command.
 - [ ] Compile against the target Stardew Valley installation.
-- [ ] Verify each candidate monster constructor and spawn behaviour in-game.
+- [ ] Verify the command route and every candidate type in-game.
 - [ ] Tune health weighting using actual gameplay results.
 - [ ] Verify multiplayer replication with a host and farmhand.
 - [ ] Add spawn caps, cooldowns and safe game-state checks.
