@@ -9,6 +9,8 @@ The product is a private Spectrum integration. Control Center decides which acti
 - [x] Add direct, explicit vanilla constructor dispatch for named monster variants.
 - [x] Add a local random monster test command.
 - [x] Add first-pass location-group progression checks using vanilla save flags and completed Special Order history.
+- [x] Track permanent Mines-floor-120 and Skull-Cavern-floor-100 milestones per host save, with Combat Level as a secondary factor.
+- [x] Add first-pass progression-based threat targeting without directly changing vanilla monster stats.
 - [x] Add an in-game diagnostic command for unlocked pools, full catalogue mappings and constructor/setup support.
 - [x] Add explicit spawn definitions for the reference roster's named variants and location pools, including restored Skeleton Mage, Dangerous Copper/Iron Slimes and Dangerous Armored Bug.
 - [x] Implement first-pass dangerous monster setup with an additional-difficulty stat step and optional dangerous textures.
