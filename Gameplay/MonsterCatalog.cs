@@ -27,10 +27,10 @@ internal static class MonsterCatalog
         C("blue-slime", "Blue Slime (Frost Jelly)", "GreenSlime", 106, P(MonsterPool.Mines, MonsterPool.Farm), 40),
         C("red-slime", "Red Slime (Sludge)", "GreenSlime", 205, P(MonsterPool.Mines, MonsterPool.Farm), 80),
         C("purple-slime", "Purple Slime (Sludge)", "GreenSlime", 410, P(MonsterPool.SkullCavern, MonsterPool.Farm), 121),
-        C("copper-slime", "Copper Slime", "GreenSlime", 102, P(MonsterPool.QuarryMine), new Color(184, 115, 51), PostConstruction.CopperSlime),
-        C("iron-slime", "Iron Slime", "GreenSlime", 205, P(MonsterPool.QuarryMine), new Color(170, 175, 185), PostConstruction.IronSlime),
-        C("dangerous-copper-slime", "Dangerous Copper Slime", "GreenSlime", 360, P(MonsterPool.DangerousMines), new Color(184, 115, 51), PostConstruction.CopperSlime, true),
-        C("dangerous-iron-slime", "Dangerous Iron Slime", "GreenSlime", 520, P(MonsterPool.DangerousMines), new Color(170, 175, 185), PostConstruction.IronSlime, true),
+        C("copper-slime", "Copper Slime", "GreenSlime", 102, P(MonsterPool.QuarryMine), null, PostConstruction.CopperSlime),
+        C("iron-slime", "Iron Slime", "GreenSlime", 205, P(MonsterPool.QuarryMine), null, PostConstruction.IronSlime),
+        C("dangerous-copper-slime", "Dangerous Copper Slime", "GreenSlime", 360, P(MonsterPool.DangerousMines), null, PostConstruction.CopperSlime, true),
+        C("dangerous-iron-slime", "Dangerous Iron Slime", "GreenSlime", 520, P(MonsterPool.DangerousMines), null, PostConstruction.IronSlime, true),
 
         C("bat", "Bat", "Bat", 24, P(MonsterPool.Mines, MonsterPool.Farm)),
         C("frost-bat", "Frost Bat", "Bat", 36, P(MonsterPool.Mines, MonsterPool.Farm), 40),
@@ -287,10 +287,10 @@ internal static class MonsterCatalog
         switch (candidate.Post)
         {
             case PostConstruction.CopperSlime:
-                ConfigureNamedSlime((GreenSlime)monster, "Copper Slime");
+                ConfigureNamedSlime((GreenSlime)monster, "Copper Slime", new Color(184, 115, 51));
                 break;
             case PostConstruction.IronSlime:
-                ConfigureNamedSlime((GreenSlime)monster, "Iron Slime");
+                ConfigureNamedSlime((GreenSlime)monster, "Iron Slime", new Color(170, 175, 185));
                 break;
             case PostConstruction.TigerSlime:
                 ((GreenSlime)monster).makeTigerSlime();
@@ -304,9 +304,10 @@ internal static class MonsterCatalog
         }
     }
 
-    private static void ConfigureNamedSlime(GreenSlime slime, string name)
+    private static void ConfigureNamedSlime(GreenSlime slime, string name, Color color)
     {
         slime.Name = name;
+        slime.color.Value = color;
         ParseMonsterInfo(slime, name);
         slime.reloadSprite();
     }
