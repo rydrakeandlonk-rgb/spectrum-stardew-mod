@@ -155,6 +155,7 @@ internal static class MonsterCatalog
 
     public static IReadOnlyList<string> AllTypes => Candidates.Select(candidate => candidate.DisplayName).ToArray();
     public static IReadOnlyList<string> GetEligibleTypes() => GetEligibleCandidates().Select(candidate => candidate.DisplayName).ToArray();
+    public static IReadOnlyList<string> GetAllTestableTypes() => GetTestableCandidates().Select(candidate => candidate.DisplayName).ToArray();
 
     public static IReadOnlyList<string> GetThreatDataFallbacks()
     {
@@ -255,15 +256,16 @@ internal static class MonsterCatalog
         return eligible[^1].Id;
     }
 
-    public static bool TryGetCanonicalType(string? value, out string monsterType)
+    public static bool TryGetCanonicalType(string? value, out string monsterType, bool ignoreProgression = false)
     {
         Candidate? candidate = FindCandidate(value);
-        bool eligible = candidate is not null && GetEligibleCandidates().Any(item => item.Id == candidate.Id);
+        Candidate[] allowed = ignoreProgression ? GetTestableCandidates() : GetEligibleCandidates();
+        bool eligible = candidate is not null && allowed.Any(item => item.Id == candidate.Id);
         monsterType = eligible ? candidate!.Id : "";
         return eligible;
     }
 
-    public static bool TryCreateMonster(string candidateId, Vector2 position, out Monster? monster, out string error)
+    public static bool TryCreateMonster(string candidateId, Vector2 position, out Monster? monster, out string error, bool ignoreProgression = false)
     {
         monster = null;
         error = "";
@@ -272,9 +274,12 @@ internal static class MonsterCatalog
             error = "Unknown spawn definition.";
             return false;
         }
-        if (!GetEligibleCandidates().Any(item => item.Id == candidate.Id))
+        Candidate[] allowed = ignoreProgression ? GetTestableCandidates() : GetEligibleCandidates();
+        if (!allowed.Any(item => item.Id == candidate.Id))
         {
-            error = "Monster is not unlocked in this save.";
+            error = ignoreProgression
+                ? "Monster is excluded or has no supported constructor/setup."
+                : "Monster is not unlocked in this save.";
             return false;
         }
         if (!TryGetConstructor(candidate, out ConstructorInfo? constructor))
@@ -312,6 +317,11 @@ internal static class MonsterCatalog
 
     private static Candidate[] GetEligibleCandidates() =>
         GetUnlockedCandidates().Where(HasSupportedDefinition).ToArray();
+
+    // Developer-only test path: bypasses progression gates, but never the
+    // approved roster exclusions or constructor/setup validation.
+    private static Candidate[] GetTestableCandidates() =>
+        Candidates.Where(candidate => !IsExcludedCandidate(candidate) && HasSupportedDefinition(candidate)).ToArray();
 
     private static Candidate[] GetUnlockedCandidates()
     {
