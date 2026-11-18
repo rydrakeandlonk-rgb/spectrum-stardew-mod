@@ -74,6 +74,7 @@ Random selection now targets a threat band based on permanent save progression:
 - After Mines floor 120, before Skull Cavern floor 100: target 155.
 - After Skull Cavern floor 100: target 260.
 - Combat Level contributes a secondary adjustment of up to 25% within each stage.
+- The active Mines or Skull Cavern area's Shrine of Challenge difficulty adds 12% per level (0–2) to the target; it does not affect selection outside that matching area.
 - Easy shifts the target lower; Hard shifts it higher. The weighting curve controls how tightly selection clusters around the target.
 - Dangerous variants use a higher catalogue threat estimate.
 
