@@ -82,10 +82,10 @@ internal sealed class ModEntry : Mod
         this.Monitor.Log($"Loaded {this.processedCommandIds.Count} saved Spectrum redemption IDs for duplicate protection.", LogLevel.Trace);
     }
 
-    private void RememberProcessedCommand(string commandId)
+    private bool RememberProcessedCommand(string commandId)
     {
-        if (!this.processedCommandsLoaded || string.IsNullOrWhiteSpace(commandId))
-            return;
+        if (string.IsNullOrWhiteSpace(commandId))
+            return false;
 
         if (this.processedCommandIds.Add(commandId))
             this.processedCommandOrder.Enqueue(commandId);
@@ -93,7 +93,21 @@ internal sealed class ModEntry : Mod
         while (this.processedCommandOrder.Count > 500)
             this.processedCommandIds.Remove(this.processedCommandOrder.Dequeue());
 
-        this.Helper.Data.WriteGlobalData(ProcessedCommandGlobalKey, this.processedCommandOrder.ToList());
+        return this.TryPersistProcessedCommands();
+    }
+
+    private bool TryPersistProcessedCommands()
+    {
+        try
+        {
+            this.Helper.Data.WriteGlobalData(ProcessedCommandGlobalKey, this.processedCommandOrder.ToList());
+            return true;
+        }
+        catch (Exception ex)
+        {
+            this.Monitor.Log($"Could not persist processed Spectrum redemption IDs; acknowledgement is being held for retry: {ex.Message}", LogLevel.Error);
+            return false;
+        }
     }
 
     private void OnUpdateTicked(object? sender, UpdateTickedEventArgs e)
@@ -118,6 +132,13 @@ internal sealed class ModEntry : Mod
             if (this.processedCommandIds.Contains(command.CommandId))
             {
                 this.Monitor.Log($"[Spectrum] DUPLICATE | {command.CommandId}", LogLevel.Trace);
+                if (!this.TryPersistProcessedCommands())
+                {
+                    this.gameModsClient.RequeueCommand(command);
+                    this.retryCommandsAtUtc = DateTime.UtcNow.AddSeconds(10);
+                    break;
+                }
+
                 _ = this.gameModsClient.AcknowledgeAsync(command.CommandId);
                 continue;
             }
@@ -157,7 +178,13 @@ internal sealed class ModEntry : Mod
 
                 // Persist before acknowledgement so a reconnect or game restart
                 // cannot normally replay a redemption that already spawned.
-                this.RememberProcessedCommand(command.CommandId);
+                if (!this.RememberProcessedCommand(command.CommandId))
+                {
+                    this.gameModsClient.RequeueCommand(command);
+                    this.retryCommandsAtUtc = DateTime.UtcNow.AddSeconds(10);
+                    break;
+                }
+
                 _ = this.gameModsClient.AcknowledgeAsync(command.CommandId);
             }
             else
