@@ -13,6 +13,7 @@ internal sealed class ModEntry : Mod
     private GameModsClient? gameModsClient;
     private readonly HashSet<string> processedCommandIds = new(StringComparer.Ordinal);
     private readonly Queue<string> processedCommandOrder = new();
+    private DateTime retryCommandsAtUtc = DateTime.MinValue;
 
     public override void Entry(IModHelper helper)
     {
@@ -56,16 +57,19 @@ internal sealed class ModEntry : Mod
     {
         if (this.gameModsClient is null ||
             this.monsterSpawner is null ||
+            !this.gameModsClient.SpawnsEnabled ||
+            DateTime.UtcNow < this.retryCommandsAtUtc ||
             !Context.IsWorldReady ||
             !Context.IsMainPlayer)
         {
             return;
         }
 
-        // Keep each tick bounded if a host reconnects with several queued commands.
-        for (int i = 0; i < 3; i++)
+        // Process one redemption at a time so Stop Spawns takes effect cleanly.
+        for (int i = 0; i < 1; i++)
         {
-            if (!this.gameModsClient.TryDequeueCommand(out GameCommand? command) || command is null)
+            if (!this.gameModsClient.SpawnsEnabled ||
+                !this.gameModsClient.TryDequeueCommand(out GameCommand? command) || command is null)
                 break;
 
             if (!this.processedCommandIds.Add(command.CommandId))
@@ -74,10 +78,6 @@ internal sealed class ModEntry : Mod
                 _ = this.gameModsClient.AcknowledgeAsync(command.CommandId);
                 continue;
             }
-
-            this.processedCommandOrder.Enqueue(command.CommandId);
-            while (this.processedCommandOrder.Count > 500)
-                this.processedCommandIds.Remove(this.processedCommandOrder.Dequeue());
 
             this.Monitor.Log(
                 $"[Spectrum] REDEEM | {DisplayValue(command.TwitchUserName)} | {DisplayValue(command.RewardTitle)} | {FormatRedeemedAt(command.RedeemedAt)} | {command.CommandId}",
@@ -106,15 +106,27 @@ internal sealed class ModEntry : Mod
                 spawned && result == "SUCCESS" ? LogLevel.Info : LogLevel.Warn
             );
 
-            if (spawned)
+            if (spawned && result == "SUCCESS" && spawnedCount == requestedCount)
             {
                 string redeemer = DisplayValue(command.TwitchUserName);
                 string spawnDescription = spawnedCount == 1 ? $"a {monsterSummary}" : monsterSummary;
                 Game1.chatBox?.addInfoMessage($"{redeemer} spawned {spawnDescription} in the {locationName}!");
-            }
 
-            // Acknowledge only after the game-thread handler has processed the command.
-            _ = this.gameModsClient.AcknowledgeAsync(command.CommandId);
+                this.processedCommandIds.Add(command.CommandId);
+                this.processedCommandOrder.Enqueue(command.CommandId);
+                while (this.processedCommandOrder.Count > 500)
+                    this.processedCommandIds.Remove(this.processedCommandOrder.Dequeue());
+
+                _ = this.gameModsClient.AcknowledgeAsync(command.CommandId);
+            }
+            else
+            {
+                // Keep the durable server-side command pending and retry locally after a short delay.
+                this.gameModsClient.RequeueCommand(command);
+                this.retryCommandsAtUtc = DateTime.UtcNow.AddSeconds(10);
+                this.Monitor.Log($"[Spectrum] RETRY | {command.CommandId} | Spawn was not completed; retrying in 10 seconds.", LogLevel.Warn);
+                break;
+            }
         }
     }
 
