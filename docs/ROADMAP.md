@@ -10,13 +10,13 @@ The product is a private Spectrum integration. Control Center decides which acti
 - [x] Add a local random monster test command.
 - [x] Add first-pass location-group progression checks using vanilla save flags and completed Special Order history.
 - [x] Add an in-game diagnostic command for unlocked pools, full catalogue mappings and constructor/setup support.
-- [x] Add explicit spawn definitions for the reference roster's non-excluded named variants and location pools.
+- [x] Add explicit spawn definitions for the reference roster's named variants and location pools, including restored Skeleton Mage, Dangerous Copper/Iron Slimes and Dangerous Armored Bug.
 - [x] Implement first-pass dangerous monster setup with an additional-difficulty stat step and optional dangerous textures.
 - [ ] Validate dangerous scaling and visuals in-game; compare the fixed global stat step with vanilla mine-specific scaling.
 - [x] Add an authenticated WebSocket client, reconnect loop and typed command validation.
 - [x] Queue remote commands for processing on the SMAPI update thread and acknowledge after handling.
 - [ ] Compile against the target Stardew Valley installation.
-- [ ] Verify every explicit monster variant, its post-construction behaviour and its spawn compatibility in-game.
+- [ ] Verify every explicit monster variant, its post-construction behaviour and its spawn compatibility in-game, especially the Armored Bug constructor flag and dangerous form.
 - [ ] Verify multiplayer replication with a host and farmhand.
 - [x] Add compact one-line SMAPI redemption and spawn-result logs with command IDs.
 - [x] Announce confirmed successful spawns through Stardew's existing in-game chat with the Twitch redeemer, monster and location.
