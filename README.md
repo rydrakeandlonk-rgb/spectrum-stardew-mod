@@ -56,7 +56,7 @@ The farm host is authoritative. Only the host's mod connection processes externa
 
 The local gameplay path now delegates monster creation to Stardew's built-in debug-command parser instead of using reflection to construct monster classes. This code has not yet been compiled or tested in-game.
 
-The Control Center repository contains an admin-only Mods page, per-member activation API, and additive D1 migration. The shared Game Mods gateway, Event Hub's guarded redemption route, Control Center pairing/revocation APIs and Mods dashboard controls, and the SMAPI WebSocket client are now implemented in source. They have not yet been compiled, deployed, or tested end-to-end. Reward mapping UI, live connection reporting, release ZIP verification, and distribution remain outstanding. The migration has not been applied and the dashboard has not been deployed.
+The Control Center repository contains an admin-only Mods page, per-member activation API, and additive D1 migration. The shared Game Mods gateway, Event Hub's guarded redemption route, Control Center pairing/revocation APIs and Mods dashboard controls, and the SMAPI WebSocket client are now implemented in source. They have not yet been compiled, deployed, or tested end-to-end. Live connection reporting, release ZIP verification, and distribution remain outstanding. The migration has not been applied and the dashboard has not been deployed.
 
 ## Pair the host
 
@@ -64,9 +64,9 @@ An administrator enables the member in Control Center, then uses **Pair / re-pai
 
 1. Launch the mod once so SMAPI creates its local config file.
 2. Open the generated `config.json` in the mod folder.
-3. Set `BroadcasterUserId` to the numeric ID shown by Control Center.
-4. Set `HostToken` to the one-time token shown by Control Center.
-5. Leave `GatewayUrl` at its default value and restart Stardew Valley.
+3. Set `BroadcasterUserId` to the numeric ID shown by Control Center.\n4. In the Mods page, use Set reward and enter the Twitch reward ID and exact title for the member.
+5. Set `HostToken` to the one-time token shown by Control Center.
+6. Leave `GatewayUrl` at its default value and restart Stardew Valley.
 
 The host token is stored locally as a revocable game-session credential. Never commit or share the local config. Re-pairing rotates the token and closes the previous host connection. Use `spectrum_connection_status` in the SMAPI console to check the connection.
 
