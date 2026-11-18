@@ -31,6 +31,23 @@ internal static class MonsterCatalog
 
     public static IReadOnlyList<string> AllTypes => Candidates.Select(candidate => candidate.TypeName).ToArray();
 
+    public static string GetDisplayName(string typeName)
+    {
+        return typeName switch
+        {
+            "DinoMonster" => "Dino Monster",
+            "DustSpirit" => "Dust Spirit",
+            "GreenSlime" => "Green Slime",
+            "LavaCrab" => "Lava Crab",
+            "RockCrab" => "Rock Crab",
+            "RockGolem" => "Rock Golem",
+            "ShadowBrute" => "Shadow Brute",
+            "ShadowShaman" => "Shadow Shaman",
+            "SquidKid" => "Squid Kid",
+            _ => typeName
+        };
+    }
+
     public static string GetRandomType(string difficulty = "normal")
     {
         // Easy favours weaker monsters; hard makes tougher monsters more likely.
