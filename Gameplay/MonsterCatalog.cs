@@ -155,7 +155,7 @@ internal static class MonsterCatalog
 
     public static IReadOnlyList<string> AllTypes => Candidates.Select(candidate => candidate.DisplayName).ToArray();
     public static IReadOnlyList<string> GetEligibleTypes() => GetEligibleCandidates().Select(candidate => candidate.DisplayName).ToArray();
-    public static IReadOnlyList<string> GetAllTestableTypes() => GetTestableCandidates().Select(candidate => candidate.DisplayName).ToArray();
+    public static IReadOnlyList<string> GetAllTestableTypes() => Candidates.Select(candidate => candidate.DisplayName).ToArray();
 
     public static IReadOnlyList<string> GetThreatDataFallbacks()
     {
