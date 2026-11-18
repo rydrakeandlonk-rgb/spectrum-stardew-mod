@@ -19,7 +19,7 @@ Twitch Channel Point redemption → Event Hub → Stardew gateway → host SMAPI
 - Enables/disables Stardew Monster Spawner per member.
 - Shows activation and pairing state; live connection/last-seen reporting still needs to be wired.
 - Owns the canonical Twitch identity and authorisation.
-- Will own streamer-facing reward mapping configuration.
+- Provides administrator controls for each member's Twitch reward ID and title.
 
 ### Spectrum Event Hub
 
