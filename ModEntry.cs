@@ -55,6 +55,24 @@ internal sealed class ModEntry : Mod
         );
 
         helper.ConsoleCommands.Add(
+            "spectrum_spawn_monster_force_test",
+            "Developer test: spawn a catalogue monster while bypassing progression only. Exclusions remain enforced. Usage: spectrum_spawn_monster_force_test <monster name or ID>",
+            this.OnSpawnMonsterForceTestCommand
+        );
+
+        helper.ConsoleCommands.Add(
+            "spectrum_progression_test",
+            "Apply a temporary in-memory progression profile or reset to the real save. Usage: spectrum_progression_test <early|mines|skull100|danger-mines|quarry|skull-cavern|danger-skull|bug-lair|volcano|all|reset>",
+            this.OnProgressionTestCommand
+        );
+
+        helper.ConsoleCommands.Add(
+            "spectrum_monster_catalog_test",
+            "Run every supported monster constructor and special setup without adding monsters to the world. Usage: spectrum_monster_catalog_test",
+            this.OnMonsterCatalogTestCommand
+        );
+
+        helper.ConsoleCommands.Add(
             "spectrum_connection_status",
             "Show the Spectrum Game Mods connection status. Usage: spectrum_connection_status",
             this.OnConnectionStatusCommand
@@ -217,7 +235,14 @@ internal sealed class ModEntry : Mod
 
     private void OnSpawnRandomTestCommand(string command, string[] args)
     {
-        this.monsterSpawner?.TrySpawnRandomMonster();
+        string difficulty = args.Length == 0 ? "normal" : args[0].Trim().ToLowerInvariant();
+        if (args.Length > 1 || difficulty is not ("easy" or "normal" or "hard"))
+        {
+            this.Monitor.Log("Usage: spectrum_spawn_random_test [easy|normal|hard]", LogLevel.Warn);
+            return;
+        }
+
+        this.monsterSpawner?.TrySpawnRandomMonster(difficulty);
     }
 
     private void OnSpawnMonsterTestCommand(string command, string[] args)
@@ -230,6 +255,82 @@ internal sealed class ModEntry : Mod
 
         string monsterType = string.Join(" ", args);
         this.monsterSpawner?.TrySpawnMonster(monsterType);
+    }
+
+    private void OnSpawnMonsterForceTestCommand(string command, string[] args)
+    {
+        if (args.Length == 0)
+        {
+            this.Monitor.Log("Usage: spectrum_spawn_monster_force_test <monster name or ID>", LogLevel.Warn);
+            return;
+        }
+
+        string monsterType = string.Join(" ", args);
+        this.monsterSpawner?.TrySpawnMonster(monsterType, ignoreProgression: true);
+    }
+
+    private void OnProgressionTestCommand(string command, string[] args)
+    {
+        if (!Context.IsWorldReady || Game1.player is null)
+        {
+            this.Monitor.Log("Load a save before changing the temporary progression test profile.", LogLevel.Warn);
+            return;
+        }
+
+        if (args.Length != 1)
+        {
+            this.Monitor.Log("Usage: spectrum_progression_test <early|mines|skull100|danger-mines|quarry|skull-cavern|danger-skull|bug-lair|volcano|all|reset>", LogLevel.Warn);
+            this.Monitor.Log("Profiles are temporary and memory-only. 'reset' restores the real save's progression checks.", LogLevel.Info);
+            return;
+        }
+
+        string preset = args[0].Trim().ToLowerInvariant();
+        if (preset == "reset")
+        {
+            MonsterProgressionSnapshot.ClearTestOverride();
+            this.Monitor.Log("Progression test override cleared. Using the real save again.", LogLevel.Info);
+        }
+        else if (!MonsterProgressionSnapshot.TrySetTestPreset(preset, Game1.player, out string error))
+        {
+            this.Monitor.Log(error, LogLevel.Warn);
+            return;
+        }
+        else
+        {
+            this.Monitor.Log($"Temporary progression profile applied: {preset}. No save data was changed.", LogLevel.Warn);
+        }
+
+        this.OnMonsterPoolStatusCommand(command, Array.Empty<string>());
+    }
+
+    private void OnMonsterCatalogTestCommand(string command, string[] args)
+    {
+        if (!Context.IsWorldReady || Game1.player is null || !Context.IsMainPlayer)
+        {
+            this.Monitor.Log("Load a save as the host before running the monster constructor test.", LogLevel.Warn);
+            return;
+        }
+
+        int passed = 0;
+        int failed = 0;
+        foreach (string displayName in MonsterCatalog.GetAllTestableTypes())
+        {
+            if (!MonsterCatalog.TryGetCanonicalType(displayName, out string id, ignoreProgression: true) ||
+                !MonsterCatalog.TryCreateMonster(id, Game1.player.Position, out _, out string error, ignoreProgression: true))
+            {
+                failed++;
+                this.Monitor.Log($"[Spectrum] CATALOG TEST FAILED | {displayName} | {error}", LogLevel.Error);
+                continue;
+            }
+
+            passed++;
+            this.Monitor.Log($"[Spectrum] CATALOG TEST PASSED | {displayName}", LogLevel.Trace);
+        }
+
+        this.Monitor.Log(
+            $"Monster constructor/setup test complete: {passed} passed, {failed} failed, {passed + failed} tested. No monsters were added to the world.",
+            failed == 0 ? LogLevel.Info : LogLevel.Error
+        );
     }
 
     private void OnConnectionStatusCommand(string command, string[] args)
@@ -269,7 +370,7 @@ internal sealed class ModEntry : Mod
         IReadOnlyList<string> threatDataFallbacks = MonsterCatalog.GetThreatDataFallbacks();
 
         this.Monitor.Log($"Vanilla threat data: {MonsterCatalog.AllTypes.Count - threatDataFallbacks.Count}/{MonsterCatalog.AllTypes.Count} definitions | Fallbacks: {(threatDataFallbacks.Count == 0 ? "none" : string.Join(", ", threatDataFallbacks))}", LogLevel.Info);
-        this.Monitor.Log($"Progression stage: {progression.ProgressionStageName} | Combat Level: {progression.CombatLevel}/10", LogLevel.Info);
+        this.Monitor.Log($"Progression stage: {progression.ProgressionStageName} | Combat Level: {progression.CombatLevel}/10 | Test override: {(MonsterProgressionSnapshot.IsTestOverrideActive ? "ACTIVE (memory only)" : "off")}", LogLevel.Info);
         this.Monitor.Log($"Current area: {progression.CurrentAreaName} | Shrine difficulty: {progression.CurrentAreaDifficulty}/2", LogLevel.Info);
         this.Monitor.Log($"Milestones: Mines floor 120 {(progression.MinesCompleted ? "reached" : "not reached")} | Skull Cavern floor 100 {(progression.SkullCavern100Reached ? "reached" : "not reached")}", LogLevel.Info);
         this.Monitor.Log($"Unlocked monster pools: {string.Join(", ", unlockedPools)}", LogLevel.Info);
