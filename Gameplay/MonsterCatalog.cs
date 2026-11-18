@@ -188,18 +188,6 @@ internal static class MonsterCatalog
         }
     }
 
-    private static Candidate[] GetEligibleCandidates()
-    {
-        if (Game1.player is null)
-            return Array.Empty<Candidate>();
-        HashSet<string> ids = MonsterLocationPools.GetEligibleDefinitionIds(MonsterProgressionSnapshot.Read(Game1.player));
-        return Candidates.Where(candidate =>
-            ids.Contains(candidate.Id) &&
-            !ExcludedNames.Contains(candidate.DisplayName) &&
-            !ExcludedNames.Contains(candidate.ClassName))
-            .ToArray();
-    }
-
     private static Candidate[] GetEligibleCandidates() =>
         GetUnlockedCandidates().Where(HasSupportedDefinition).ToArray();
 
