@@ -52,7 +52,7 @@ A dedicated service in the Spectrum Cloudflare repository.
 - Maintains an authenticated outbound gateway connection.
 - Queues typed spawn requests and processes them on the SMAPI game thread.
 - Checks that the world is ready and the local player is the multiplayer host.
-- Selects a local allowlisted monster type and tile coordinate.
+- Discovers eligible vanilla monster classes from the Stardew game assembly, selects a local canonical monster type and tile coordinate, and excludes third-party mod assemblies.
 - Calls Game1.parseDebugInput with a generated monster command so Stardew's own DebugCommands handler creates the monster.
 - Confirms the location's character count increases before reporting success, writes compact one-line redemption/spawn logs, and posts successful results through the existing in-game chat.
 - Farmhands do not connect to Twitch or independently process redemption requests.
@@ -61,9 +61,9 @@ A dedicated service in the Spectrum Cloudflare repository.
 
 The redemption type is fixed: Random Monster Spawner.
 
-The SMAPI client owns the final random selection so the gateway never needs to know or trust a game class name. The initial candidate list follows the Stardew Valley Wiki's documented monster command allowlist: Bat, DinoMonster, DustSpirit, Fly, Ghost, GreenSlime, Grub, LavaCrab, Mummy, RockCrab, RockGolem, Serpent, ShadowBrute, ShadowShaman, Skeleton and SquidKid. Duggy is excluded because its spawn depends on terrain.
+The SMAPI client owns the final random selection so the gateway never needs to know or trust a game class name. The candidate catalogue is discovered from the vanilla `StardewValley.Monsters` namespace in the game's own assembly. It includes concrete monster subclasses with the public `Vector2` constructor used by the built-in `monster Type X Y` debug command. This covers the documented command types and other compatible vanilla monster classes present in the installed game version, while excluding mod-added assemblies. Terrain-dependent monsters such as Duggy are included when they satisfy that constructor contract; the game's own behavior may still impose location or terrain requirements.
 
-Monster construction is delegated to the game's own DebugCommands.Monster handler through Game1.parseDebugInput. The generated command is limited to a local allowlisted type and integer tile coordinates. This avoids reflection-based constructor guessing and keeps the Spectrum mod independent of monster implementation details. Candidate selection uses approximate health values and the weight formula:
+Monster construction is delegated to the game's own DebugCommands.Monster handler through Game1.parseDebugInput. The generated command is limited to a locally discovered vanilla type and integer tile coordinates. This avoids reflection-based constructor guessing and keeps the Spectrum mod independent of monster implementation details. Candidate selection uses approximate health values and the weight formula:
 
     weight = 1 / health ^ 1.35
 
@@ -102,7 +102,7 @@ Implemented in source:
 - Authenticated WebSocket client with reconnect, typed command validation and command acknowledgements.
 - Game-thread queue processing and host-only execution guard.
 - Built-in debug-command dispatch for monster creation.
-- Allowlisted monster names and inverse-health weighted random selection.
+- Runtime discovery of vanilla monster classes supported by the built-in command, canonical name validation and inverse-health weighted random selection.
 - Control Center admin Mods page and per-member activation API.
 - Additive D1 schema migration for member access and reward mappings.
 
