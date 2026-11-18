@@ -177,15 +177,15 @@ internal sealed class ModEntry : Mod
         MonsterProgressionSnapshot progression = MonsterProgressionSnapshot.Read(Game1.player);
         IReadOnlyList<MonsterPool> unlockedPools = MonsterLocationPools.GetUnlockedPools(progression);
         IReadOnlyList<string> eligibleTypes = MonsterCatalog.GetEligibleTypes();
-        IReadOnlyList<string> unresolvedTypes = MonsterCatalog.GetUnresolvedEligibleClassNames();
+        IReadOnlyList<string> catalogIssues = MonsterCatalog.GetCatalogValidationIssues();
 
         this.Monitor.Log($"Unlocked monster pools: {string.Join(", ", unlockedPools)}", LogLevel.Info);
-        this.Monitor.Log($"Currently selectable monster variants ({eligibleTypes.Count}): {string.Join(", ", eligibleTypes)}", LogLevel.Info);
+        this.Monitor.Log($"Currently selectable monster variants ({eligibleTypes.Count}/{MonsterCatalog.AllTypes.Count}): {string.Join(", ", eligibleTypes)}", LogLevel.Info);
         this.Monitor.Log(
-            unresolvedTypes.Count == 0
-                ? "All unlocked spawn definitions have supported constructors and setup methods."
-                : $"Spawn definitions awaiting constructor/setup support ({unresolvedTypes.Count}): {string.Join(", ", unresolvedTypes)}",
-            unresolvedTypes.Count == 0 ? LogLevel.Info : LogLevel.Warn
+            catalogIssues.Count == 0
+                ? "Monster catalogue validation passed: all pool IDs, constructors and special setup methods are supported."
+                : $"Monster catalogue validation found {catalogIssues.Count} issue(s): {string.Join(" | ", catalogIssues)}",
+            catalogIssues.Count == 0 ? LogLevel.Info : LogLevel.Warn
         );
     }
 }
