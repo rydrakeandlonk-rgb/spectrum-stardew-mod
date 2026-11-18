@@ -509,10 +509,18 @@ internal static class MonsterCatalog
             ? candidate.DisplayName.Substring("Dangerous ".Length)
             : candidate.DisplayName;
 
+        // Several catalogue entries are runtime variants of another vanilla
+        // monster record rather than independent Data/Monsters entries.
         return name switch
         {
             "Dust Sprite" => "Dust Spirit",
             "Cave Fly" => "Fly",
+            "Haunted Skull" => "Bat",
+            "Stick Bug" => "Rock Crab",
+            "Truffle Crab" => "Rock Crab",
+            "Royal Serpent" => "Serpent",
+            "Skeleton" => "Skeleton Warrior",
+            "Dangerous Skeleton" => "Skeleton Warrior",
             _ => name
         };
     }
