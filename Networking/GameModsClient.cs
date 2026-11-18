@@ -324,7 +324,7 @@ internal sealed class GameModsClient : IDisposable
                     this.monitor.Log("Ignored an unsupported Spectrum game action.", LogLevel.Warn);
                     return;
                 }
-                this.actions.Enqueue(new GameAction(actionId, game, name));
+                this.actions.Enqueue(new GameAction(actionId, actionGame, actionName));
                 return;
             }
 
