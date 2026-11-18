@@ -119,7 +119,7 @@ internal static class MonsterCatalog
         C("dangerous-shadow-brute", "Dangerous Shadow Brute", "ShadowBrute", 450, P(MonsterPool.DangerousMines), null, PostConstruction.None, true),
         C("dangerous-shadow-shaman", "Dangerous Shadow Shaman", "ShadowShaman", 400, P(MonsterPool.DangerousMines), null, PostConstruction.None, true),
         C("dangerous-skeleton", "Dangerous Skeleton", "Skeleton", 350, P(MonsterPool.DangerousMines), false, PostConstruction.None, true),
-        C("dangerous-squid-kid", "Dangerous Squid Kid", "SquidKid", 400, P(MonsterPool.DangerousMines, MonsterPool.DangerousSkullCavern), null, PostConstruction.None, true)
+        C("dangerous-squid-kid", "Dangerous Squid Kid", "SquidKid", 400, P(MonsterPool.DangerousMines), null, PostConstruction.None, true)
     };
 
     private static readonly IReadOnlyDictionary<string, Candidate> CandidatesById =
