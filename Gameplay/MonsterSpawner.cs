@@ -74,10 +74,7 @@ internal sealed class MonsterSpawner
                 break;
 
             case "random_count_random_monsters":
-                count = Random.Shared.Next(
-                    ClampCount(command.MinCount, 1),
-                    ClampCount(command.MaxCount, 3) + 1
-                );
+                count = GetRandomCount(command.MinCount, command.MaxCount);
                 chooseMonster = () => MonsterCatalog.GetRandomType(command.Difficulty);
                 result = "Random number of random monsters";
                 break;
@@ -95,10 +92,7 @@ internal sealed class MonsterSpawner
                     this.monitor.Log(result, LogLevel.Warn);
                     return false;
                 }
-                count = Random.Shared.Next(
-                    ClampCount(command.MinCount, 1),
-                    ClampCount(command.MaxCount, 3) + 1
-                );
+                count = GetRandomCount(command.MinCount, command.MaxCount);
                 chooseMonster = () => monsterType;
                 result = "Random number of a specific monster";
                 break;
@@ -133,6 +127,13 @@ internal sealed class MonsterSpawner
             ? $"{result}: {spawnedCount} monster(s) spawned."
             : $"{result}: {spawnedCount} of {count} monster(s) spawned.";
         return spawnedCount > 0;
+    }
+
+    private static int GetRandomCount(int minimum, int maximum)
+    {
+        int min = ClampCount(minimum, 1);
+        int max = Math.Max(min, ClampCount(maximum, 3));
+        return Random.Shared.Next(min, max + 1);
     }
 
     private static int ClampCount(int value, int fallback)
