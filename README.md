@@ -79,7 +79,7 @@ After installing the GitHub Actions ZIP through SMAPI, enter these commands in t
 The first command requests a Green Slime. The second selects from the progression-eligible weighted random pool. The pool-status command reports unlocked progression groups, selectable variant definitions, and any definitions still missing constructor/setup support. All are host-only.
 
 Developer validation commands:
-- `spectrum_progression_test <early|mines|skull100|danger-mines|quarry|skull-cavern|danger-skull|bug-lair|volcano|all|reset>` temporarily simulates progression in memory only; it never edits the save. Use `reset` to restore real save checks.
+- `spectrum_progression_test <early|mines|skull100|danger-mines|quarry|skull-cavern|danger-skull|bug-lair|volcano|combat-0|combat-5|combat-10|shrine-0|shrine-1|shrine-2|all|reset>` temporarily simulates progression in memory only; it never edits the save. Use `reset` to restore real save checks.
 - `spectrum_spawn_monster_force_test <monster name or ID>` bypasses progression for a local test spawn only; catalogue exclusions remain enforced.
 - `spectrum_monster_catalog_test` executes every supported constructor and special setup without adding monsters to the world.
 - `spectrum_spawn_random_test [easy|normal|hard]` exercises the three selection difficulty modes.
