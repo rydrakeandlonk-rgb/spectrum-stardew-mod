@@ -32,7 +32,7 @@ The current reference-assembly snapshot is based on Stardew Valley 1.6.15 and SM
 2. Open the SMAPI console.
 3. Run `spectrum_spawn_test` to request a Green Slime through its explicit vanilla constructor definition.
 4. Run `spectrum_spawn_random_test` to exercise the weighted random monster allowlist.
-5. Run `spectrum_spawn_monster_test <monster name or ID>` to test a specific progression-eligible catalogue entry; repeat for each variant and special setup.
+5. Run `spectrum_spawn_monster_test <monster name or ID>` to test a specific progression-eligible catalogue entry; repeat for each variant and special setup. Copper and Iron Slimes are custom tinted Green Slime variants and intentionally retain the base constructor's initialized stats because vanilla `Data/Monsters` has no entries for those custom names.
 6. Run `spectrum_monster_pool_status` to inspect the save's progression stage, Mines 120 and Skull Cavern 100 milestones, Combat Level, current-area Shrine of Challenge difficulty, vanilla threat-data coverage, unlocked location groups, selectable variants, and unresolved constructor/setup definitions.
 7. Run `spectrum_connection_status` to inspect the gateway connection.
 8. Check the compact SMAPI log entries for the redeemer, reward, redemption time, command ID and confirmed spawn result. Failed attempts stay queued for retry; only successful spawns are acknowledged. The latest 500 successful redemption IDs are also saved in the mod's local global data to prevent normal reconnect/restart replay.
