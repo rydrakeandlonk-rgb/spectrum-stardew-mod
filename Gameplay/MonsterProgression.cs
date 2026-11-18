@@ -1,4 +1,5 @@
 using StardewValley;
+using StardewValley.Locations;
 using System.Collections;
 using System.Reflection;
 
@@ -24,6 +25,8 @@ internal sealed record MonsterProgressionSnapshot(
     bool MinesCompleted,
     bool SkullCavern100Reached,
     int CombatLevel,
+    string CurrentAreaName,
+    int CurrentAreaDifficulty,
     bool DangerousMinesUnlocked,
     bool QuarryMineUnlocked,
     bool SkullCavernUnlocked,
@@ -60,6 +63,26 @@ internal sealed record MonsterProgressionSnapshot(
         // Qi's challenges are repeatable Special Orders. Their permanent
         // completion history lives on the shared FarmerTeam, not questsCompleted.
         var completedOrders = farmer.team.completedSpecialOrders;
+        string currentAreaName = "Other location";
+        int currentAreaDifficulty = 0;
+
+        if (Game1.currentLocation is MineShaft shaft)
+        {
+            if (shaft.mineLevel == 77377)
+            {
+                currentAreaName = "Quarry Mine";
+            }
+            else if (shaft.mineLevel >= 121)
+            {
+                currentAreaName = "Skull Cavern";
+                currentAreaDifficulty = Math.Clamp((int)Game1.netWorldState.Value.SkullCavesDifficulty, 0, 2);
+            }
+            else if (shaft.mineLevel is >= 1 and <= 120)
+            {
+                currentAreaName = "Mines";
+                currentAreaDifficulty = Math.Clamp((int)Game1.netWorldState.Value.MinesDifficulty, 0, 2);
+            }
+        }
 
         return new MonsterProgressionSnapshot(
             MinesCompleted: farmer.deepestMineLevel >= 120,
@@ -68,6 +91,8 @@ internal sealed record MonsterProgressionSnapshot(
             // keep the source compatible with the pinned 1.6.15 build references.
             SkullCavern100Reached: HasCompletedQuest(farmer, 30),
             CombatLevel: Math.Clamp(farmer.CombatLevel, 0, 10),
+            CurrentAreaName: currentAreaName,
+            CurrentAreaDifficulty: currentAreaDifficulty,
             DangerousMinesUnlocked: completedOrders.Contains("QiChallenge9"),
             QuarryMineUnlocked: farmer.mailReceived.Contains("gotGoldenScythe"),
             SkullCavernUnlocked: farmer.hasSkullKey,
