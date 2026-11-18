@@ -21,6 +21,7 @@ internal static class MonsterCatalog
         double Health, double Damage, double Defense, double Speed,
         double Experience, double MissChance, bool IsGlider);
 
+    // Dangerous variants inherit these exclusions; neither Armored Bug form is eligible.
     private static readonly HashSet<string> ExcludedNames = new(StringComparer.OrdinalIgnoreCase)
     {
         "Mummy", "Armored Bug", "Lava Lurk", "Duggy", "Magma Duggy"
