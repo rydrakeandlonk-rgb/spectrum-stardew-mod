@@ -13,6 +13,7 @@ Progression eligibility and difficulty weighting are separate:
 - A permanent three-stage save milestone sets the threat target: before Mines floor 120, after Mines floor 120, and after Skull Cavern floor 100.
 - Combat Level is a secondary adjustment within the current stage, not the main progression gate.
 - Easy, Normal and Hard shift the target threat and weighting curve; they do not directly alter monster stats.
+- The active generated Mines area uses `Game1.netWorldState.Value.MinesDifficulty`; Skull Cavern uses `SkullCavesDifficulty`. Each level (clamped to 0–2) raises the target by 12%, and only applies in its matching area. Quarry Mine and all other locations use 0.
 - The first-pass threat estimate is the catalogue's balancing value, not a claim about exact runtime health or damage. It should be refined against vanilla monster data and in-game results.
 
 ## Location groups and unlock conditions
@@ -35,7 +36,7 @@ The progression reader uses existing save state:
 | Progression | Vanilla value |
 |---|---|
 | Mines floor 120 reached | `Game1.player.deepestMineLevel >= 120` |
-| Skull Cavern floor 100 story reached | reflection lookup of `Farmer.questsCompleted` for quest ID `30` (completed Cryptic Note story quest; the API was added in Stardew 1.6.16) (completed Cryptic Note quest) |
+| Skull Cavern floor 100 story reached | reflection lookup of `Farmer.questsCompleted` for quest ID `30` (completed Cryptic Note story quest; the API was added in Stardew 1.6.16) |
 | Danger in the Deep completed | `Game1.player.team.completedSpecialOrders.Contains("QiChallenge9")` |
 | Skull Cavern Invasion completed | `Game1.player.team.completedSpecialOrders.Contains("QiChallenge10")` |
 | Golden Scythe obtained | `Game1.player.mailReceived.Contains("gotGoldenScythe")` |
