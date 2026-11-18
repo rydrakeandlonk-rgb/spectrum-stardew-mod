@@ -146,11 +146,7 @@ internal sealed class ModEntry : Mod
                 int removed = this.monsterSpawner?.ClearLoadedMonsters() ?? -1;
                 if (removed >= 0)
                 {
-                    Game1.addHUDMessage(new HUDMessage(
-                        $"Spectrum cleared {removed} loaded monster(s).",
-                        Color.LightGreen,
-                        3000f
-                    ));
+                    Game1.chatBox?.addInfoMessage($"Spectrum cleared {removed} loaded monster(s).");
                 }
             },
             this.OpenControlCenter
@@ -170,11 +166,7 @@ internal sealed class ModEntry : Mod
         catch (Exception ex)
         {
             this.Monitor.Log($"Could not open Spectrum Control Center: {ex.Message}", LogLevel.Warn);
-            Game1.addHUDMessage(new HUDMessage(
-                "Open Spectrum Control Center in your browser to pair this host.",
-                Color.White,
-                4000f
-            ));
+            Game1.chatBox?.addInfoMessage("Open Spectrum Control Center in your browser to pair this host.");
         }
     }
 
