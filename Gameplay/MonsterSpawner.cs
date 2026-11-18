@@ -84,11 +84,11 @@ internal sealed class MonsterSpawner
                 break;
             case "random_count_random_monsters":
                 count = GetRandomCount(command.MinCount, command.MaxCount);
-                chooseMonster = () => MonsterCatalog.GetRandomType(command.Difficulty);
+                chooseMonster = () => MonsterCatalog.GetRandomType(command.Difficulty, useTestProgression: false);
                 break;
             case "fixed_count_random_monsters":
                 count = ClampCount(command.Count, 1);
-                chooseMonster = () => MonsterCatalog.GetRandomType(command.Difficulty);
+                chooseMonster = () => MonsterCatalog.GetRandomType(command.Difficulty, useTestProgression: false);
                 break;
             case "random_count_specific_monster":
                 if (!MonsterCatalog.TryGetCanonicalType(command.MonsterType, out candidateId, useTestProgression: false))
@@ -100,7 +100,7 @@ internal sealed class MonsterSpawner
                 chooseMonster = () => candidateId;
                 break;
             case "fixed_count_specific_monster":
-                if (!MonsterCatalog.TryGetCanonicalType(command.MonsterType, out candidateId))
+                if (!MonsterCatalog.TryGetCanonicalType(command.MonsterType, out candidateId, useTestProgression: false))
                 {
                     result = "FAILED: unsupported or progression-locked configured monster";
                     return false;
