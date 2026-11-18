@@ -13,7 +13,7 @@ internal sealed class ModEntry : Mod
     private GameModsClient? gameModsClient;
     private readonly HashSet<string> processedCommandIds = new(StringComparer.Ordinal);
     private readonly Queue<string> processedCommandOrder = new();
-    private const string ProcessedCommandSaveKey = "processed-spectrum-command-ids";
+    private const string ProcessedCommandGlobalKey = "processed-spectrum-command-ids";
     private bool processedCommandsLoaded;
     private DateTime retryCommandsAtUtc = DateTime.MinValue;
 
@@ -71,7 +71,7 @@ internal sealed class ModEntry : Mod
 
     private void LoadProcessedCommands(IModHelper helper)
     {
-        List<string> savedIds = helper.Data.ReadGlobalData<List<string>>(ProcessedCommandSaveKey) ?? new List<string>();
+        List<string> savedIds = helper.Data.ReadGlobalData<List<string>>(ProcessedCommandGlobalKey) ?? new List<string>();
         foreach (string id in savedIds.Where(id => !string.IsNullOrWhiteSpace(id)).TakeLast(500))
         {
             if (this.processedCommandIds.Add(id))
@@ -93,7 +93,7 @@ internal sealed class ModEntry : Mod
         while (this.processedCommandOrder.Count > 500)
             this.processedCommandIds.Remove(this.processedCommandOrder.Dequeue());
 
-        this.Helper.Data.WriteGlobalData(ProcessedCommandSaveKey, this.processedCommandOrder.ToList());
+        this.Helper.Data.WriteGlobalData(ProcessedCommandGlobalKey, this.processedCommandOrder.ToList());
     }
 
     private void OnUpdateTicked(object? sender, UpdateTickedEventArgs e)
