@@ -78,7 +78,7 @@ Before any distribution, verify the ZIP on a clean SMAPI installation. It must c
 
 - Version 0.7.5 is the last runtime-validated build. It passed the user's single-player tests for catalogue construction, progression selection, Twitch redemption handling, reconnect safety and retry/acknowledgement behaviour. Multiplayer remains untested.
 - Version 0.8.0 adds the in-game Spectrum HUD/menu, shared settings, remote administrator overrides and loaded-monster clearing. It must pass GitHub Actions compilation/package checks before an artifact is considered installable.
-- The in-game Connect button currently opens Control Center. The existing one-time host token and local config pairing procedure remains necessary; an automatic in-game device-pairing flow is not part of this implementation pass.
+- The in-game Connect button starts a ten-minute device-code flow. The streamer approves their own Twitch identity in Control Center; the mod then receives and stores its revocable host credential automatically. This self-service flow still needs end-to-end testing.
 - The new in-game menu, host-wide clear action, settings conflict handling and Control Center remote controls still require in-game testing.
 - Multiplayer replication and host/farmhand menu permissions must be verified with two actual game clients. A successful CI build does not prove runtime or multiplayer behaviour.
 - No public mod release is planned. Build ZIPs remain private GitHub Actions artifacts.
