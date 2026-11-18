@@ -229,7 +229,11 @@ internal sealed class GameModsClient : IDisposable
             }
 
             this.commands.Enqueue(new GameCommand(
-                commandId, game, name, behaviorKey,
+                commandId, game, name,
+                ReadString(payload, "user_name"),
+                ReadString(payload, "reward_title"),
+                ReadString(payload, "redeemed_at"),
+                behaviorKey,
                 ReadString(payload, "user_input"),
                 ReadString(payload, "monster_type"),
                 ReadString(payload, "difficulty"),
