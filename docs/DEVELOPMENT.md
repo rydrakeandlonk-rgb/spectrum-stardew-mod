@@ -29,15 +29,15 @@ The current reference-assembly snapshot is based on Stardew Valley 1.6.15 and SM
 
 1. Load a disposable test save as the host.
 2. Open the SMAPI console.
-3. Run `spectrum_spawn_test` to request a Green Slime through Stardew's built-in debug command parser.
+3. Run `spectrum_spawn_test` to request a Green Slime through its explicit vanilla constructor definition.
 4. Run `spectrum_spawn_random_test` to exercise the weighted random monster allowlist.
-5. Run `spectrum_monster_pool_status` to inspect the save's unlocked location groups, selectable discovered classes, and unresolved class families.
+5. Run `spectrum_monster_pool_status` to inspect the save's unlocked location groups, selectable variants, and unresolved constructor/setup definitions.
 6. Run `spectrum_connection_status` to inspect the gateway connection.
-6. Check the compact SMAPI log entries for the redeemer, reward, redemption time, command ID and confirmed spawn result. Failed attempts stay queued for retry; only successful spawns are acknowledged.
+7. Check the compact SMAPI log entries for the redeemer, reward, redemption time, command ID and confirmed spawn result. Failed attempts stay queued for retry; only successful spawns are acknowledged.
 7. Confirm a successful redemption appears in Stardew's existing chat with the Twitch username, monster name and location. Failed spawns must not produce a success chat message.
 8. Repeat in a multiplayer farm with a farmhand connected; confirm exactly one monster appears for both players.
 
-The network client validates typed messages and queues them for the SMAPI update thread. It does not execute server-supplied command text or monster class names. The local catalogue filters discovered vanilla class families through the active save's progression snapshot. See docs/MONSTER_POOLS.md for the unlock rules and the remaining variant-aware constructor work. In-game validation must cover each explicit spawn definition, including dangerous variants and location-sensitive behaviours.
+The network client validates typed messages and queues them for the SMAPI update thread. It does not execute server-supplied command text or monster class names. The local catalogue filters explicit vanilla variant definitions through the active save's progression snapshot. See docs/MONSTER_POOLS.md for unlock rules, constructor mappings and dangerous-variant setup. Every entry still needs in-game validation.
 
 Back up saves before early gameplay testing.
 
