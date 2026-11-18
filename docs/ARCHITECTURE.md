@@ -110,7 +110,7 @@ Not yet implemented or verified:
 - Verify every allowlisted monster type is accepted by the installed Stardew version.
 - Apply migration 0028 to production D1 through the confirmation-gated workflow.
 - Deploy Control Center and synchronise dashboard KV assets; deploy Event Hub and Game Mods through their connected Workers Builds.
-- Add reward mapping management and live connection/last-seen reporting.
+- Add live connection/last-seen reporting.
 - Complete end-to-end EventSub delivery, command acknowledgement and host/farmhand multiplayer tests.
 - Verify clean ZIP installation and release packaging.
 
