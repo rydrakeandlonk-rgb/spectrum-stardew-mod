@@ -97,6 +97,8 @@ internal sealed class SpectrumMenu : IClickableMenu
 
         if (this.connectBounds.Contains(x, y))
         {
+            if (this.getPairingStatus().StartsWith("Requesting", StringComparison.OrdinalIgnoreCase))
+                return;
             this.openControlCenter();
             Game1.playSound("smallSelect");
             return;
