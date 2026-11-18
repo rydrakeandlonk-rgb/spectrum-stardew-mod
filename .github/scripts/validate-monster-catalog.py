@@ -131,6 +131,8 @@ for command in (
         errors.append(f"Developer validation command is missing: {command}")
 if "ignoreProgression" not in spawner_source:
     errors.append("Progression-bypass spawn test path is missing.")
+if "useTestProgression: false" not in spawner_source:
+    errors.append("Live redemption path must explicitly ignore local progression test overrides.")
 
 # Custom variants must use an existing vanilla threat-data key, not their display name.
 for expected in (
