@@ -17,6 +17,7 @@
   let reconnectTimer = null;
   let hideTimer = null;
   let requestTimer = null;
+  let hideAnimationTimer = null;
   let reconnectDelay = 1000;
   let activeEventId = "";
   const seenRequestIds = new Set();
@@ -26,18 +27,26 @@
   function clearDisplayTimers() {
     if (hideTimer) clearTimeout(hideTimer);
     if (requestTimer) clearTimeout(requestTimer);
+    if (hideAnimationTimer) clearTimeout(hideAnimationTimer);
     hideTimer = null;
     requestTimer = null;
+    hideAnimationTimer = null;
   }
 
   function show() {
+    if (hideAnimationTimer) clearTimeout(hideAnimationTimer);
+    hideAnimationTimer = null;
     root.classList.remove("is-hidden");
     requestAnimationFrame(() => root.classList.add("is-visible"));
   }
 
   function hide() {
     root.classList.remove("is-visible");
-    setTimeout(() => root.classList.add("is-hidden"), 240);
+    if (hideAnimationTimer) clearTimeout(hideAnimationTimer);
+    hideAnimationTimer = setTimeout(() => {
+      root.classList.add("is-hidden");
+      hideAnimationTimer = null;
+    }, 240);
   }
 
   function formatMonsterNames(names) {
@@ -93,7 +102,8 @@
     viewer.textContent = (event.payload?.redeemer || "A viewer") + " spawned:";
     monsters.textContent = formatMonsterNames(event.payload?.monster_names) || "Monster spawned";
     const location = String(event.payload?.location || "");
-    locationLabel.textContent = fields.showLocation === false || !location ? "" : "LOCATION  ·  " + location;
+    const showLocation = fields.showLocation !== false && fields.showLocation !== "false";
+    locationLabel.textContent = !showLocation || !location ? "" : "LOCATION  ·  " + location;
     stateLabel.textContent = event.payload?.is_horde ? "HORDE" : "CONFIRMED";
     show();
 
