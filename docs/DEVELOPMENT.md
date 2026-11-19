@@ -54,11 +54,11 @@ Back up saves before early gameplay testing.
 
 ## Pair each player
 
-After an administrator enables each Spectrum member in Control Center, each player pairs their own Twitch account through the in-game **Connect Twitch account** button. Each installation receives a separate broadcaster-scoped game-session credential.
+After an administrator enables each Spectrum member in Control Center, each player pairs their own Twitch account through the GMCM **Connection actions** selector. Each installation receives a separate broadcaster-scoped game-session credential.
 
 1. Load the multiplayer save as host or farmhand.
-2. Open **Options → Generic Mod Config Menu → Spectrum Stardew Monster Spawner → Open Spectrum Control Panel**.
-3. Select **Connect Twitch account** and approve the pairing while signed into your own Twitch account.
+2. Open **Options → Generic Mod Config Menu → Spectrum Stardew Monster Spawner**.
+3. Under **Connection actions**, choose **Connect Twitch / open Control Center**, then press GMCM's **Save** button. Approve the pairing while signed into your own Twitch account.
 4. Return to Stardew and confirm `spectrum_connection_status` reports your broadcaster connection.
 5. Set your own streamer preference in the in-game panel or Control Center. Every fresh connection defaults to stopped.
 
@@ -89,4 +89,4 @@ Before any distribution, verify the ZIP on a clean SMAPI installation. It must c
 
 ## Vanilla Options menu integration
 
-Version 0.8.2 includes the Generic Mod Config Menu **Open Spectrum Control Panel** action from 0.8.1 and adds per-player Spectrum connections with a typed farmhand-to-host command relay. Generic Mod Config Menu remains a required dependency. Verify the menu entry, individual account pairing, farmhand forwarding, host-side spawn targeting and completion acknowledgement in-game.
+Spectrum registers its streamer settings and actions directly in Generic Mod Config Menu. The page uses native GMCM checkboxes and dropdowns; settings are sent when GMCM's Save button is pressed. Pairing is selected under Connection actions. Clearing loaded monsters is a host-only two-step action (Arm clear, then Confirm clear), each followed by Save. There is no separate launch button or floating HUD control. Verify the controls in-game with GMCM 1.16.0 before treating them as runtime-validated.
