@@ -314,7 +314,8 @@ internal sealed class ModEntry : Mod
 
     private bool IsTwitchLinked =>
         !string.IsNullOrWhiteSpace(this.config?.BroadcasterUserId) &&
-        !string.IsNullOrWhiteSpace(this.config?.HostToken);
+        !string.IsNullOrWhiteSpace(this.config?.HostToken) &&
+        !string.IsNullOrWhiteSpace(this.config?.BroadcasterLogin);
 
     private void DrawLinkTwitchButton(SpriteBatch spriteBatch, Vector2 position)
     {
@@ -407,8 +408,9 @@ internal sealed class ModEntry : Mod
 
     private void StartPairingOrOpenControlCenter()
     {
-        if (this.gameModsClient?.IsConnected == true ||
-            this.pairingStatus.StartsWith("Twitch account authorised", StringComparison.OrdinalIgnoreCase))
+        if (this.IsTwitchLinked &&
+            (this.gameModsClient?.IsConnected == true ||
+             this.pairingStatus.StartsWith("Twitch account authorised", StringComparison.OrdinalIgnoreCase)))
         {
             this.OpenControlCenter();
             return;
