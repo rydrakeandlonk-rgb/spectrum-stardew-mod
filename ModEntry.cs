@@ -284,7 +284,7 @@ internal sealed class ModEntry : Mod
             fieldId: "spectrum-clear-enemies"
         );
 
-        this.Monitor.Log("Spectrum settings and controls registered directly in Generic Mod Config Menu.", LogLevel.Info);        this.Monitor.Log("Spectrum settings and actions registered directly in Generic Mod Config Menu.", LogLevel.Info);
+        this.Monitor.Log("Spectrum settings and controls registered directly in Generic Mod Config Menu.", LogLevel.Info);
     }
 
     private HostSettings GetGmcmSettings()
