@@ -9,6 +9,8 @@ on:
       - "manifest.json"
       - ".github/workflows/build-smapi-mod.yml"
       - ".github/scripts/validate-monster-catalog.py"
+      - "stream-elements-widget/**"
+      - "stream-elements-widget/**"
   pull_request:
     branches: [main]
     paths:
@@ -44,6 +46,11 @@ jobs:
 
       - name: Validate monster catalogue and progression pools
         run: python3 .github/scripts/validate-monster-catalog.py
+
+      - name: Validate StreamElements widget source
+        run: |
+          node --check stream-elements-widget/widget.js
+          python3 -c "import json; json.load(open('stream-elements-widget/fields.json', encoding='utf-8'))"
 
       - name: Set up .NET 6
         uses: actions/setup-dotnet@v4
