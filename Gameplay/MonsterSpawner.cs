@@ -173,7 +173,7 @@ internal sealed class MonsterSpawner
                 break;
             }
 
-            createdInLocation ??= Game1.currentLocation;
+            createdInLocation ??= targetFarmer.currentLocation;
             createdMonsters.Add(createdMonster);
             spawnedCount++;
             spawnedTypes.Add(selectedId);
