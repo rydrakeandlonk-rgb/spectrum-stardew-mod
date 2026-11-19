@@ -875,7 +875,8 @@ internal sealed class ModEntry : Mod
             bool hasMod = peer?.GetMod(this.ModManifest.UniqueID) is not null;
             bool farmerOnline = Game1.getOnlineFarmers().Any(farmer => farmer.UniqueMultiplayerID == e.FromPlayerID);
             if (!hasMod || !farmerOnline || string.IsNullOrWhiteSpace(message.ActionId) ||
-                message.Name is not ("stardew.clear_loaded_monsters" or "stardew.spawn_random_test"))
+                message.Name is not ("stardew.clear_loaded_monsters" or "stardew.spawn_random_test") ||
+                message.Difficulty is not ("easy" or "normal" or "hard"))
             {
                 this.Monitor.Log($"Rejected forwarded Spectrum clear action from multiplayer peer {e.FromPlayerID}.", LogLevel.Warn);
                 return;
