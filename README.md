@@ -60,7 +60,7 @@ The host does not need to pair with or listen to other streamers. It can accept 
 
 ## Current implementation status
 
-**Version 1.0.0 release candidate.** The core integration is implemented. The current live build has been tested for Twitch redemption delivery, multiplayer host/farmhand spawning, and the Control Center one-shot Test Spawn action. The Test Spawn action was also verified after updating a second streamer to the current mod build.
+**Version 2.0.0 development build.** The original 1.0.0 gameplay integration remains the foundation; 2.0.0 adds game-to-stream events and the persistent challenge-series death counter. The current live build has been tested for Twitch redemption delivery, multiplayer host/farmhand spawning, and the Control Center one-shot Test Spawn action. The Test Spawn action was also verified after updating a second streamer to the current mod build.
 
 The release candidate includes the progression-aware vanilla monster catalogue, dangerous variants, native progression HUD notices, the rare ten-monster horde event, per-player broadcaster-scoped connections, typed multiplayer forwarding, settings synchronisation, host-authoritative world changes, and Control Center remote actions.
 
@@ -83,6 +83,10 @@ The GMCM page contains the same streamer settings as the former Spectrum panel: 
 Pairing codes expire after ten minutes. The private device code is separate from the visible approval code and is never shown in the dashboard. The game-session credential is not displayed to the streamer or sent to browser JavaScript. Revoke access in Control Center before moving your connection to another Twitch account.
 
 The local config carries a schema version and is migrated automatically on first launch after an update. Gateway URLs must use HTTPS, and incomplete or malformed saved credentials are cleared so the host can be paired again safely. The status section explains whether spawning is stopped by the global safety gate, the administrator override, the streamer's preference, a revoked connection, or a gateway interruption. Temporary gateway interruptions retry automatically; revoked or rotated credentials stop retrying and require a fresh Twitch pairing. Never commit or share the local config or host token.
+
+## Challenge-series controls
+
+Open Options → Generic Mod Config Menu → Spectrum Stardew Monster Spawner → Challenge series. Set the challenge name and manually correct the death total, then press Save. Automatic local-player death detection increments the same counter and immediately writes the updated value to the mod config. This is a per-installation series counter, not a per-save or per-stream counter. A fresh game connection and every overlay reconnect sends the latest snapshot to StreamElements.
 
 ## In-game test commands
 
@@ -126,13 +130,15 @@ Spectrum's streamer settings and actions are registered directly in the vanilla 
 
 ## Game-to-stream events (2.0.0 foundation)
 
-The mod reports a `stardew.monster_spawned` event only after the host has successfully placed the complete requested monster group. The event carries the redemption ID, viewer name, display names of the spawned monsters, count, location and horde flag. For farmhand-originated redemptions, the host includes this result in its existing typed multiplayer response; the originating farmhand then publishes it through its own broadcaster-scoped gateway connection. This preserves the one-channel-per-client model and avoids requiring the host to pair every farmhand's Twitch account.
+The mod reports a stardew.monster_spawned event only after the host has successfully placed the complete requested monster group. The event carries the redemption ID, viewer name, display names of the spawned monsters, count, location and horde flag. For farmhand-originated redemptions, the host includes this result in its existing typed multiplayer response; the originating farmhand then publishes it through its own broadcaster-scoped gateway connection.
 
-Events are sent over the existing authenticated WebSocket. They are not added to the save, local config, D1, KV or Durable Object storage. If the game connection is offline at the exact moment the event is sent, the transient announcement may be missed; the next milestone adds the persistent challenge-state snapshot separately.
+The mod also tracks the paired installer's local-player deaths as a challenge-series total. The challenge name and death count are persisted in the local SMAPI config, not the Stardew save. The counter therefore survives save changes, game restarts and separate streams. GMCM exposes the challenge name and a manual death-count override. Each death sends a transient stardew.player_died event; connection and overlay reconnects send a stardew.challenge_state snapshot so the display can recover after a missed event.
+
+All events use the existing authenticated WebSocket and broadcaster-scoped read-only overlay feed. No event history or challenge data is written to D1, KV or Durable Object storage. The gateway only transports events to currently connected overlays.
 
 
 ## StreamElements overlay
 
-The initial custom widget source is bundled in `stream-elements-widget/`. Copy its HTML, CSS, JS and fields JSON into a StreamElements Custom Widget. The widget connects to the broadcaster-scoped read-only Game Mods WebSocket and animates a spawn request before revealing the monster names confirmed by the game. See `stream-elements-widget/README.md` for setup.
+The custom widget source is bundled in stream-elements-widget/. It keeps the challenge name and death tally visible while showing temporary monster-spawn animations. Copy its HTML, CSS, JS and fields JSON into a StreamElements Custom Widget. See stream-elements-widget/README.md for setup.
 
-The widget does not use StreamElements persistent storage, polling, D1 or KV. The StreamElements account still requires a one-time manual Custom Widget setup. The GitHub Actions build publishes a complete bundle ZIP containing the installable mod ZIP, widget source files and setup instructions, alongside the mod-only ZIP.
+The widget does not use StreamElements persistent storage, polling, D1, KV or Durable Object storage. The StreamElements account still requires a one-time manual Custom Widget setup. The GitHub Actions build publishes a complete bundle ZIP containing the installable mod ZIP, widget source files and setup instructions, alongside the mod-only ZIP.
