@@ -192,6 +192,16 @@ internal sealed class ModEntry : Mod
             titleScreenOnly: false
         );
 
+        this.configMenuApi.AddSectionTitle(this.ModManifest, () => "Connection");
+        this.configMenuApi.AddComplexOption(
+            this.ModManifest,
+            () => "Twitch account",
+            this.DrawLinkTwitchButton,
+            () => "Connect this game to your Spectrum Twitch account.",
+            height: () => 72,
+            fieldId: "spectrum-link-twitch"
+        );
+
         this.configMenuApi.AddSectionTitle(this.ModManifest, () => "Spectrum Stardew Monster Spawner");
         this.configMenuApi.AddParagraph(this.ModManifest, this.GetGmcmStatusText);
 
@@ -205,40 +215,22 @@ internal sealed class ModEntry : Mod
             fieldId: "spectrum-spawning-toggle"
         );
 
-        this.configMenuApi.AddSectionTitle(this.ModManifest, () => "Challenge series");
-        this.configMenuApi.AddParagraph(
-            this.ModManifest,
-            () => "This counter follows this installation's local player across saves and streaming sessions. It is stored in the mod config, not in a database. Set the series name and manually correct the death count here, then press Save."
-        );
+        this.configMenuApi.AddSectionTitle(this.ModManifest, () => "Overlay Settings");
         this.configMenuApi.AddTextOption(
             this.ModManifest,
             () => this.pendingChallengeName ?? this.config?.ChallengeName ?? "Spectrum Challenge",
             value => this.pendingChallengeName = value,
-            () => "Challenge name",
-            () => "The title shown on the StreamElements overlay. Maximum 80 characters.",
+            () => "Title",
+            () => "Title displayed on the overlay.",
             fieldId: "spectrum-challenge-name"
         );
         this.configMenuApi.AddTextOption(
             this.ModManifest,
             () => this.pendingChallengeDeathCount ?? (this.config?.ChallengeDeathCount ?? 0).ToString(CultureInfo.InvariantCulture),
             value => this.pendingChallengeDeathCount = value,
-            () => "Challenge death count",
-            () => "Manually override the series total. Enter a whole number from 0 to 1,000,000, then press Save.",
+            () => "Death Counter",
+            () => "Overlay death count.",
             fieldId: "spectrum-challenge-death-count"
-        );
-
-        this.configMenuApi.AddSectionTitle(this.ModManifest, () => "Connection");
-        this.configMenuApi.AddParagraph(
-            this.ModManifest,
-            () => "Link your Spectrum Twitch account or reopen the connection page. This button opens your browser."
-        );
-        this.configMenuApi.AddComplexOption(
-            this.ModManifest,
-            () => "Twitch account",
-            this.DrawLinkTwitchButton,
-            () => "Open the Twitch linking or pairing page in your external browser.",
-            height: () => 72,
-            fieldId: "spectrum-link-twitch"
         );
 
         this.configMenuApi.AddSectionTitle(this.ModManifest, () => "Host actions");
@@ -285,12 +277,12 @@ internal sealed class ModEntry : Mod
                 {
                     this.Helper.WriteConfig(this.config);
                     _ = this.gameModsClient?.SendChallengeStateAsync(this.config.ChallengeName, this.config.ChallengeDeathCount);
-                    this.gmcmStatusMessage = "Challenge series settings saved and sent to the stream overlay.";
+                    this.gmcmStatusMessage = "Overlay settings saved.";
                 }
             }
             else
             {
-                this.gmcmStatusMessage = "Challenge death count must be a whole number between 0 and 1,000,000. No challenge changes were saved.";
+                this.gmcmStatusMessage = "Death Counter must be a whole number from 0 to 1,000,000. No overlay changes were saved.";
             }
             this.pendingChallengeName = null;
             this.pendingChallengeDeathCount = null;
@@ -300,21 +292,15 @@ internal sealed class ModEntry : Mod
 
     private string GetGmcmStatusText()
     {
-        bool connected = this.gameModsClient?.IsConnected == true;
         bool enabled = this.gameModsClient?.SpawnsEnabled == true;
-        string connection = "Connection: " + (connected ? "Connected" : "Disconnected");
         string spawning = "Monster spawning: " + (enabled ? "Enabled" : "Paused");
-        string role = Context.IsMainPlayer ? "World authority: Host" : "World authority: Farmhand (host-only actions unavailable)";
-        string reason = this.gameModsClient?.SpawnStateReason
-            ?? "Link your Twitch account to connect this game to Spectrum.";
-        string adminOverride = "Administrator override: " + (this.gameModsClient?.SpawnOverride ?? "follow").Replace("_", " ");
+        string hostName = Game1.MasterPlayer?.Name;
+        string authority = "World Authority: " + (string.IsNullOrWhiteSpace(hostName) ? "Detecting host…" : hostName);
         string state = !string.IsNullOrWhiteSpace(this.pairingStatus)
             ? this.pairingStatus
-            : !string.IsNullOrWhiteSpace(this.gmcmStatusMessage)
-                ? this.gmcmStatusMessage
-                : reason;
+            : this.gmcmStatusMessage;
 
-        return string.Join(Environment.NewLine, new[] { connection, spawning, role, adminOverride, state });
+        return string.Join(Environment.NewLine, new[] { spawning, authority, state }.Where(value => !string.IsNullOrWhiteSpace(value)));
     }
 
     private void DrawSpawningButton(SpriteBatch spriteBatch, Vector2 position)
@@ -326,9 +312,18 @@ internal sealed class ModEntry : Mod
         this.spawningButtonBounds = this.DrawGmcmButton(spriteBatch, position, label, client?.IsConnected == true);
     }
 
+    private bool IsTwitchLinked =>
+        !string.IsNullOrWhiteSpace(this.config?.BroadcasterUserId) &&
+        !string.IsNullOrWhiteSpace(this.config?.HostToken);
+
     private void DrawLinkTwitchButton(SpriteBatch spriteBatch, Vector2 position)
     {
-        this.linkTwitchButtonBounds = this.DrawGmcmButton(spriteBatch, position, "Link Twitch  ↗", true);
+        bool linked = this.IsTwitchLinked;
+        string login = this.config?.BroadcasterLogin ?? "";
+        string label = linked
+            ? (string.IsNullOrWhiteSpace(login) ? "Twitch Connected" : $"{login} Connected")
+            : "Link Twitch  ↗";
+        this.linkTwitchButtonBounds = this.DrawGmcmButton(spriteBatch, position, label, !linked);
     }
 
     private void DrawClearEnemiesButton(SpriteBatch spriteBatch, Vector2 position)
@@ -360,7 +355,7 @@ internal sealed class ModEntry : Mod
             this.Helper.Input.Suppress(e.Button);
             this.ToggleMonsterSpawning();
         }
-        else if (this.linkTwitchButtonBounds.Contains(cursor))
+        else if (this.linkTwitchButtonBounds.Contains(cursor) && !this.IsTwitchLinked)
         {
             this.Helper.Input.Suppress(e.Button);
             this.StartPairingOrOpenControlCenter();
@@ -552,6 +547,7 @@ internal sealed class ModEntry : Mod
             {
                 this.config ??= new ModConfig();
                 this.config.BroadcasterUserId = pairingResult.BroadcasterUserId;
+                this.config.BroadcasterLogin = pairingResult.BroadcasterLogin;
                 this.config.HostToken = pairingResult.HostToken;
                 this.config.ConfigVersion = ModConfig.CurrentConfigVersion;
                 this.Helper.WriteConfig(this.config);
