@@ -25,7 +25,6 @@ internal sealed class ModEntry : Mod
     private const string ProcessedCommandGlobalKey = "processed-spectrum-command-ids";
     private DateTime retryCommandsAtUtc = DateTime.MinValue;
     private GenericModConfigMenu.IGenericModConfigMenuApi? configMenuApi;
-    private HostSettings? pendingGmcmSettings;
     private string? pendingChallengeName;
     private string? pendingChallengeDeathCount;
     private Rectangle spawningButtonBounds = Rectangle.Empty;
@@ -206,34 +205,6 @@ internal sealed class ModEntry : Mod
             fieldId: "spectrum-spawning-toggle"
         );
 
-        this.configMenuApi.AddSectionTitle(this.ModManifest, () => "Streamer settings");
-        this.configMenuApi.AddTextOption(
-            this.ModManifest,
-            () => this.GetGmcmSettings().Difficulty,
-            value => this.SetGmcmSettings(settings => settings with { Difficulty = value }),
-            () => "Difficulty",
-            () => "Choose the monster threat weighting used for this streamer's redemptions.",
-            new[] { "easy", "normal", "hard" },
-            value => value.ToUpperInvariant(),
-            "spectrum-difficulty"
-        );
-        this.configMenuApi.AddBoolOption(
-            this.ModManifest,
-            () => this.GetGmcmSettings().ChatResponses,
-            value => this.SetGmcmSettings(settings => settings with { ChatResponses = value }),
-            () => "Chat responses",
-            () => "Show the normal in-game chat response after a successful spawn.",
-            "spectrum-chat-responses"
-        );
-        this.configMenuApi.AddBoolOption(
-            this.ModManifest,
-            () => this.GetGmcmSettings().DebugMessages,
-            value => this.SetGmcmSettings(settings => settings with { DebugMessages = value }),
-            () => "Debug messages",
-            () => "Show additional diagnostic messages for this streamer's commands.",
-            "spectrum-debug-messages"
-        );
-
         this.configMenuApi.AddSectionTitle(this.ModManifest, () => "Challenge series");
         this.configMenuApi.AddParagraph(
             this.ModManifest,
@@ -287,45 +258,15 @@ internal sealed class ModEntry : Mod
         this.Monitor.Log("Spectrum settings and controls registered directly in Generic Mod Config Menu.", LogLevel.Info);
     }
 
-    private HostSettings GetGmcmSettings()
-    {
-        return this.pendingGmcmSettings ?? this.gameModsClient?.Settings ?? new HostSettings();
-    }
-
-    private void SetGmcmSettings(Func<HostSettings, HostSettings> update)
-    {
-        this.pendingGmcmSettings = update(this.GetGmcmSettings());
-    }
-
     private void ResetGmcmOptions()
     {
-        this.pendingGmcmSettings = new HostSettings();
         this.pendingChallengeName = this.config?.ChallengeName ?? "Spectrum Challenge";
         this.pendingChallengeDeathCount = (this.config?.ChallengeDeathCount ?? 0).ToString(CultureInfo.InvariantCulture);
-        this.gmcmStatusMessage = "Settings reset to their defaults. Press Save to apply them.";
+        this.gmcmStatusMessage = "Challenge settings reset. Press Save to apply them.";
     }
 
     private void SaveGmcmOptions()
     {
-        if (this.pendingGmcmSettings is HostSettings settings)
-        {
-            HostSettings current = this.gameModsClient?.Settings ?? new HostSettings();
-            if (settings != current)
-            {
-                if (this.gameModsClient?.IsConnected == true)
-                {
-                    _ = this.gameModsClient.UpdateSettingsAsync(settings);
-                    this.gmcmStatusMessage = "Streamer settings sent to Control Center.";
-                }
-                else
-                {
-                    this.gmcmStatusMessage = "Settings were not sent because this player is not connected to the Spectrum gateway. Connect Twitch first.";
-                }
-            }
-
-            this.pendingGmcmSettings = null;
-        }
-
         if (this.config is not null &&
             (this.pendingChallengeName is not null || this.pendingChallengeDeathCount is not null))
         {
@@ -641,7 +582,7 @@ internal sealed class ModEntry : Mod
                     this.gameModsClient.TryDequeueCommand(out GameCommand? localCommand) &&
                     localCommand is not null)
                 {
-                    this.QueueSpawnCommand(localCommand, null, this.gameModsClient.Settings.ChatResponses);
+                    this.QueueSpawnCommand(localCommand, null);
                 }
             }
             else
@@ -787,7 +728,7 @@ internal sealed class ModEntry : Mod
             {
                 this.AnnounceHorde(redeemer);
             }
-            else if (work.ChatResponses)
+            else
             {
                 string spawnDescription = spawnedCount == 1 ? $"a {monsterSummary}" : monsterSummary;
                 Game1.chatBox?.addInfoMessage($"{redeemer} spawned {spawnDescription} near {targetFarmer.Name} in {locationName}!");
@@ -921,8 +862,7 @@ internal sealed class ModEntry : Mod
 
             ForwardedSpawnCommand message = ForwardedSpawnCommand.FromCommand(
                 pending.Command,
-                this.config?.BroadcasterUserId ?? "",
-                this.gameModsClient.Settings.ChatResponses
+                this.config?.BroadcasterUserId ?? ""
             );
             this.Helper.Multiplayer.SendMessage(
                 message,
@@ -934,12 +874,12 @@ internal sealed class ModEntry : Mod
         }
     }
 
-    private void QueueSpawnCommand(GameCommand command, long? replyToPlayerId, bool chatResponses)
+    private void QueueSpawnCommand(GameCommand command, long? replyToPlayerId)
     {
         if (string.IsNullOrWhiteSpace(command.CommandId) || this.processedCommandIds.Contains(command.CommandId))
         {
             if (!string.IsNullOrWhiteSpace(command.CommandId))
-                this.CompleteSpawnCommand(new SpawnWorkItem(command, replyToPlayerId, chatResponses), true, "Already processed.");
+                this.CompleteSpawnCommand(new SpawnWorkItem(command, replyToPlayerId), true, "Already processed.");
             return;
         }
 
@@ -1118,11 +1058,11 @@ internal sealed class ModEntry : Mod
             GameCommand command = message.ToGameCommand();
             if (this.processedCommandIds.Contains(command.CommandId))
             {
-                this.CompleteSpawnCommand(new SpawnWorkItem(command, e.FromPlayerID, message.ChatResponses), true, "Already processed.");
+                this.CompleteSpawnCommand(new SpawnWorkItem(command, e.FromPlayerID), true, "Already processed.");
                 return;
             }
 
-            this.QueueSpawnCommand(command, e.FromPlayerID, message.ChatResponses);
+            this.QueueSpawnCommand(command, e.FromPlayerID);
             return;
         }
 
@@ -1198,7 +1138,6 @@ internal sealed class ModEntry : Mod
     private sealed record SpawnWorkItem(
         GameCommand Command,
         long? ReplyToPlayerId,
-        bool ChatResponses,
         bool HordeRollCompleted = false,
         bool IsHorde = false
     );
