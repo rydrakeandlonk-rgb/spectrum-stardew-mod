@@ -84,7 +84,7 @@ internal sealed class ModConfig
             }
         }
 
-        string challengeName = Regex.Replace((this.ChallengeName ?? "").Trim(), @"[\\r\\n\\t]+", " ");
+        string challengeName = Regex.Replace((this.ChallengeName ?? "").Trim(), @"[\r\n\t]+", " ");
         if (challengeName.Length == 0)
             challengeName = "Spectrum Challenge";
         if (challengeName.Length > 80)
