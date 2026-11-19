@@ -19,7 +19,8 @@ All compilation and packaging must run through GitHub Actions; do not ask contri
 The `.github/workflows/build-smapi-mod.yml` workflow:
 1. Checks out the mod source and pinned Stardew reference assemblies.
 2. Validates monster catalogue IDs, progression-pool assignments and exclusions.
-3. Restores the .NET project.
+3. Syntax-checks the bundled StreamElements JavaScript and parses its Fields JSON.
+4. Restores the .NET project.
 4. Compiles the SMAPI project in Release mode.
 5. Creates a ready-to-install ZIP.
 6. Verifies the ZIP contains `SpectrumStardewMod.dll` and `manifest.json`, and excludes a local `config.json`.
@@ -84,3 +85,20 @@ The user has already confirmed live Twitch redemption spawning, multiplayer host
 ## Current release status
 
 The manifest is being prepared as **1.0.0**. The cloud build workflow and package verification are in place. The release should not be announced as final until the 1.0.0 artifact passes the clean-install and remaining in-game smoke tests above.
+
+
+## 2.0.0 challenge and overlay smoke tests
+
+- Confirm the existing config migrates to schema version 2 without clearing broadcaster ID or host token.
+- In GMCM, set a challenge name and a known death count; save and confirm the local config updates.
+- Trigger one normal in-game player death and verify exactly one increment appears in the local config and overlay.
+- Verify the counter does not increment repeatedly during the same death/respawn sequence.
+- Return to title, load a different save, and confirm the challenge total is unchanged.
+- Restart Stardew and confirm the challenge name and total remain.
+- Manually change the total in GMCM while the overlay is connected and confirm the display updates.
+- Disconnect/reconnect the game client and reload the overlay; confirm the state snapshot restores the latest total.
+- Trigger a Twitch spawn redemption and confirm the wheel starts at request delivery and reveals only the game-confirmed monster result.
+- Test the counter and spawn animation together in StreamElements and OBS.
+- Confirm the widget makes no polling requests and uses no StreamElements persistent storage.
+
+The death counter is per paired game installation and tracks that installation's local player. If the streamer pairs a different installation, that installation has its own local challenge state unless the streamer manually enters the same total.
