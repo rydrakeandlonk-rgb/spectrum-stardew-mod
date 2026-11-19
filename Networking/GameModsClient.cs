@@ -102,22 +102,6 @@ internal sealed class GameModsClient : IDisposable
         });
     }
 
-    public async Task UpdateSettingsAsync(HostSettings next)
-    {
-        await this.SendMessageAsync(new
-        {
-            type = "settings.update",
-            base_revision = this.settingsRevision,
-            settings = new
-            {
-                spawn_enabled = next.SpawnEnabled,
-                difficulty = next.Difficulty,
-                chat_responses = next.ChatResponses,
-                debug_messages = next.DebugMessages
-            }
-        });
-    }
-
     public Task SendMonsterSpawnedAsync(
         string commandId,
         string redeemer,
@@ -426,8 +410,6 @@ internal sealed class GameModsClient : IDisposable
                     this.settings = new HostSettings(
                         ReadBool(settingsElement, "spawn_enabled", true),
                         ReadString(settingsElement, "difficulty") is "easy" or "hard" ? ReadString(settingsElement, "difficulty") : "normal",
-                        ReadBool(settingsElement, "chat_responses", true),
-                        ReadBool(settingsElement, "debug_messages", false)
                     );
                 }
                 this.settingsRevision = ReadInt(root, "revision", this.settingsRevision);
@@ -436,7 +418,7 @@ internal sealed class GameModsClient : IDisposable
                 this.spawnsEnabled = ReadBool(root, "effective_spawn_enabled", false);
                 this.monitor.Log(
                     $"Spectrum settings synced (revision {this.settingsRevision}); preference {(this.settings.SpawnEnabled ? "enabled" : "disabled")}; override {this.spawnOverride}; safety gate {(this.safetyGateEnabled ? "open" : "closed")}.",
-                    this.settings.DebugMessages ? LogLevel.Info : LogLevel.Trace
+                    LogLevel.Info
                 );
                 return;
             }
