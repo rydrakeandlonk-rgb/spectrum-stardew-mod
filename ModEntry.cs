@@ -228,38 +228,28 @@ internal sealed class ModEntry : Mod
         );
 
         this.configMenuApi.AddSectionTitle(this.ModManifest, () => "Host actions");
-        if (Context.IsMainPlayer)
-        {
-            this.configMenuApi.AddParagraph(
-                this.ModManifest,
-                () => this.gmcmClearArmed
-                    ? "Clear is armed. Select Confirm clear and press Save to remove hostile monsters from all currently loaded locations."
-                    : "Clearing is a two-step action. Select Arm clear and press Save, then select Confirm clear and press Save."
-            );
-            this.configMenuApi.AddTextOption(
-                this.ModManifest,
-                () => "none",
-                value => this.pendingGmcmHostAction = value,
-                () => "Loaded monsters",
-                () => "Host only. Arm and confirm separately before clearing hostile monsters from all loaded locations.",
-                new[] { "none", "arm_clear", "confirm_clear", "cancel_clear" },
-                value => value switch
-                {
-                    "arm_clear" => "Arm clear",
-                    "confirm_clear" => "Confirm clear",
-                    "cancel_clear" => "Cancel clear",
-                    _ => "No action"
-                },
-                "spectrum-loaded-monster-action"
-            );
-        }
-        else
-        {
-            this.configMenuApi.AddParagraph(
-                this.ModManifest,
-                () => "Clear loaded monsters is available only to the multiplayer host. Farmhand spawn requests are still executed by the host."
-            );
-        }
+        this.configMenuApi.AddParagraph(
+            this.ModManifest,
+            () => this.gmcmClearArmed
+                ? "Clear is armed. Select Confirm clear and press Save to remove hostile monsters from all currently loaded locations."
+                : "Clearing is a two-step, host-only action. Select Arm clear and press Save, then select Confirm clear and press Save. Farmhand spawn requests are still executed by the host."
+        );
+        this.configMenuApi.AddTextOption(
+            this.ModManifest,
+            () => "none",
+            value => this.pendingGmcmHostAction = value,
+            () => "Loaded monsters",
+            () => "Host only. Arm and confirm separately before clearing hostile monsters from all loaded locations.",
+            new[] { "none", "arm_clear", "confirm_clear", "cancel_clear" },
+            value => value switch
+            {
+                "arm_clear" => "Arm clear",
+                "confirm_clear" => "Confirm clear",
+                "cancel_clear" => "Cancel clear",
+                _ => "No action"
+            },
+            "spectrum-loaded-monster-action"
+        );
 
         this.Monitor.Log("Spectrum settings and actions registered directly in Generic Mod Config Menu.", LogLevel.Info);
     }
