@@ -217,6 +217,34 @@ internal static class MonsterCatalog
         if (eligible.Length == 0)
             throw new InvalidOperationException("No progression-eligible monster definitions are available.");
 
+        (double targetThreat, double exponent) = GetThreatSelectionSettings(difficulty, useTestProgression);
+        return SelectWeightedCandidate(eligible, targetThreat, exponent).Id;
+    }
+
+    /// <summary>
+    /// Selects distinct eligible monster definitions using the same threat weighting
+    /// as normal spawns, removing each selected variant before the next draw.
+    /// </summary>
+    public static IReadOnlyList<string> GetRandomDistinctTypes(int count, string difficulty = "normal", bool useTestProgression = true)
+    {
+        Candidate[] remaining = GetEligibleCandidates(useTestProgression).ToArray();
+        if (remaining.Length < count)
+            return Array.Empty<string>();
+
+        (double targetThreat, double exponent) = GetThreatSelectionSettings(difficulty, useTestProgression);
+        var selected = new List<string>(count);
+        for (int i = 0; i < count; i++)
+        {
+            Candidate candidate = SelectWeightedCandidate(remaining, targetThreat, exponent);
+            selected.Add(candidate.Id);
+            remaining = remaining.Where(item => item.Id != candidate.Id).ToArray();
+        }
+
+        return selected;
+    }
+
+    private static (double TargetThreat, double Exponent) GetThreatSelectionSettings(string difficulty, bool useTestProgression)
+    {
         MonsterProgressionSnapshot progression = MonsterProgressionSnapshot.Read(Game1.player!, useTestProgression);
         string selectedDifficulty = difficulty.Trim().ToLowerInvariant();
         double exponent = selectedDifficulty switch
@@ -226,8 +254,6 @@ internal static class MonsterCatalog
             _ => 1.35d
         };
 
-        // Progression milestones establish the main threat target. Combat Level
-        // is a smaller adjustment within that stage, not a substitute for progress.
         double targetThreat = progression.ProgressionStage switch
         {
             0 => 75d,
@@ -235,7 +261,6 @@ internal static class MonsterCatalog
             _ => 260d
         };
         targetThreat *= 1d + progression.CombatLevel * 0.025d;
-        // Shrine difficulty affects selection only inside its matching generated area.
         targetThreat *= 1d + progression.CurrentAreaDifficulty * 0.12d;
         targetThreat *= selectedDifficulty switch
         {
@@ -244,15 +269,21 @@ internal static class MonsterCatalog
             _ => 1d
         };
 
-        double totalWeight = eligible.Sum(candidate => GetThreatWeight(candidate, targetThreat, exponent));
+        return (targetThreat, exponent);
+    }
+
+    private static Candidate SelectWeightedCandidate(Candidate[] candidates, double targetThreat, double exponent)
+    {
+        double totalWeight = candidates.Sum(candidate => GetThreatWeight(candidate, targetThreat, exponent));
         double roll = Random.Shared.NextDouble() * totalWeight;
-        foreach (Candidate candidate in eligible)
+        foreach (Candidate candidate in candidates)
         {
             roll -= GetThreatWeight(candidate, targetThreat, exponent);
             if (roll <= 0)
-                return candidate.Id;
+                return candidate;
         }
-        return eligible[^1].Id;
+
+        return candidates[^1];
     }
 
     public static bool TryGetCanonicalType(string? value, out string monsterType, bool ignoreProgression = false, bool useTestProgression = true)

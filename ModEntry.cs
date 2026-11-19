@@ -894,6 +894,22 @@ internal sealed class ModEntry : Mod
         if (e.FromModID != this.ModManifest.UniqueID || !Context.IsWorldReady)
             return;
 
+        if (e.Type == "spectrum.horde.announce" &&
+            !Context.IsMainPlayer &&
+            e.FromPlayerID == Game1.MasterPlayer.UniqueMultiplayerID)
+        {
+            string redeemer;
+            try { redeemer = e.ReadAs<string>(); }
+            catch (Exception ex)
+            {
+                this.Monitor.Log($"Ignored an invalid horde announcement: {ex.Message}", LogLevel.Warn);
+                return;
+            }
+
+            this.ShowHordePreludeAndQueueBanner(redeemer);
+            return;
+        }
+
         if (e.Type == "spectrum.progression.unlocked" &&
             !Context.IsMainPlayer &&
             e.FromPlayerID == Game1.MasterPlayer.UniqueMultiplayerID)
@@ -1299,6 +1315,30 @@ internal sealed class ModEntry : Mod
 
     private void AnnounceHorde(string redeemer)
     {
+        this.ShowHordePreludeAndQueueBanner(redeemer);
+
+        if (!Context.IsMainPlayer || Game1.player is null)
+            return;
+
+        long[] recipients = Game1.getOnlineFarmers()
+            .Where(farmer => farmer.UniqueMultiplayerID != Game1.player.UniqueMultiplayerID)
+            .Where(farmer => this.Helper.Multiplayer.GetConnectedPlayer(farmer.UniqueMultiplayerID)?.GetMod(this.ModManifest.UniqueID) is not null)
+            .Select(farmer => farmer.UniqueMultiplayerID)
+            .ToArray();
+
+        if (recipients.Length > 0)
+        {
+            this.Helper.Multiplayer.SendMessage(
+                redeemer,
+                "spectrum.horde.announce",
+                modIDs: new[] { this.ModManifest.UniqueID },
+                playerIDs: recipients
+            );
+        }
+    }
+
+    private void ShowHordePreludeAndQueueBanner(string redeemer)
+    {
         Game1.chatBox?.addInfoMessage("Oh no... something is happening.");
         this.pendingChatMessages.Add(new PendingChatMessage(
             DateTime.UtcNow.AddSeconds(3),
@@ -1311,13 +1351,13 @@ internal sealed class ModEntry : Mod
         for (int i = 0; i < this.pendingChatMessages.Count;)
         {
             PendingChatMessage pending = this.pendingChatMessages[i];
-            if (DateTime.UtcNow < pending.ShowAtUtc || Game1.chatBox is null)
+            if (DateTime.UtcNow < pending.ShowAtUtc)
             {
                 i++;
                 continue;
             }
 
-            Game1.chatBox.addInfoMessage(pending.Message);
+            Game1.addHUDMessage(new HUDMessage(pending.Message, HUDMessage.achievement_type));
             this.pendingChatMessages.RemoveAt(i);
         }
     }

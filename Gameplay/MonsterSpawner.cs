@@ -22,16 +22,16 @@ internal sealed class MonsterSpawner
 
     public bool ShouldTriggerHorde(GameCommand command)
     {
-        bool isSingleMonsterRequest = command.BehaviorKey switch
+        bool isSingleRandomPoolRequest = command.BehaviorKey switch
         {
-            "difficulty_random" or "chat_monster" => true,
-            "fixed_count_random_monsters" or "fixed_count_specific_monster" => command.Count == 1,
-            "random_count_random_monsters" or "random_count_specific_monster" =>
-                command.MinCount == 1 && command.MaxCount == 1,
+            "difficulty_random" => true,
+            "fixed_count_random_monsters" => command.Count == 1,
+            "random_count_random_monsters" => command.MinCount == 1 && command.MaxCount == 1,
             _ => false
         };
 
-        return isSingleMonsterRequest && Random.Shared.Next(1000) == 0;
+        // Temporary playtest odds: one horde per 100 eligible single-monster redemptions.
+        return isSingleRandomPoolRequest && Random.Shared.Next(100) == 0;
     }
 
     public bool TrySpawnRandomMonster(string difficulty = "normal", Farmer? targetFarmer = null)
@@ -165,8 +165,27 @@ internal sealed class MonsterSpawner
                 return false;
         }
 
-        if (forceHorde && count == 1)
+        List<string>? hordeTypes = null;
+        if (forceHorde)
+        {
+            bool randomPoolRequest = command.BehaviorKey is "difficulty_random" or "fixed_count_random_monsters" or "random_count_random_monsters";
+            if (!randomPoolRequest || count != 1)
+            {
+                result = "FAILED: horde events require a single-monster random-pool request";
+                return false;
+            }
+
+            hordeTypes = MonsterCatalog.GetRandomDistinctTypes(10, command.Difficulty, useTestProgression: false).ToList();
+            if (hordeTypes.Count != 10)
+            {
+                result = "FAILED: fewer than ten distinct eligible monster variants are available";
+                return false;
+            }
+
+            int hordeIndex = 0;
+            chooseMonster = () => hordeTypes[hordeIndex++];
             count = 10;
+        }
 
         if (!Context.IsWorldReady || !Context.IsMainPlayer)
         {

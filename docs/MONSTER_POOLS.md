@@ -48,7 +48,7 @@ The Skull Cavern milestone uses the completed Cryptic Note story quest (quest ID
 
 ## Unlock notifications and efficiency
 
-The host compares the existing progression snapshot once per second while a save is active. A snapshot captured when the save is loaded is the baseline, so only newly reached milestones are announced. Each optional pool has its own one-time-per-session transition notification using Stardew's native achievement-style HUD banner. The watcher performs local save-state reads only; it adds no save flags, database records, network requests, or background task.
+The host compares the existing progression snapshot once per second while a save is active. A snapshot captured when the save is loaded is the baseline, so only newly reached milestones are announced. Each optional pool has its own one-time-per-session transition notification using Stardew's native achievement-style HUD banner. The watcher performs local save-state reads only; it adds no save flags, database records, network requests, or background task. Horde announcements use that same large HUD style for the final reveal, after a short in-game chat teaser.
 
 `MonsterProgressionSnapshot.Read` is also used when a monster is selected. The current host farmer remains the source of truth for the shared spawn pool, so loading a different save naturally uses that save's progress.
 
