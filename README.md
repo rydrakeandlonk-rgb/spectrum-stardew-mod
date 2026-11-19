@@ -48,7 +48,6 @@ The host does not need to pair with or listen to other streamers. It can accept 
 - Gameplay/MonsterProgression.cs and Gameplay/MonsterLocationPools.cs — vanilla save checks and location-group unlock rules.
 - docs/MONSTER_POOLS.md — complete progression rules, exclusions, and variant implementation requirements.
 - ModEntry.cs — SMAPI entry point, GMCM settings/actions, local test commands and game-thread command/action processing.
-- UI/SpectrumMenu.cs — in-game streamer settings, connection status, host-only controls and clear confirmation.
 - Networking/GameModsClient.cs — authenticated WebSocket connection, versioned settings sync, typed command/action validation, reconnect and acknowledgements.
 - Networking/HostSettings.cs and Networking/GameAction.cs — shared settings and typed remote action contracts.
 - ModConfig.cs — versioned local configuration, validated gateway URL, broadcaster ID and revocable host token.
