@@ -1,6 +1,9 @@
 # Spectrum Stardew StreamElements Widget
 
-This folder contains the source for the Spectrum Stardew monster-spawn overlay.
+The bundled widget displays two live features from the Spectrum Stardew mod:
+
+- A persistent challenge-series death counter, including the challenge name.
+- A temporary spawn animation that starts when a redemption is sent to the game and reveals the actual monster(s) only after the game confirms the spawn.
 
 ## Install
 
@@ -19,14 +22,18 @@ The widget connects to:
 
 ## Behaviour
 
-- A `stardew.monster_spawn_requested` event starts the spinning-wheel animation when the gateway sends a redemption to the connected game.
-- A `stardew.monster_spawned` event stops the wheel and reveals the actual monster or monsters confirmed by the game.
-- The widget reconnects automatically after a temporary WebSocket interruption.
-- The widget uses browser memory only. It does not call `SE_API.store`, use D1/KV, or poll the gateway.
-- The feed is read-only. The paired game host is the only publisher.
+- The challenge name and death total are loaded from the paired mod's local config snapshot when the overlay connects.
+- Each newly detected local-player death updates the counter immediately.
+- The counter survives game restarts, save changes and separate streaming sessions because the mod stores the series values in its local SMAPI config.
+- The mod's GMCM page lets the streamer rename the series or manually override the death total. Saving sends the new snapshot to the overlay.
+- Spawn requests start the wheel animation; successful spawn events reveal the confirmed monster names.
+- The widget reconnects automatically after temporary WebSocket interruptions.
+- The widget uses browser memory only. It does not call `SE_API.store`, poll the gateway, or write D1/KV/Durable Object storage.
 
-The broadcaster ID is a numeric Twitch user ID, not the Twitch username. Each streamer uses their own ID so their overlay receives only their own Stardew events.
+## Layout
 
-## Notes
+- The challenge counter stays visible in the bottom-right corner.
+- Spawn events appear temporarily near the top-centre.
+- The accent colour, result display duration, location label and death-counter visibility are configurable in Fields.
 
-The overlay animation is a reveal effect; it does not choose the monster. The Stardew game remains authoritative and the widget displays only the result reported by the mod after the full spawn succeeds.
+Each streamer uses their own numeric broadcaster ID. The public feed is read-only and scoped to that streamer's paired game session.
