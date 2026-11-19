@@ -1,3 +1,9 @@
+/*
+  Stardew textbox styling adapted from AnotherPillow's shared CSS.
+  Font by u/Cowsplay: https://www.reddit.com/r/StardewValley/comments/4dtgp7/
+  Original CSS: https://gist.github.com/AnotherPillow/242e9f9f90a07d353871ae381f5668c1
+*/
+
 :root {
   --spectrum-accent: {{accentColor}};
   --spectrum-panel: rgba(18, 20, 31, 0.94);
@@ -42,7 +48,7 @@ html, body {
   padding: 13px 24px 13px 18px;
   border-style: solid;
   border-width: 5px;
-  border-image-slice: 20 fill;
+  border-image-slice: 20;
   border-image-width: 10px 20px;
   border-image-outset: 0 20px;
   border-image-repeat: round;
