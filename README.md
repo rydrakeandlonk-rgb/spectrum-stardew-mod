@@ -90,11 +90,13 @@ After installing the GitHub Actions ZIP through SMAPI, enter these commands in t
 
     spectrum_spawn_test
     spectrum_spawn_random_test
+    spectrum_spawn_horde_test
 
 The first command requests a Green Slime. The second selects from the progression-eligible weighted random pool. The pool-status command reports unlocked progression groups, selectable variant definitions, and any definitions still missing constructor/setup support. All are host-only.
 
 Developer validation commands:
-- `spectrum_progression_test <early|mines|skull100|danger-mines|quarry|skull-cavern|danger-skull|bug-lair|volcano|combat-0|combat-5|combat-10|shrine-0|shrine-1|shrine-2|all|reset>` temporarily simulates progression in memory only; it never edits the save. Use `reset` to restore real save checks.
+- `spectrum_progression_test <early|mines|skull100|danger-mines|quarry|skull-cavern|danger-skull|bug-lair|volcano|combat-0|combat-5|combat-10|shrine-0|shrine-1|shrine-2|all|reset>` temporarily simulates progression in memory only; it never edits the save. To preview a HUD unlock notice, apply `early`, wait for the next progression check, then apply an individual pool profile such as `skull-cavern` or `volcano`. Use `reset` to restore real save checks.
+- `spectrum_spawn_horde_test` forces the ten-monster horde spawn and its two chat messages near the host. Use an open area with enough clear tiles; it does not consume a Twitch redemption or change the 1-in-1,000 live chance.
 - `spectrum_spawn_monster_force_test <monster name or ID>` bypasses progression for a local test spawn only; catalogue exclusions remain enforced.
 - `spectrum_monster_catalog_test` executes every supported constructor and special setup without adding monsters to the world.
 - `spectrum_spawn_random_test [easy|normal|hard]` exercises the three selection difficulty modes.

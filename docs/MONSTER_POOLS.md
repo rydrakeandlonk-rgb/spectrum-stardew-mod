@@ -96,7 +96,7 @@ Available profiles:
 - `all`: all milestones and optional pools unlocked.
 - `reset`: discard the temporary profile and read the actual save again.
 
-After applying a profile, `spectrum_monster_pool_status` reports the simulated state. Use `spectrum_spawn_random_test [easy|normal|hard]` to exercise each weighting mode under the selected progression stage.
+After applying a profile, `spectrum_monster_pool_status` reports the simulated state. The HUD notification watcher also reads the temporary profile, so apply `early`, wait for its next one-second check, then apply an individual pool profile to preview that unlock's banner. Use `reset` afterward to restore the real save. Use `spectrum_spawn_random_test [easy|normal|hard]` to exercise each weighting mode under the selected progression stage. The separate `spectrum_spawn_horde_test` command forces the ten-monster spawn and chat sequence without changing the live 1-in-1,000 roll.
 
 `spectrum_spawn_monster_force_test <name or ID>` bypasses progression eligibility for one local constructor/appearance test only. It does not bypass the catalogue exclusions or supported-constructor checks. It is a local console command; gateway redemptions always use real save progression.
 
