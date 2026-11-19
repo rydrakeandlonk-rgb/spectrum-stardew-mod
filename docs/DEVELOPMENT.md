@@ -82,3 +82,8 @@ Before any distribution, verify the ZIP on a clean SMAPI installation. It must c
 - The new in-game menu, host-wide clear action, settings conflict handling and Control Center remote controls still require in-game testing.
 - Multiplayer replication and host/farmhand menu permissions must be verified with two actual game clients. A successful CI build does not prove runtime or multiplayer behaviour.
 - No public mod release is planned. Build ZIPs remain private GitHub Actions artifacts.
+
+
+## Vanilla Options menu integration
+
+Version 0.8.1 removes the floating HUD button. It registers a custom **Open Spectrum Control Panel** action in Generic Mod Config Menu, which is accessible from Stardew Valley's in-game Options menu. Generic Mod Config Menu is declared as a required dependency. The custom action opens the existing Spectrum control panel; the connection, host permissions, remote settings and clear action remain handled by the existing game-thread callbacks. Verify the menu entry and click target in-game after installing the release artifact.
