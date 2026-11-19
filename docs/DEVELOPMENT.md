@@ -79,7 +79,7 @@ Before any distribution, verify the ZIP on a clean SMAPI installation. It must c
 ## Current limitations
 
 - Version 0.7.5 is the last runtime-validated build. It passed the user's single-player tests for catalogue construction, progression selection, Twitch redemption handling, reconnect safety and retry/acknowledgement behaviour. Multiplayer remains untested.
-- Version 0.8.0 adds the in-game Spectrum HUD/menu, shared settings, remote administrator overrides and loaded-monster clearing. It must pass GitHub Actions compilation/package checks before an artifact is considered installable.
+- Version 0.8.2 adds independent per-player gateway connections and the typed farmhand-to-host SMAPI command relay. It must pass GitHub Actions compilation/package checks and two-client runtime tests before it is considered ready.
 - The in-game Connect button starts a ten-minute device-code flow. The streamer approves their own Twitch identity in Control Center; the mod then receives and stores its revocable host credential automatically. This self-service flow still needs end-to-end testing.
 - The new in-game menu, host-wide clear action, settings conflict handling and Control Center remote controls still require in-game testing.
 - Multiplayer relay, host/farmhand spawn targeting, retry/acknowledgement behaviour, and Stardew monster replication must be verified with two actual game clients. A successful CI build does not prove runtime or multiplayer behaviour.
@@ -88,4 +88,4 @@ Before any distribution, verify the ZIP on a clean SMAPI installation. It must c
 
 ## Vanilla Options menu integration
 
-Version 0.8.1 removes the floating HUD button. It registers a custom **Open Spectrum Control Panel** action in Generic Mod Config Menu, which is accessible from Stardew Valley's in-game Options menu. Generic Mod Config Menu is declared as a required dependency. The custom action opens the existing Spectrum control panel; the connection, host permissions, remote settings and clear action remain handled by the existing game-thread callbacks. Verify the menu entry and click target in-game after installing the release artifact.
+Version 0.8.2 includes the Generic Mod Config Menu **Open Spectrum Control Panel** action from 0.8.1 and adds per-player Spectrum connections with a typed farmhand-to-host command relay. Generic Mod Config Menu remains a required dependency. Verify the menu entry, individual account pairing, farmhand forwarding, host-side spawn targeting and completion acknowledgement in-game.
