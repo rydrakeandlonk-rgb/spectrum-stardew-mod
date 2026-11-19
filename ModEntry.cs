@@ -892,6 +892,23 @@ internal sealed class ModEntry : Mod
         if (e.FromModID != this.ModManifest.UniqueID || !Context.IsWorldReady)
             return;
 
+        if (e.Type == "spectrum.progression.unlocked" &&
+            !Context.IsMainPlayer &&
+            e.FromPlayerID == Game1.MasterPlayer.UniqueMultiplayerID)
+        {
+            string message;
+            try { message = e.ReadAs<string>(); }
+            catch (Exception ex)
+            {
+                this.Monitor.Log($"Ignored an invalid progression notification: {ex.Message}", LogLevel.Warn);
+                return;
+            }
+
+            if (SupportedProgressionNotifications.Contains(message))
+                Game1.addHUDMessage(new HUDMessage(message, HUDMessage.achievement_type));
+            return;
+        }
+
         if (e.Type == "spectrum.action.forward" && Context.IsMainPlayer)
         {
             ForwardedClearAction message;
@@ -1022,6 +1039,17 @@ internal sealed class ModEntry : Mod
             }
         }
     }
+
+    private static readonly HashSet<string> SupportedProgressionNotifications = new(StringComparer.Ordinal)
+    {
+        "The Dangerous Mines Have Awakened",
+        "The Quarry Mine Has Awakened",
+        "The Skull Caverns Have Awakened",
+        "The Skull Caverns Have Grown More Dangerous",
+        "A Greater Danger Stirs in the Skull Caverns",
+        "The Mutant Bug Lair Has Awakened",
+        "The Volcano Dungeon Has Awakened"
+    };
 
     private static readonly HashSet<string> SupportedForwardedBehaviors = new(StringComparer.Ordinal)
     {
@@ -1198,9 +1226,27 @@ internal sealed class ModEntry : Mod
             this.NotifyPoolUnlocked("The Volcano Dungeon Has Awakened");
     }
 
-    private static void NotifyPoolUnlocked(string message)
+    private void NotifyPoolUnlocked(string message)
     {
         Game1.addHUDMessage(new HUDMessage(message, HUDMessage.achievement_type));
+
+        if (!Context.IsMainPlayer || Game1.player is null)
+            return;
+
+        long[] recipients = Game1.getOnlineFarmers()
+            .Where(farmer => farmer.UniqueMultiplayerID != Game1.player.UniqueMultiplayerID)
+            .Select(farmer => farmer.UniqueMultiplayerID)
+            .ToArray();
+
+        if (recipients.Length > 0)
+        {
+            this.Helper.Multiplayer.SendMessage(
+                message,
+                "spectrum.progression.unlocked",
+                modIDs: new[] { this.ModManifest.UniqueID },
+                playerIDs: recipients
+            );
+        }
     }
 
     private void ProcessPendingChatMessages()
