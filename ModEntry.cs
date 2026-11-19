@@ -23,9 +23,7 @@ internal sealed class ModEntry : Mod
     private DateTime retryCommandsAtUtc = DateTime.MinValue;
     private GenericModConfigMenu.IGenericModConfigMenuApi? configMenuApi;
     private HostSettings? pendingGmcmSettings;
-    private string pendingGmcmConnectionAction = "none";
     private string pendingGmcmHostAction = "none";
-    private string lastHandledGmcmConnectionAction = "none";
     private string lastHandledGmcmHostAction = "none";
     private bool gmcmClearArmed;
     private string gmcmStatusMessage = "";
@@ -228,12 +226,12 @@ internal sealed class ModEntry : Mod
         this.configMenuApi.AddSectionTitle(this.ModManifest, () => "Connection actions");
         this.configMenuApi.AddParagraph(
             this.ModManifest,
-            () => "Choose an action, then press Save at the bottom of this GMCM page. Choose No action and save before repeating the same action."
+            () => "Select Connect Twitch / open Control Center to start immediately. You do not need to press Save for this connection action."
         );
         this.configMenuApi.AddTextOption(
             this.ModManifest,
             () => "none",
-            value => this.pendingGmcmConnectionAction = value,
+            value => { if (value == "connect") this.StartPairingOrOpenControlCenter(); },
             () => "Twitch / Control Center",
             () => "Connect this Stardew installation to its own Twitch account, continue an existing pairing, or open Control Center if already connected.",
             new[] { "none", "connect" },
@@ -281,9 +279,7 @@ internal sealed class ModEntry : Mod
     private void ResetGmcmOptions()
     {
         this.pendingGmcmSettings = new HostSettings();
-        this.pendingGmcmConnectionAction = "none";
         this.pendingGmcmHostAction = "none";
-        this.lastHandledGmcmConnectionAction = "none";
         this.lastHandledGmcmHostAction = "none";
         this.gmcmClearArmed = false;
         this.gmcmStatusMessage = "Settings reset to their defaults. Press Save to apply them.";
@@ -310,15 +306,6 @@ internal sealed class ModEntry : Mod
             this.pendingGmcmSettings = null;
         }
 
-        if (this.pendingGmcmConnectionAction == "none")
-        {
-            this.lastHandledGmcmConnectionAction = "none";
-        }
-        else if (this.pendingGmcmConnectionAction != this.lastHandledGmcmConnectionAction)
-        {
-            this.lastHandledGmcmConnectionAction = this.pendingGmcmConnectionAction;
-            this.StartPairingOrOpenControlCenter();
-        }
 
         switch (this.pendingGmcmHostAction)
         {

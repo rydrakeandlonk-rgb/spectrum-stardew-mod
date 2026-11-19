@@ -43,7 +43,7 @@ Every Spectrum streamer who wants their own redemptions to trigger spawns pairs 
 
 If the connected player is the host, their mod queues the command locally. If they're a farmhand, their mod forwards the typed command to the host using SMAPI's multiplayer messaging API. The host validates that the message came from a connected player running this mod, resolves that sender to their online farmer, and creates the monster near that farmer in their current location. The host sends a completion response to the originating farmhand, which only then acknowledges the redemption to the gateway. Both sides retain command-ID deduplication so retries don't create duplicate monsters. Control Center clear-monsters and random test-spawn actions received by a farmhand are forwarded to the host through the same SMAPI path and acknowledged after the host completes them.
 
-The host does not need to pair with or listen to other streamers. It can accept forwarded commands even if its own Spectrum connection is not paired; it only pairs if it also wants its own channel's redemptions to trigger spawns. Stardew remains responsible for synchronising the host-created vanilla monster to the other players. This multiplayer path still requires a real two-client runtime test.
+The host does not need to pair with or listen to other streamers. It can accept forwarded commands even if its own Spectrum connection is not paired; it only pairs if it also wants its own channel's redemptions to trigger spawns. Stardew remains responsible for synchronising the host-created vanilla monster to the other players. The Spectrum multiplayer test farm has verified host/farmhand command forwarding and host-authoritative spawning. Keep broader save-transition and reconnect edge cases on the final regression checklist.
 
 ## Repository contents
 
@@ -60,11 +60,11 @@ The host does not need to pair with or listen to other streamers. It can accept 
 
 ## Current implementation status
 
-Version 0.8.3 passed the user's single-player runtime checks for pairing, settings synchronisation and Twitch redemption spawning. Multiplayer remains untested.
+**Version 1.0.0 release candidate.** The core integration is implemented. The current live build has been tested for Twitch redemption delivery, multiplayer host/farmhand spawning, and the Control Center one-shot Test Spawn action. The Test Spawn action was also verified after updating a second streamer to the current mod build.
 
-Version 0.8.4 adds an administrator-triggered random test-spawn action from Control Center. It is delivered as a typed one-shot game action, uses the mod's local progression-eligible monster catalogue, targets the requesting farmer in multiplayer, and does not open the normal spawn safety gate. The game reports the result to Control Center.
+The release candidate includes the progression-aware vanilla monster catalogue, dangerous variants, native progression HUD notices, the rare ten-monster horde event, per-player broadcaster-scoped connections, typed multiplayer forwarding, settings synchronisation, host-authoritative world changes, and Control Center remote actions.
 
-Version 0.8.5 adds native HUD milestone notifications and the rare ten-monster horde event. Version 0.8.6 changes the temporary horde odds to 1-in-100, selects ten distinct progression-eligible variants using the existing threat weighting, and upgrades the final announcement to the large native HUD notification. Both features are host-authoritative and require fresh in-game validation; CI compilation does not prove runtime or multiplayer behaviour.
+The final release gate is still to verify the refreshed one-click pairing action, a clean-install ZIP, the Control Center Kill All action, and the remaining release smoke tests. A successful CI build is not a substitute for in-game validation.
 
 ## Connect each player in-game
 
@@ -72,13 +72,13 @@ An administrator first enables the Spectrum member's Stardew access in Control C
 
 1. Load the multiplayer save as either host or farmhand.
 2. Open **Options → Generic Mod Config Menu → Spectrum Stardew Monster Spawner**.
-3. Under **Connection actions**, choose **Connect Twitch / open Control Center**, then press GMCM's **Save** button.
+3. Under **Connection actions**, select **Connect Twitch / open Control Center**. The connection starts immediately and opens the pairing page in your browser; you do not need to press GMCM's **Save** button for this action.
 4. Sign in using the Twitch account that owns your active Spectrum channel.
 5. Confirm the pairing request. Control Center only authorises the signed-in member's own account, and only if an administrator has enabled Stardew access.
 6. Return to Stardew. Your mod receives its own revocable game-session credential securely and writes it to your local SMAPI config automatically.
 7. Your mod connects only to your broadcaster's gateway session. Spawning remains stopped until that streamer's Control Center safety gate is explicitly opened.
 
-The GMCM page contains the same streamer settings as the former Spectrum panel: spawning, difficulty, chat responses and debug messages. Change settings and press **Save** to send them to the gateway. Connection and host actions are explicit dropdown selections followed by Save. Clearing loaded monsters requires selecting **Arm clear**, saving, then selecting **Confirm clear** and saving again. Choose **No action** and save before repeating an action.
+The GMCM page contains the same streamer settings as the former Spectrum panel: spawning, difficulty, chat responses and debug messages. Change settings and press **Save** to send them to the gateway. The connection action starts immediately when selected. Settings still require GMCM's **Save** button. Clearing loaded monsters remains a two-step host action: select **Arm clear** and save, then select **Confirm clear** and save.
 
 Pairing codes expire after ten minutes. The private device code is separate from the visible approval code and is never shown in the dashboard. The game-session credential is not displayed to the streamer or sent to browser JavaScript. Revoke access in Control Center before moving your connection to another Twitch account.
 
@@ -96,7 +96,7 @@ The first command requests a Green Slime. The second selects from the progressio
 
 Developer validation commands:
 - `spectrum_progression_test <early|mines|skull100|danger-mines|quarry|skull-cavern|danger-skull|bug-lair|volcano|combat-0|combat-5|combat-10|shrine-0|shrine-1|shrine-2|all|reset>` temporarily simulates progression in memory only; it never edits the save. To preview a HUD unlock notice, apply `early`, wait for the next progression check, then apply an individual pool profile such as `skull-cavern` or `volcano`. Use `reset` to restore real save checks.
-- `spectrum_spawn_horde_test` forces the ten-monster horde spawn and its two chat messages near the host. Use an open area with enough clear tiles; it does not consume a Twitch redemption or change the 1-in-1,000 live chance.
+- `spectrum_spawn_horde_test` forces the ten-monster horde spawn and its two chat messages near the host. Use an open area with enough clear tiles; it does not consume a Twitch redemption or change the 1-in-100 live chance.
 - `spectrum_spawn_monster_force_test <monster name or ID>` bypasses progression for a local test spawn only; catalogue exclusions remain enforced.
 - `spectrum_monster_catalog_test` executes every supported constructor and special setup without adding monsters to the world.
 - `spectrum_spawn_random_test [easy|normal|hard]` exercises the three selection difficulty modes.

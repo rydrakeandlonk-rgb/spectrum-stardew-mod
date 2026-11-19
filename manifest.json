@@ -1,8 +1,8 @@
 {
   "Name": "Spectrum Stardew Monster Spawner",
   "Author": "RydrakeAndLonk",
-  "Version": "0.8.6",
-  "Description": "Private Spectrum integration with shared in-game and Control Center controls, including remote test spawns.",
+  "Version": "1.0.0",
+  "Description": "Twitch Channel Point monster encounters for authorised Spectrum streamers.",
   "UniqueID": "RydrakeAndLonk.SpectrumStardewMod",
   "EntryDll": "SpectrumStardewMod.dll",
   "MinimumApiVersion": "4.5.0",

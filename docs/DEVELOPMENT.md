@@ -1,92 +1,86 @@
-# Development
+# Development and release validation
 
-## Product development model
+## Product boundary
 
-This repository contains the SMAPI game client and its release packaging. Spectrum Control Center, Event Hub and the shared Game Mods gateway live in the existing `spectrum-cloudflare` repository. The integration is private to active Spectrum members explicitly enabled by a Control Center administrator.
+This repository contains the SMAPI game client and its release packaging. Spectrum Control Center, Event Hub and the shared Game Mods gateway live in the `spectrum-cloudflare` repository. The integration is restricted to active Spectrum members explicitly enabled by a Control Center administrator.
 
-## Requirements
+## Supported environment
 
-- Stardew Valley 1.6.14 or later
-- SMAPI 4.5.0 or later
+- Stardew Valley 1.6.15 (the version used for current in-game validation)
+- SMAPI 4.5.0 or later (tested with SMAPI 4.5.2)
+- Generic Mod Config Menu 1.16.0 or later
 
-No local SDK, editor, terminal, dependency installation, or build is required. The repository's GitHub Actions workflow performs compilation and packaging in the cloud.
+The mod uses the standard SMAPI `Mods/SpectrumStardewMod` folder. GMCM is a required dependency and is declared in `manifest.json`.
 
-## Build the mod
+## Cloud build and package
 
-The `.github/workflows/build-smapi-mod.yml` workflow builds the mod when relevant source files are pushed to `main`, on pull requests, or when manually dispatched.
+All compilation and packaging must run through GitHub Actions; do not ask contributors to build locally.
 
-The workflow:
-1. Checks out the mod source.
-2. Checks out the pinned community reference assemblies used for automated builds.
-3. Runs static roster and pool validation before compiling.
-4. Restores the project dependencies.
-5. Compiles the SMAPI project in Release mode.
-6. Creates and verifies a release ZIP.
-7. Uploads the ZIP as a GitHub Actions artifact for 14 days.
+The `.github/workflows/build-smapi-mod.yml` workflow:
+1. Checks out the mod source and pinned Stardew reference assemblies.
+2. Validates monster catalogue IDs, progression-pool assignments and exclusions.
+3. Restores the .NET project.
+4. Compiles the SMAPI project in Release mode.
+5. Creates a ready-to-install ZIP.
+6. Verifies the ZIP contains `SpectrumStardewMod.dll` and `manifest.json`, and excludes a local `config.json`.
+7. Uploads the ZIP as a 14-day GitHub Actions artifact.
 
-The current reference-assembly snapshot is based on Stardew Valley 1.6.15 and SMAPI 4.4.0. This provides a repeatable compile check, but does not replace testing against the installed Stardew Valley and SMAPI versions required by the mod.
+The pinned reference-assembly snapshot is Stardew Valley 1.6.15 with SMAPI 4.4.0. This is a repeatable compile check against the pinned assembly set; the mod manifest requires SMAPI 4.5.0 or later, and the current runtime test environment is SMAPI 4.5.2. CI success does not replace testing the produced ZIP in the actual game.
 
-## In-game validation (required before release)
+## Install and pair
 
-1. Load a disposable test save as the host.
-2. Open the SMAPI console.
-3. Run `spectrum_spawn_test` to request a Green Slime through its explicit vanilla constructor definition.
-4. Run `spectrum_spawn_random_test` to exercise the weighted random monster allowlist.
-5. Run `spectrum_monster_catalog_test` to execute every supported monster constructor and post-construction setup without adding the monsters to the world. This is a constructor check, not a substitute for in-world appearance tests.
-6. Run `spectrum_progression_test early`, then `spectrum_monster_pool_status`, to confirm only Mines and Farm are unlocked. Repeat with `mines`, `skull100`, `danger-mines`, `quarry`, `skull-cavern`, `danger-skull`, `bug-lair`, `volcano`, and `all`; confirm each profile exposes only its intended pools and stage. Use `combat-0`, `combat-5`, `combat-10`, and `shrine-0`, `shrine-1`, `shrine-2` to exercise the secondary weighting inputs without changing the farmer's actual Combat Level or mine difficulty. Finish with `spectrum_progression_test reset` to restore the real save.
-7. Use `spectrum_spawn_monster_force_test <monster name or ID>` to spawn a progression-locked entry for a local constructor/appearance check. This bypasses progression only; excluded entries and unsupported constructors remain blocked. The gateway path never uses this override.
-8. Run `spectrum_spawn_random_test easy`, `spectrum_spawn_random_test normal`, and `spectrum_spawn_random_test hard` under early, Mines-complete and Skull-Cavern-100 profiles to exercise the threat weighting modes.
-9. Run `spectrum_monster_pool_status` again after `spectrum_progression_test reset` to confirm the real save's progression is restored.
-10. Run `spectrum_connection_status` to inspect the gateway connection.
-11. Check the compact SMAPI log entries for the redeemer, reward, redemption time, command ID and confirmed spawn result. Failed attempts stay queued for retry; only successful spawns are acknowledged. The latest 500 successful redemption IDs are also saved in the mod's local global data to prevent normal reconnect/restart replay.
-12. Confirm a successful redemption appears in Stardew's existing chat with the Twitch username, monster name and location. Failed spawns must not produce a success chat message.
-13. Repeat in a multiplayer farm with at least one farmhand connected and paired to their own Twitch account. Confirm each client receives only its own channel's commands.
-14. Redeem on the host's channel and confirm the host spawns one monster near the host farmer.
-15. Redeem on the farmhand's channel and confirm the farmhand forwards one command, the host spawns one monster near the farmhand farmer, and both players see the same monster.
-16. Put the host and farmhand in different locations and confirm the monster appears near the redeeming farmer in that farmer's current location.
-17. Confirm the farmhand gateway command is acknowledged only after the host reports a successful spawn. Force a retry/reconnect and confirm no duplicate monster appears.
-18. Confirm the farmhand can receive commands when the host has not paired their own Twitch account, and confirm a closed source-streamer safety gate prevents that streamer's commands from spawning.
-19. Trigger a Control Center clear-loaded-monsters action for the farmhand's broadcaster and confirm the farmhand forwards it to the host, the host clears loaded locations, and the gateway action is acknowledged only after completion.
+1. Install SMAPI and Generic Mod Config Menu.
+2. Download the ZIP from the successful **Build Stardew SMAPI Mod** workflow run.
+3. Extract the ZIP contents into `Stardew Valley/Mods/SpectrumStardewMod`.
+4. Launch Stardew Valley and confirm SMAPI loads **Spectrum Stardew Monster Spawner 1.0.0** without an error.
+5. Open **Options → Generic Mod Config Menu → Spectrum Stardew Monster Spawner**.
+6. An administrator must first enable the member in Control Center.
+7. Under **Connection actions**, select **Connect Twitch / open Control Center**. Pairing starts immediately and the browser opens; no GMCM Save click is required for this action.
+8. Approve the request while signed into the Twitch account that owns the enabled Spectrum channel.
+9. Return to Stardew and confirm `spectrum_connection_status` reports the correct broadcaster connection.
+10. Open the Control Center safety gate explicitly. Every fresh connection starts with spawning stopped.
 
-The network client validates typed messages and queues them for the SMAPI update thread. It does not execute server-supplied command text or monster class names. The local catalogue filters explicit vanilla variant definitions through the mod installation's progression snapshot. See docs/MONSTER_POOLS.md for unlock rules, constructor mappings and dangerous-variant setup. Every entry still needs in-game validation.
+Settings such as spawn preference, difficulty, chat responses and debug messages still require GMCM's **Save** button. The host-only clear action remains a deliberate two-step action (Arm clear, Save; Confirm clear, Save).
 
-Back up saves before early gameplay testing.
+If the browser does not open automatically, use the in-game status message and open Spectrum Control Center manually. Never copy, share or commit the local SMAPI config or host token.
 
-## Pair each player
+## In-game smoke tests
 
-After an administrator enables each Spectrum member in Control Center, each player pairs their own Twitch account through the GMCM **Connection actions** selector. Each installation receives a separate broadcaster-scoped game-session credential.
+Use a disposable save for destructive tests. Run the following from the SMAPI console where applicable:
 
-1. Load the multiplayer save as host or farmhand.
-2. Open **Options → Generic Mod Config Menu → Spectrum Stardew Monster Spawner**.
-3. Under **Connection actions**, choose **Connect Twitch / open Control Center**, then press GMCM's **Save** button. Approve the pairing while signed into your own Twitch account.
-4. Return to Stardew and confirm `spectrum_connection_status` reports your broadcaster connection.
-5. Set your own streamer preference in the in-game panel or Control Center. Every fresh connection defaults to stopped.
+- `spectrum_connection_status` — verify the broadcaster-scoped gateway session.
+- `spectrum_spawn_test` — verify the local Green Slime test path.
+- `spectrum_spawn_random_test [easy|normal|hard]` — exercise progression-aware random selection.
+- `spectrum_monster_catalog_test` — execute every supported constructor/setup path without adding monsters to the world.
+- `spectrum_monster_pool_status` — inspect the progression-unlocked candidate pools.
+- `spectrum_spawn_horde_test` — force the ten-monster horde event in a safe open area; this does not consume a redemption or change the live 1-in-100 chance.
+- `spectrum_progression_test <profile>` — simulate a progression profile in memory for HUD and pool testing; finish with `spectrum_progression_test reset`.
 
-Use `spectrum_connection_status` in the SMAPI console to check the connection. Never commit the local config or share the host token. Re-pairing rotates the token and disconnects the previous host session.
+Final release smoke-test sequence:
+1. Install the ZIP into a clean SMAPI Mods folder with GMCM installed.
+2. Confirm SMAPI loads the mod and reports version 1.0.0.
+3. Pair a streamer through the in-game connection action and confirm the browser approval flow.
+4. Confirm the mod stores its revocable game-session credential locally and reconnects to its own broadcaster session.
+5. Redeem the configured Twitch reward with the game connected and spawning enabled; confirm one eligible monster appears near the redeeming farmer and the command is acknowledged only after success.
+6. Repeat from a farmhand account; confirm the farmhand forwards the typed command and the host creates the shared-world monster near that farmer.
+7. Use Control Center Test Spawn for a selected connected host and confirm the in-game action log and monster spawn.
+8. Use Control Center Kill All and confirm the host clears loaded hostile monsters and the action reports completion.
+9. Verify the global safety gate remains stopped on a fresh connection and that streamer preference/admin override cannot bypass the gate.
+10. Verify reconnect/re-pair and access revocation do not replay completed redemptions or leave an old host credential usable.
 
-## Build artifact and installation
+The user has already confirmed live Twitch redemption spawning, multiplayer host/farmhand spawning, and the Control Center Test Spawn action with the current mod. The remaining items above are release-gate checks, not claims that all test cases have passed.
 
-Download the ZIP from the successful **Build Stardew SMAPI Mod** workflow run's Artifacts section. The artifact is a build output, not a public release. Do not publish it to a public mod directory until the private beta and multiplayer tests are complete.
+## Security and operational invariants
 
-Before any distribution, verify the ZIP on a clean SMAPI installation. It must contain the compiled DLL, `manifest.json`, and required dependencies/assets at its root. It must not contain source-only files, Twitch client secrets, service credentials, or private gateway configuration.
-
-## Secrets and configuration
-
-- Never commit Twitch client secrets, OAuth tokens, signing keys, or production service credentials.
-- The game mod must never store Twitch access or refresh tokens.
-- The host token is a revocable game-session credential stored only in the local SMAPI config.
+- Never ship Twitch client secrets, OAuth tokens, signing keys, service credentials, or a local `config.json` in the mod ZIP.
+- The mod never stores Twitch access or refresh tokens.
+- The host token is a revocable broadcaster-scoped game-session credential.
+- Only explicitly enabled Spectrum members can pair.
 - Network callbacks enqueue typed requests; game state changes only on the SMAPI game thread.
+- Never accept arbitrary C# types, commands or executable content from the service.
+- Keep the gateway's global safety gate closed on fresh connections and disconnects.
+- Keep generated build outputs out of source control.
 
-## Current limitations
+## Current release status
 
-- Version 0.7.5 is the last runtime-validated build. It passed the user's single-player tests for catalogue construction, progression selection, Twitch redemption handling, reconnect safety and retry/acknowledgement behaviour. Multiplayer remains untested.
-- Version 0.8.2 adds independent per-player gateway connections and the typed farmhand-to-host SMAPI command relay. It must pass GitHub Actions compilation/package checks and two-client runtime tests before it is considered ready.
-- The in-game Connect button starts a ten-minute device-code flow. The streamer approves their own Twitch identity in Control Center; the mod then receives and stores its revocable host credential automatically. This self-service flow still needs end-to-end testing.
-- The new in-game menu, host-wide clear action, settings conflict handling and Control Center remote controls still require in-game testing.
-- Multiplayer relay, host/farmhand spawn targeting, retry/acknowledgement behaviour, and Stardew monster replication must be verified with two actual game clients. A successful CI build does not prove runtime or multiplayer behaviour.
-- No public mod release is planned. Build ZIPs remain private GitHub Actions artifacts.
-
-
-## Vanilla Options menu integration
-
-Spectrum registers its streamer settings and actions directly in Generic Mod Config Menu. The page uses native GMCM checkboxes and dropdowns; settings are sent when GMCM's Save button is pressed. Pairing is selected under Connection actions. Clearing loaded monsters is a host-only two-step action (Arm clear, then Confirm clear), each followed by Save. There is no separate launch button or floating HUD control. Verify the controls in-game with GMCM 1.16.0 before treating them as runtime-validated.
+The manifest is being prepared as **1.0.0**. The cloud build workflow and package verification are in place. The release should not be announced as final until the 1.0.0 artifact passes the clean-install and remaining in-game smoke tests above.

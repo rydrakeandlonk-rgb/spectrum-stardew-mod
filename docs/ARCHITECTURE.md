@@ -17,7 +17,7 @@ Twitch Channel Point redemption → Event Hub → that broadcaster's gateway ses
 - Administrator-only Mods page.
 - Reads the active Spectrum member roster.
 - Enables/disables Stardew Monster Spawner per member.
-- Shows activation, pairing and connection state. Live connection status reporting is implemented in source; deployed behaviour still needs end-to-end verification.
+- Shows activation, pairing and live connection state; the connected-host status has been exercised in the live Spectrum dashboard.
 - Owns the canonical Twitch identity and authorisation.
 - Provides one shared Twitch Channel Point reward title and per-member Start/Stop Spawns controls.
 
@@ -30,7 +30,7 @@ Twitch Channel Point redemption → Event Hub → that broadcaster's gateway ses
 - Deduplicates by Twitch EventSub message ID and redemption ID.
 - Does not perform Stardew gameplay or choose monster classes.
 
-The central Control Center OAuth scope list already includes channel:read:redemptions; each affected broadcaster must have granted it in their stored Twitch authorisation. Subscription sync and notification routing are implemented in source but remain blocked by the explicit Game Mods readiness flag until end-to-end tests pass.
+The central Control Center OAuth scope list already includes channel:read:redemptions; each affected broadcaster must have granted it in their stored Twitch authorisation. The live Twitch redemption route has been exercised end-to-end with the current mod; new broadcaster accounts still need the required Twitch redemption scope.
 
 ### Stardew gateway
 
@@ -98,7 +98,7 @@ Each Spectrum streamer who wants their own redemptions to trigger spawns connect
 
 When a farmhand receives a command, it forwards a typed payload to the host through SMAPI's multiplayer messaging API. The host checks the sender's SMAPI peer identity and that the sender is an online farmer, then creates the monster near that farmer in their current location. The host sends a completion result back to the originating farmhand. The farmhand acknowledges the original gateway command only after success is confirmed. Host and farmhand both use command IDs to prevent duplicate spawns across retries and reconnects. Control Center clear-loaded-monsters actions received by a farmhand use the same host relay and are acknowledged only after the host completes the action.
 
-Only the host creates monster entities, changes shared-world state, and executes the clear-loaded-monsters action. Farmhands can manage their own Spectrum connection and streamer settings, but cannot directly mutate the shared world. The host may accept forwarded commands even when the host's own Spectrum account is not paired; the source farmhand's own gateway safety gate and settings govern that command. Stardew's built-in multiplayer synchronisation is expected to replicate the host-created vanilla monster. Both monster spawning and clear actions must still be tested with two actual game clients.
+Only the host creates monster entities, changes shared-world state, and executes the clear-loaded-monsters action. Farmhands can manage their own Spectrum connection and streamer settings, but cannot directly mutate the shared world. The host may accept forwarded commands even when the host's own Spectrum account is not paired; the source farmhand's own gateway safety gate and settings govern that command. Stardew's built-in multiplayer synchronisation is expected to replicate the host-created vanilla monster. Host/farmhand monster spawning and the remote Test Spawn action have been verified with two game clients. Keep the remote clear action on the final release smoke-test list.
 
 ## Security and reliability
 
@@ -113,25 +113,29 @@ Only the host creates monster entities, changes shared-world state, and executes
 - Mutate Stardew state only on the game thread.
 - Log operational status, not OAuth tokens or session credentials.
 
-## Implementation status
+## Implementation and verification status
 
-Implemented in source:
-- SMAPI prototype, local Green Slime test command and weighted random monster test command.
-- Authenticated WebSocket client with reconnect, typed command validation and command acknowledgements.
-- Game-thread queue processing and host-only execution guard.
-- Explicit variant-aware vanilla monster construction and dangerous-variant setup.
-- Explicit variant definitions, progression-aware global candidate selection, canonical display-name validation and progression-targeted threat weighting using permanent Mines and Skull Cavern milestones, with Combat Level as a secondary factor.
-- Control Center admin Mods page and per-member activation API.
-- Additive D1 schema migration for member access and reward mappings.
+Implemented:
+- SMAPI client, authenticated broadcaster-scoped WebSocket sessions, typed commands/actions, reconnect handling and game-thread execution.
+- Progression-aware vanilla monster catalogue, safe spawn selection, danger variants, milestone notices and rare horde event.
+- Host-authoritative multiplayer forwarding, command deduplication and completion acknowledgement.
+- Control Center member activation, pairing/revocation, live connection state, shared reward configuration, spawn safety gate, streamer preferences and administrator overrides.
+- Event Hub redemption routing and Game Mods gateway delivery.
+- Control Center remote Test Spawn and loaded-monster clear actions.
 
-Not yet implemented or verified:
-- Install and test explicit variant constructors and the WebSocket client against the target Stardew/SMAPI installation.
-- Verify every allowlisted monster variant constructs, behaves and synchronises correctly in the installed Stardew version.
-- Apply migration 0028 to production D1 through the confirmation-gated workflow.
-- Deploy Control Center and synchronise dashboard KV assets; deploy Event Hub and Game Mods through their connected Workers Builds.
-- Verify live connection/last-seen reporting against a connected SMAPI host.
-- Complete end-to-end EventSub delivery, command acknowledgement and host/farmhand multiplayer tests.
-- Verify clean ZIP installation and release packaging.
+Verified in the live Spectrum environment:
+- Twitch Channel Point redemption reaches the correct broadcaster-scoped game session and spawns through the current mod.
+- Host/farmhand command forwarding creates the shared-world monster near the redeeming farmer.
+- Control Center Test Spawn reaches the selected connected host and is recognised by the current mod.
+- Connection state is visible in the Control Center Stardew page.
+
+Remaining release checks:
+- Clean-install validation of the version 1.0.0 ZIP.
+- In-game validation of the streamlined immediate-start pairing selector.
+- Final remote Kill All smoke test, access-revocation/re-pair check and reconnect/safety-gate regression.
+- Broader in-world appearance checks for the complete monster catalogue and dangerous variants.
+
+The CI reference assemblies are pinned to Stardew Valley 1.6.15 and SMAPI 4.4.0; the mod manifest requires SMAPI 4.5.0 or later. Current runtime validation has been performed with Stardew Valley 1.6.15 and SMAPI 4.5.2.
 
 
 
