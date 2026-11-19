@@ -1,9 +1,19 @@
 <div id="spectrum-stardew-widget" class="spectrum-stardew-widget is-hidden">
-  <div class="event-panel">
+  <section id="death-counter" class="death-counter">
+    <div class="counter-kicker"><span class="status-indicator"></span> CHALLENGE SERIES</div>
+    <div id="challenge-name" class="challenge-name">Spectrum Challenge</div>
+    <div class="death-total-row">
+      <span id="death-count" class="death-count">0</span>
+      <span class="death-label">DEATHS</span>
+    </div>
+    <div id="counter-connection" class="counter-connection">CONNECTING</div>
+  </section>
+
+  <section id="event-panel" class="event-panel is-hidden">
     <div class="event-heading">
       <span class="status-indicator"></span>
-      <span id="event-kicker">SPECTRUM STARDEW</span>
-      <span id="event-state">CONNECTING</span>
+      <span>SPECTRUM STARDEW</span>
+      <span id="event-state">INCOMING</span>
     </div>
     <div class="event-body">
       <div id="summon-wheel" class="summon-wheel is-spinning" aria-hidden="true">
@@ -17,8 +27,8 @@
         <div id="event-location" class="event-location"></div>
       </div>
     </div>
-  </div>
+  </section>
 </div>
 <div id="spectrum-stardew-setup" class="setup-hint is-hidden">
-  Set your Twitch broadcaster ID in this widget's Fields tab.
+  Enter this streamer's numeric Twitch broadcaster ID in the widget Fields tab.
 </div>
