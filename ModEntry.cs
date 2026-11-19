@@ -588,7 +588,7 @@ internal sealed class ModEntry : Mod
             {
                 Farmer? target = Game1.getOnlineFarmers().FirstOrDefault(farmer => farmer.UniqueMultiplayerID == actionWork.SenderPlayerId);
                 succeeded = target is not null && this.monsterSpawner.TrySpawnRandomMonster(
-                    this.gameModsClient?.Settings.Difficulty ?? "normal",
+                    actionWork.Difficulty,
                     target
                 );
                 detail = succeeded ? "Random progression-eligible enemy spawned" : "No eligible enemy or safe spawn tile was available";
@@ -715,7 +715,7 @@ internal sealed class ModEntry : Mod
         }
         else if (action.Name == "stardew.spawn_random_test")
         {
-            succeeded = this.monsterSpawner?.TrySpawnRandomMonster(this.gameModsClient?.Settings.Difficulty ?? "normal") == true;
+            succeeded = this.monsterSpawner?.TrySpawnRandomMonster(action.Difficulty) == true;
             detail = succeeded ? "Random progression-eligible enemy spawned" : "No eligible enemy or safe spawn tile was available";
         }
         else
@@ -760,7 +760,7 @@ internal sealed class ModEntry : Mod
                 continue;
 
             this.Helper.Multiplayer.SendMessage(
-                new ForwardedClearAction(pending.Action.ActionId, pending.Action.Name),
+                new ForwardedClearAction(pending.Action.ActionId, pending.Action.Name, pending.Action.Difficulty),
                 "spectrum.action.forward",
                 modIDs: new[] { this.ModManifest.UniqueID },
                 playerIDs: new[] { Game1.MasterPlayer.UniqueMultiplayerID }
@@ -888,7 +888,7 @@ internal sealed class ModEntry : Mod
             }
 
             if (this.queuedClearActionIds.Add(message.ActionId))
-                this.pendingClearActions.Enqueue(new PendingClearWorkItem(message.ActionId, message.Name, e.FromPlayerID));
+                this.pendingClearActions.Enqueue(new PendingClearWorkItem(message.ActionId, message.Name, message.Difficulty, e.FromPlayerID));
             return;
         }
 
@@ -1003,7 +1003,7 @@ internal sealed class ModEntry : Mod
 
     private sealed record SpawnWorkItem(GameCommand Command, long? ReplyToPlayerId, bool ChatResponses);
     private sealed record PendingForwardedCommand(GameCommand Command, DateTime LastSentAtUtc);
-    private sealed record PendingClearWorkItem(string ActionId, string Name, long SenderPlayerId);
+    private sealed record PendingClearWorkItem(string ActionId, string Name, string Difficulty, long SenderPlayerId);
     private sealed record PendingForwardedClearAction(GameAction Action, DateTime LastSentAtUtc);
 
     private static string DisplayValue(string value)
