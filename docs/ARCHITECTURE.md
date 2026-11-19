@@ -42,7 +42,7 @@ A dedicated service in the Spectrum Cloudflare repository.
 - Maintains one persistent outbound connection per broadcaster's existing Durable Object session.
 - Accepts authenticated, typed redemption requests from Event Hub.
 - Stores live connection, global safety-gate state, versioned streamer settings, administrator override and pending-command/action state in the per-broadcaster Durable Object; new connections and disconnects default the safety gate to stopped. The dashboard can pause or resume delivery without deleting queued redemptions.
-- Computes effective spawning from host authorisation, connection state, the global safety gate, streamer preference and administrator override. Force enabled/disabled only overrides the streamer preference; neither can bypass the safety gate or revoked access.
+- Computes effective spawning from broadcaster authorisation, connection state, that broadcaster's global safety gate, streamer preference and administrator override. Force enabled/disabled only overrides the streamer preference; neither can bypass the safety gate or revoked access.
 - Sends typed remote actions to the host and records acknowledgements, including the loaded-monster clear action.
 - Enforces request expiry, deduplication, reconnect handling and rate limits.
 - Never accepts a client-supplied monster type; the game client chooses from its local allowlist.
@@ -147,4 +147,4 @@ The per-broadcaster Durable Object is the source of truth for:
 
 Effective spawning requires a valid, connected host, an open global safety gate and a positive effective preference. The administrator override changes only the preference result. It cannot bypass the global gate or host authorisation. Settings revisions prevent a stale game client from overwriting a newer Control Center update. Game-side setting changes are stored in the Durable Object; they do not create D1/KV writes.
 
-The typed stardew.clear_loaded_monsters action is sent to the host and acknowledged with the number of removed monsters. The in-game menu can perform the same host-only clear locally, with confirmation. The in-game Connect button starts a short-lived device-code flow, opens Control Center for approval by the signed-in member's own Twitch identity, then receives and stores the revocable host credential automatically. The browser never receives the host token.
+The typed stardew.clear_loaded_monsters action is sent to the broadcaster's paired game client and acknowledged with the number of removed monsters; only a client that is the Stardew multiplayer host executes it. The in-game menu can perform the same host-only clear locally, with confirmation. Each player's in-game Connect button starts a short-lived device-code flow, opens Control Center for approval by that member's own Twitch identity, then receives and stores their revocable game-session credential automatically. The browser never receives the credential.
