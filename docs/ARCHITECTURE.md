@@ -43,7 +43,7 @@ A dedicated service in the Spectrum Cloudflare repository.
 - Accepts authenticated, typed redemption requests from Event Hub.
 - Stores live connection, global safety-gate state, versioned streamer settings, administrator override and pending-command/action state in the per-broadcaster Durable Object; new connections and disconnects default the safety gate to stopped. The dashboard can pause or resume delivery without deleting queued redemptions.
 - Computes effective spawning from broadcaster authorisation, connection state, that broadcaster's global safety gate, streamer preference and administrator override. Force enabled/disabled only overrides the streamer preference; neither can bypass the safety gate or revoked access.
-- Sends typed remote actions to the host and records acknowledgements, including the loaded-monster clear action.
+- Sends typed remote actions to the host and records acknowledgements, including loaded-monster clearing and a one-shot random test spawn. The test spawn uses the mod's local progression-eligible catalogue and never changes the normal safety gate.
 - Enforces request expiry, deduplication, reconnect handling and rate limits.
 - Never accepts a client-supplied monster type; the game client chooses from its local allowlist.
 
