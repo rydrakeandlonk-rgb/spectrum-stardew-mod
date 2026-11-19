@@ -129,3 +129,10 @@ Spectrum's streamer settings and actions are registered directly in the vanilla 
 The mod reports a `stardew.monster_spawned` event only after the host has successfully placed the complete requested monster group. The event carries the redemption ID, viewer name, display names of the spawned monsters, count, location and horde flag. For farmhand-originated redemptions, the host includes this result in its existing typed multiplayer response; the originating farmhand then publishes it through its own broadcaster-scoped gateway connection. This preserves the one-channel-per-client model and avoids requiring the host to pair every farmhand's Twitch account.
 
 Events are sent over the existing authenticated WebSocket. They are not added to the save, local config, D1, KV or Durable Object storage. If the game connection is offline at the exact moment the event is sent, the transient announcement may be missed; the next milestone adds the persistent challenge-state snapshot separately.
+
+
+## StreamElements overlay
+
+The initial custom widget source is bundled in `stream-elements-widget/`. Copy its HTML, CSS, JS and fields JSON into a StreamElements Custom Widget. The widget connects to the broadcaster-scoped read-only Game Mods WebSocket and animates a spawn request before revealing the monster names confirmed by the game. See `stream-elements-widget/README.md` for setup.
+
+The widget does not use StreamElements persistent storage, polling, D1 or KV. The StreamElements account still requires a one-time manual Custom Widget setup. The GitHub Actions build publishes a complete bundle ZIP containing the installable mod ZIP, widget source files and setup instructions, alongside the mod-only ZIP.

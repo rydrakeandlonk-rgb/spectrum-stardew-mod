@@ -1,0 +1,25 @@
+{
+  "broadcasterId": {
+    "type": "text",
+    "label": "Twitch Broadcaster ID",
+    "value": ""
+  },
+  "accentColor": {
+    "type": "colorpicker",
+    "label": "Accent colour",
+    "value": "#e89a45"
+  },
+  "displaySeconds": {
+    "type": "slider",
+    "label": "Result display duration",
+    "value": 7,
+    "min": 3,
+    "max": 15,
+    "step": 1
+  },
+  "showLocation": {
+    "type": "checkbox",
+    "label": "Show spawn location",
+    "value": true
+  }
+}
