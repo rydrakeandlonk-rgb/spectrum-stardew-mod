@@ -13,7 +13,14 @@ The Spectrum Stardew Monster Spawner is a private Spectrum integration. Control 
 - [x] Progression milestone HUD notices and rare ten-monster horde event.
 - [x] Per-player broadcaster-scoped gateway connections; no client subscribes to every Spectrum channel.
 - [x] Typed farmhand-to-host command forwarding and host completion response.
+- [x] Persistent challenge-series name and death total in local SMAPI config.
+- [x] Automatic local-player death detection and duplicate-edge protection.
+- [x] GMCM challenge-name and manual death-count override controls.
+- [x] Transient challenge/death events and state snapshots over the existing WebSocket.
+- [ ] In-game validation of death detection, series persistence, and manual override.
+- [x] Bundled StreamElements widget for persistent challenge deaths and temporary spawn reveal.
 - [ ] Finish broad visual/behavioural spot checks across every catalogue variant and dangerous form; the constructor diagnostic is not a substitute for in-world appearance checks.
+- [ ] Test both overlay features together in StreamElements/OBS.
 
 ## Control Center and gateway
 
@@ -30,7 +37,18 @@ The Spectrum Stardew Monster Spawner is a private Spectrum integration. Control 
 - [x] Control Center Test Spawn verified with the current mod build.
 - [ ] Final Kill All end-to-end smoke test and access-revocation/re-pair regression check.
 
-## Version 1.0.0 release gate
+## Version 2.0.0 development and test gate
+
+- [x] Local challenge-series config fields and migration to config version 2.
+- [x] Death event and challenge-state snapshot publishing over the existing gateway.
+- [x] StreamElements widget death counter, spawn animation, and bundled source.
+- [ ] Cloud CI compile and packaging validation.
+- [ ] Install the 2.0.0 development artifact and test automatic death counting.
+- [ ] Test manual challenge name/count override and persistence across game restart/save change.
+- [ ] Test the StreamElements overlay with the actual broadcaster ID and OBS browser source.
+- [ ] Verify gateway reconnect and overlay reconnect state recovery.
+
+## Historical Version 1.0.0 release gate
 
 - [x] Reproducible GitHub Actions build and ZIP packaging.
 - [x] Static catalogue/pool validation in CI.
