@@ -300,7 +300,7 @@ internal sealed class ModEntry : Mod
             ? this.pairingStatus
             : this.gmcmStatusMessage;
 
-        return string.Join(Environment.NewLine, new[] { spawning, authority, state }.Where(value => !string.IsNullOrWhiteSpace(value)));
+        return string.IsNullOrWhiteSpace(state) ? string.Join(Environment.NewLine, new[] { spawning, authority }) : string.Join(Environment.NewLine, new[] { spawning, authority, state });
     }
 
     private void DrawSpawningButton(SpriteBatch spriteBatch, Vector2 position)
