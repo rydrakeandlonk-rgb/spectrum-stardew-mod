@@ -884,7 +884,7 @@ internal sealed class ModEntry : Mod
         }
 
         if (this.queuedSpawnCommandIds.Add(command.CommandId))
-            this.pendingSpawnCommands.Enqueue(new SpawnWorkItem(command, replyToPlayerId, chatResponses));
+            this.pendingSpawnCommands.Enqueue(new SpawnWorkItem(command, replyToPlayerId));
     }
 
     private void CompleteSpawnCommand(
