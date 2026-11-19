@@ -42,7 +42,7 @@ The pinned reference-assembly snapshot is Stardew Valley 1.6.15 with SMAPI 4.4.0
 9. Return to Stardew and confirm `spectrum_connection_status` reports the correct broadcaster connection.
 10. In **Monster controls**, click **Enable Monster Spawning**. Every fresh connection starts paused; the in-game toggle opens the gateway gate. Administrator Force disabled and access revocation still take priority.
 
-Difficulty, chat responses, debug messages and challenge-series settings still require GMCM's **Save** button. **Clear Enemies** is a single-click host-only action and immediately clears hostile monsters from loaded locations.
+Difficulty remains fixed at Normal during the initial live-testing period. In-game spawn announcements are always enabled, and connection/settings diagnostics are always written to the SMAPI log at Info level. Challenge-series settings still require GMCM's **Save** button. **Clear Enemies** is a single-click host-only action and immediately clears hostile monsters from loaded locations.
 
 If the browser does not open automatically, use the in-game status message and open Spectrum Control Center manually. Never copy, share or commit the local SMAPI config or host token.
 
