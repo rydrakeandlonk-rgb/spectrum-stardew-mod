@@ -5,5 +5,12 @@
   "Description": "Private Spectrum integration with shared in-game and Control Center monster-spawner controls.",
   "UniqueID": "RydrakeAndLonk.SpectrumStardewMod",
   "EntryDll": "SpectrumStardewMod.dll",
-  "MinimumApiVersion": "4.5.0"
+  "MinimumApiVersion": "4.5.0",
+  "Dependencies": [
+    {
+      "UniqueID": "spacechase0.GenericModConfigMenu",
+      "MinimumVersion": "1.14.0",
+      "IsRequired": true
+    }
+  ]
 }
