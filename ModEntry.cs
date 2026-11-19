@@ -573,23 +573,47 @@ internal sealed class ModEntry : Mod
 
         if (this.pendingClearActions.Count > 0)
         {
-            PendingClearWorkItem clearWork = this.pendingClearActions.Dequeue();
-            int removed = this.monsterSpawner.ClearLoadedMonsters();
-            bool succeeded = removed >= 0;
-            this.queuedClearActionIds.Remove(clearWork.ActionId);
+            PendingClearWorkItem actionWork = this.pendingClearActions.Dequeue();
+            int removed = 0;
+            string detail = "";
+            bool succeeded;
+
+            if (actionWork.Name == "stardew.clear_loaded_monsters")
+            {
+                removed = this.monsterSpawner.ClearLoadedMonsters();
+                succeeded = removed >= 0;
+                detail = succeeded ? "Cleared loaded monsters" : "The host world was not ready";
+            }
+            else if (actionWork.Name == "stardew.spawn_random_test")
+            {
+                Farmer? target = Game1.getOnlineFarmers().FirstOrDefault(farmer => farmer.UniqueMultiplayerID == actionWork.SenderPlayerId);
+                succeeded = target is not null && this.monsterSpawner.TrySpawnRandomMonster(
+                    this.gameModsClient?.Settings.Difficulty ?? "normal",
+                    target
+                );
+                detail = succeeded ? "Random progression-eligible enemy spawned" : "No eligible enemy or safe spawn tile was available";
+            }
+            else
+            {
+                succeeded = false;
+                detail = "Unsupported game action";
+            }
+
+            this.queuedClearActionIds.Remove(actionWork.ActionId);
             if (succeeded)
             {
-                this.completedClearActionCounts[clearWork.ActionId] = removed;
+                this.completedClearActionCounts[actionWork.ActionId] = removed;
                 while (this.completedClearActionCounts.Count > 500)
                     this.completedClearActionCounts.Remove(this.completedClearActionCounts.Keys.First());
             }
 
             this.CompleteForwardedClearAction(
-                clearWork.SenderPlayerId,
-                clearWork.ActionId,
+                actionWork.SenderPlayerId,
+                actionWork.ActionId,
                 succeeded,
                 Math.Max(0, removed),
-                succeeded ? "" : "The host world was not ready."
+                succeeded ? "" : detail,
+                detail
             );
         }
 
@@ -679,21 +703,34 @@ internal sealed class ModEntry : Mod
 
     private void ExecuteLocalClearAction(GameAction action)
     {
-        if (action.Name != "stardew.clear_loaded_monsters")
+        int removed = 0;
+        string detail;
+        bool succeeded;
+
+        if (action.Name == "stardew.clear_loaded_monsters")
+        {
+            removed = this.monsterSpawner?.ClearLoadedMonsters() ?? -1;
+            succeeded = removed >= 0;
+            detail = succeeded ? "Cleared loaded monsters" : "The host world was not ready";
+        }
+        else if (action.Name == "stardew.spawn_random_test")
+        {
+            succeeded = this.monsterSpawner?.TrySpawnRandomMonster(this.gameModsClient?.Settings.Difficulty ?? "normal") == true;
+            detail = succeeded ? "Random progression-eligible enemy spawned" : "No eligible enemy or safe spawn tile was available";
+        }
+        else
         {
             _ = this.gameModsClient?.AcknowledgeActionAsync(action.ActionId, false, 0, "Unsupported game action.");
             return;
         }
 
-        int removed = this.monsterSpawner?.ClearLoadedMonsters() ?? -1;
-        bool succeeded = removed >= 0;
-        if (this.gameModsClient?.Settings.DebugMessages == true)
-            this.Monitor.Log($"[Spectrum] REMOTE ACTION | clear loaded monsters | {(succeeded ? $"removed {removed}" : "failed")}", succeeded ? LogLevel.Info : LogLevel.Warn);
+        this.Monitor.Log($"[Spectrum] REMOTE ACTION | {action.Name} | {(succeeded ? detail : "failed: " + detail)}", succeeded ? LogLevel.Info : LogLevel.Warn);
         _ = this.gameModsClient?.AcknowledgeActionAsync(
             action.ActionId,
             succeeded,
             Math.Max(0, removed),
-            succeeded ? null : "The host world was not ready."
+            succeeded ? null : detail,
+            detail
         );
     }
 
@@ -706,7 +743,7 @@ internal sealed class ModEntry : Mod
             this.gameModsClient.TryDequeueAction(out GameAction? action) &&
             action is not null)
         {
-            if (action.Name != "stardew.clear_loaded_monsters")
+            if (action.Name is not ("stardew.clear_loaded_monsters" or "stardew.spawn_random_test"))
             {
                 _ = this.gameModsClient.AcknowledgeActionAsync(action.ActionId, false, 0, "Unsupported game action.");
                 return;
@@ -732,10 +769,10 @@ internal sealed class ModEntry : Mod
         }
     }
 
-    private void CompleteForwardedClearAction(long senderPlayerId, string actionId, bool success, int removedCount, string error)
+    private void CompleteForwardedClearAction(long senderPlayerId, string actionId, bool success, int removedCount, string error, string detail = "")
     {
         this.Helper.Multiplayer.SendMessage(
-            new ClearActionResult(actionId, success, removedCount, error),
+            new ClearActionResult(actionId, success, removedCount, error, detail),
             "spectrum.action.result",
             modIDs: new[] { this.ModManifest.UniqueID },
             playerIDs: new[] { senderPlayerId }
@@ -838,7 +875,7 @@ internal sealed class ModEntry : Mod
             bool hasMod = peer?.GetMod(this.ModManifest.UniqueID) is not null;
             bool farmerOnline = Game1.getOnlineFarmers().Any(farmer => farmer.UniqueMultiplayerID == e.FromPlayerID);
             if (!hasMod || !farmerOnline || string.IsNullOrWhiteSpace(message.ActionId) ||
-                message.Name != "stardew.clear_loaded_monsters")
+                message.Name is not ("stardew.clear_loaded_monsters" or "stardew.spawn_random_test"))
             {
                 this.Monitor.Log($"Rejected forwarded Spectrum clear action from multiplayer peer {e.FromPlayerID}.", LogLevel.Warn);
                 return;
@@ -846,12 +883,12 @@ internal sealed class ModEntry : Mod
 
             if (this.completedClearActionCounts.TryGetValue(message.ActionId, out int previousCount))
             {
-                this.CompleteForwardedClearAction(e.FromPlayerID, message.ActionId, true, previousCount, "");
+                this.CompleteForwardedClearAction(e.FromPlayerID, message.ActionId, true, previousCount, "Already processed.", "Already processed");
                 return;
             }
 
             if (this.queuedClearActionIds.Add(message.ActionId))
-                this.pendingClearActions.Enqueue(new PendingClearWorkItem(message.ActionId, e.FromPlayerID));
+                this.pendingClearActions.Enqueue(new PendingClearWorkItem(message.ActionId, message.Name, e.FromPlayerID));
             return;
         }
 
@@ -872,7 +909,7 @@ internal sealed class ModEntry : Mod
             if (result.Success)
             {
                 this.forwardedClearActions.Remove(result.ActionId);
-                _ = this.gameModsClient?.AcknowledgeActionAsync(result.ActionId, true, result.RemovedCount);
+                _ = this.gameModsClient?.AcknowledgeActionAsync(result.ActionId, true, result.RemovedCount, null, result.Detail);
             }
             else
             {
@@ -966,7 +1003,7 @@ internal sealed class ModEntry : Mod
 
     private sealed record SpawnWorkItem(GameCommand Command, long? ReplyToPlayerId, bool ChatResponses);
     private sealed record PendingForwardedCommand(GameCommand Command, DateTime LastSentAtUtc);
-    private sealed record PendingClearWorkItem(string ActionId, long SenderPlayerId);
+    private sealed record PendingClearWorkItem(string ActionId, string Name, long SenderPlayerId);
     private sealed record PendingForwardedClearAction(GameAction Action, DateTime LastSentAtUtc);
 
     private static string DisplayValue(string value)
