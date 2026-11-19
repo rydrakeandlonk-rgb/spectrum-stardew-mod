@@ -82,6 +82,7 @@ internal sealed class MonsterSpawner
 
     public bool TryExecute(
         GameCommand command,
+        Farmer targetFarmer,
         out int spawnedCount,
         out int requestedCount,
         out List<string> spawnedTypes,
@@ -155,7 +156,7 @@ internal sealed class MonsterSpawner
         for (int i = 0; i < requestedCount; i++)
         {
             string selectedId = chooseMonster();
-            if (!this.TrySpawnCandidate(selectedId, out string spawnedLocation, out Monster? createdMonster, useTestProgression: false) ||
+            if (!this.TrySpawnCandidate(selectedId, out string spawnedLocation, out Monster? createdMonster, useTestProgression: false, targetFarmer: targetFarmer) ||
                 createdMonster is null)
             {
                 // A redemption is atomic: if the full requested group cannot be
@@ -193,7 +194,7 @@ internal sealed class MonsterSpawner
     private static int ClampCount(int value, int fallback) =>
         Math.Clamp(value <= 0 ? fallback : value, 1, MaximumMonstersPerRedemption);
 
-    private bool TrySpawnCandidate(string candidateId, out string locationName, out Monster? spawnedMonster, bool ignoreProgression = false, bool useTestProgression = true)
+    private bool TrySpawnCandidate(string candidateId, out string locationName, out Monster? spawnedMonster, bool ignoreProgression = false, bool useTestProgression = true, Farmer? targetFarmer = null)
     {
         locationName = "";
         spawnedMonster = null;
@@ -202,14 +203,15 @@ internal sealed class MonsterSpawner
             this.monitor.Log("[Spectrum] SPAWN FAILED | host world not ready", LogLevel.Warn);
             return false;
         }
-        if (Game1.eventUp || Game1.currentLocation is null || Game1.player is null)
+        targetFarmer ??= Game1.player;
+        if (Game1.eventUp || targetFarmer?.currentLocation is null)
         {
-            this.monitor.Log("[Spectrum] SPAWN FAILED | game state unavailable", LogLevel.Warn);
+            this.monitor.Log("[Spectrum] SPAWN FAILED | target farmer or location unavailable", LogLevel.Warn);
             return false;
         }
 
-        GameLocation location = Game1.currentLocation;
-        Vector2 playerTile = Game1.player.Tile;
+        GameLocation location = targetFarmer.currentLocation;
+        Vector2 playerTile = targetFarmer.Tile;
         foreach (Point offset in NearbyTileOffsets)
         {
             Vector2 tile = new(playerTile.X + offset.X, playerTile.Y + offset.Y);
