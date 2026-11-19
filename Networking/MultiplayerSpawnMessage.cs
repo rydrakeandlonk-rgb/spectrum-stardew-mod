@@ -66,3 +66,37 @@ public sealed class SpawnCommandResult
         this.Error = error;
     }
 }
+
+/// <summary>Typed remote clear action relayed by a farmhand to the host.</summary>
+public sealed class ForwardedClearAction
+{
+    public string ActionId { get; set; } = "";
+    public string Name { get; set; } = "";
+
+    public ForwardedClearAction() { }
+
+    public ForwardedClearAction(string actionId, string name)
+    {
+        this.ActionId = actionId;
+        this.Name = name;
+    }
+}
+
+/// <summary>Host result for a relayed Control Center clear action.</summary>
+public sealed class ClearActionResult
+{
+    public string ActionId { get; set; } = "";
+    public bool Success { get; set; }
+    public int RemovedCount { get; set; }
+    public string Error { get; set; } = "";
+
+    public ClearActionResult() { }
+
+    public ClearActionResult(string actionId, bool success, int removedCount, string error)
+    {
+        this.ActionId = actionId;
+        this.Success = success;
+        this.RemovedCount = removedCount;
+        this.Error = error;
+    }
+}
