@@ -90,6 +90,19 @@ jobs:
           echo "Release package: $zip"
           echo "Verified package contains manifest.json and SpectrumStardewMod.dll, with no local config.json."
 
+      - name: Bundle mod and StreamElements widget sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          mod_zip="$(find dist -maxdepth 1 -type f -name '*.zip' ! -name 'spectrum-stardew-complete-bundle.zip' -print -quit)"
+          test -n "$mod_zip" || { echo "::error::Mod install ZIP was not produced."; exit 1; }
+          bundle_dir="$(mktemp -d)"
+          cp "$mod_zip" "$bundle_dir/Spectrum-Stardew-Mod-Install.zip"
+          cp -R stream-elements-widget "$bundle_dir/StreamElements-Widget"
+          cp README.md "$bundle_dir/Spectrum-Stardew-README.md"
+          (cd "$bundle_dir" && zip -qr "$GITHUB_WORKSPACE/dist/spectrum-stardew-complete-bundle.zip" .)
+          rm -rf "$bundle_dir"
+
       - name: Upload build package
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
