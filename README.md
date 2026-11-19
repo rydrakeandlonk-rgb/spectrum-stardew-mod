@@ -104,3 +104,8 @@ The integration currently accepts one typed behaviour: **Spawn Random Monster**.
 ## License
 
 Private Spectrum project. Redistribution and service access are not authorised.
+
+
+## In-game menu access
+
+Spectrum controls are registered in the vanilla Options menu through Generic Mod Config Menu (GMCM). Open the in-game Options menu, choose the Generic Mod Config Menu entry for Spectrum Stardew Monster Spawner, then select **Open Spectrum Control Panel**. The floating HUD button has been removed. GMCM is a required dependency and is included in the mod manifest so SMAPI can identify a missing installation.
