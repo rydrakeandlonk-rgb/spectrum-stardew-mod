@@ -89,14 +89,16 @@ public sealed class ClearActionResult
     public bool Success { get; set; }
     public int RemovedCount { get; set; }
     public string Error { get; set; } = "";
+    public string Detail { get; set; } = "";
 
     public ClearActionResult() { }
 
-    public ClearActionResult(string actionId, bool success, int removedCount, string error)
+    public ClearActionResult(string actionId, bool success, int removedCount, string error, string detail = "")
     {
         this.ActionId = actionId;
         this.Success = success;
         this.RemovedCount = removedCount;
         this.Error = error;
+        this.Detail = detail;
     }
 }
