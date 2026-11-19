@@ -37,7 +37,7 @@ The eight location groups are progression gates, not physical spawn restrictions
 
 Every player connects their own Spectrum/Twitch account. A client never subscribes to every Spectrum channel and never needs another streamer's credentials. The gateway and Event Hub continue routing each interpreted redemption only to that broadcaster's own mod connection.
 
-If the connected player is the host, their mod queues the command locally. If they're a farmhand, their mod forwards the typed command to the host using SMAPI's multiplayer messaging API. The host validates that the message came from a connected player running this mod, resolves that sender to their online farmer, and creates the monster near that farmer in their current location. The host sends a completion response to the originating farmhand, which only then acknowledges the redemption to the gateway. Both sides retain command-ID deduplication so retries don't create duplicate monsters.
+If the connected player is the host, their mod queues the command locally. If they're a farmhand, their mod forwards the typed command to the host using SMAPI's multiplayer messaging API. The host validates that the message came from a connected player running this mod, resolves that sender to their online farmer, and creates the monster near that farmer in their current location. The host sends a completion response to the originating farmhand, which only then acknowledges the redemption to the gateway. Both sides retain command-ID deduplication so retries don't create duplicate monsters. Control Center clear-monsters actions received by a farmhand are forwarded to the host through the same SMAPI path and acknowledged after the host completes them.
 
 The host does not need to pair with or listen to other streamers. It can accept forwarded commands even if its own Spectrum connection is not paired. Stardew remains responsible for synchronising the host-created vanilla monster to the other players. This multiplayer path still requires a real two-client runtime test.
 
@@ -73,7 +73,7 @@ An administrator first enables the Spectrum member's Stardew access in Control C
 6. Return to Stardew. Your mod receives its own revocable game-session credential securely and writes it to your local SMAPI config automatically.
 7. Your mod connects only to your broadcaster's gateway session. Spawning remains stopped until that streamer's Control Center safety gate is explicitly opened.
 
-Pairing codes expire after ten minutes. The private device code is separate from the visible approval code and is never shown in the dashboard. The host credential is not displayed to the streamer or sent to browser JavaScript. Revoke access in Control Center before moving your connection to another Twitch account.
+Pairing codes expire after ten minutes. The private device code is separate from the visible approval code and is never shown in the dashboard. The game-session credential is not displayed to the streamer or sent to browser JavaScript. Revoke access in Control Center before moving your connection to another Twitch account.
 
 The local config carries a schema version and is migrated automatically on first launch after an update. Gateway URLs must use HTTPS, and incomplete or malformed saved credentials are cleared so the host can be paired again safely. The in-game menu and `spectrum_connection_status` explain whether spawning is stopped by the global safety gate, the administrator override, the streamer's preference, a revoked connection, or a gateway interruption. Temporary gateway interruptions retry automatically; revoked or rotated credentials stop retrying and require a fresh Twitch pairing. The older administrator **Pair / re-pair** action and manual config setup remain available as a fallback. Never commit or share the local config or host token.
  
@@ -101,7 +101,7 @@ The integration currently accepts one typed behaviour: **Spawn Random Monster**.
 - Only approved, active Spectrum members with an explicit enabled record can pair.
 - A valid Twitch login alone does not grant access.
 - Never ship service credentials or Twitch tokens in the mod ZIP.
-- Use revocable game-session credentials, one-time host tokens, redemption IDs, expiry, deduplication and spawn caps.
+- Use revocable game-session credentials, one-time game-session tokens, redemption IDs, expiry, deduplication and spawn caps.
 - Network callbacks must enqueue typed requests; game state is changed only on the SMAPI game thread.
 - Never accept arbitrary C# types, commands, or executable content from the service.
 
