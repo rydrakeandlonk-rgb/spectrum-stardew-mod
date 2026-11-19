@@ -94,7 +94,7 @@ Access is disabled by default. Only the administrator API can change it. The gat
 
 ## Multiplayer authority
 
-Every participating player connects only their own broadcaster-specific gateway session. Event Hub already subscribes to eligible Spectrum broadcasters and routes each interpreted redemption to that broadcaster's session; the game mod does not fan in or subscribe to other channels.
+Each Spectrum streamer who wants their own redemptions to trigger spawns connects only their own broadcaster-specific gateway session. Other farmhands only need the mod installed to receive the shared-world result. Event Hub already subscribes to eligible Spectrum broadcasters and routes each interpreted redemption to that broadcaster's session; the game mod does not fan in or subscribe to other channels.
 
 When a farmhand receives a command, it forwards a typed payload to the host through SMAPI's multiplayer messaging API. The host checks the sender's SMAPI peer identity and that the sender is an online farmer, then creates the monster near that farmer in their current location. The host sends a completion result back to the originating farmhand. The farmhand acknowledges the original gateway command only after success is confirmed. Host and farmhand both use command IDs to prevent duplicate spawns across retries and reconnects. Control Center clear-loaded-monsters actions received by a farmhand use the same host relay and are acknowledged only after the host completes the action.
 
