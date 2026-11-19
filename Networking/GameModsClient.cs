@@ -409,7 +409,7 @@ internal sealed class GameModsClient : IDisposable
                 {
                     this.settings = new HostSettings(
                         ReadBool(settingsElement, "spawn_enabled", true),
-                        ReadString(settingsElement, "difficulty") is "easy" or "hard" ? ReadString(settingsElement, "difficulty") : "normal",
+                        ReadString(settingsElement, "difficulty") is "easy" or "hard" ? ReadString(settingsElement, "difficulty") : "normal"
                     );
                 }
                 this.settingsRevision = ReadInt(root, "revision", this.settingsRevision);
