@@ -50,7 +50,7 @@ jobs:
       - name: Validate StreamElements widget source
         run: |
           node --check stream-elements-widget/widget.js
-          python3 -c "import json; json.load(open('stream-elements-widget/fields.json', encoding='utf-8'))"
+          node -e "JSON.parse(require('node:fs').readFileSync('stream-elements-widget/fields.json', 'utf8'))"
 
       - name: Set up .NET 6
         uses: actions/setup-dotnet@v4
