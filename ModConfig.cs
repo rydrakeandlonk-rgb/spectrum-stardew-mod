@@ -6,13 +6,15 @@ namespace SpectrumStardewMod;
 /// <summary>Local configuration for the host's Spectrum Game Mods connection.</summary>
 internal sealed class ModConfig
 {
-    public const int CurrentConfigVersion = 1;
+    public const int CurrentConfigVersion = 2;
     private const string DefaultGatewayUrl = "https://spectrum-game-mods.rydrakeandlonk.workers.dev";
 
     public int ConfigVersion { get; set; }
     public string GatewayUrl { get; set; } = DefaultGatewayUrl;
     public string BroadcasterUserId { get; set; } = "";
     public string HostToken { get; set; } = "";
+    public string ChallengeName { get; set; } = "Spectrum Challenge";
+    public int ChallengeDeathCount { get; set; }
 
     /// <summary>Upgrade older configs and discard malformed or incomplete credentials safely.</summary>
     public bool Normalize(IMonitor monitor)
@@ -23,7 +25,7 @@ internal sealed class ModConfig
         {
             this.ConfigVersion = CurrentConfigVersion;
             changed = true;
-            monitor.Log("Migrated the Spectrum mod configuration to version 1. Existing valid connection details were preserved.", LogLevel.Info);
+            monitor.Log($"Migrated the Spectrum mod configuration to version {CurrentConfigVersion}. Existing valid connection details were preserved.", LogLevel.Info);
         }
         else if (this.ConfigVersion > CurrentConfigVersion)
         {
@@ -80,6 +82,24 @@ internal sealed class ModConfig
                 this.HostToken = hostToken;
                 changed = true;
             }
+        }
+
+        string challengeName = Regex.Replace((this.ChallengeName ?? "").Trim(), @"[\\r\\n\\t]+", " ");
+        if (challengeName.Length == 0)
+            challengeName = "Spectrum Challenge";
+        if (challengeName.Length > 80)
+            challengeName = challengeName[..80];
+        if (this.ChallengeName != challengeName)
+        {
+            this.ChallengeName = challengeName;
+            changed = true;
+        }
+
+        int deathCount = Math.Clamp(this.ChallengeDeathCount, 0, 1000000);
+        if (this.ChallengeDeathCount != deathCount)
+        {
+            this.ChallengeDeathCount = deathCount;
+            changed = true;
         }
 
         return changed;
