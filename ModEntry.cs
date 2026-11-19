@@ -180,8 +180,8 @@ internal sealed class ModEntry : Mod
             this.ModManifest,
             () => this.GetGmcmSettings().SpawnEnabled,
             value => this.SetGmcmSettings(settings => settings with { SpawnEnabled = value }),
-            () => "Spawning enabled",
-            () => "Controls whether this streamer's Twitch redemptions can spawn monsters. The Control Center safety gate and administrator override still take priority.",
+            () => "Streamer spawning preference",
+            () => "Shared with the Streamer preference in Control Center. Changes sync through the gateway; the Control Center safety gate and administrator override still take priority.",
             "spectrum-spawning-enabled"
         );
         this.configMenuApi.AddTextOption(
@@ -373,6 +373,7 @@ internal sealed class ModEntry : Mod
         bool connected = this.gameModsClient?.IsConnected == true;
         string connection = connected ? "Gateway: Connected" : "Gateway: Not connected";
         string role = Context.IsMainPlayer ? "World authority: Host" : "World authority: Farmhand (host executes spawns)";
+        string preference = "Shared streamer preference: " + (this.gameModsClient?.Settings.SpawnEnabled == true ? "ON" : "OFF");
         string adminOverride = "Admin override: " + (this.gameModsClient?.SpawnOverride ?? "follow").Replace("_", " ");
         string safetyGate = "Control Center safety gate: " + (this.gameModsClient?.SafetyGateEnabled == true ? "OPEN" : "CLOSED");
         string state = !string.IsNullOrWhiteSpace(this.pairingStatus)
@@ -381,7 +382,7 @@ internal sealed class ModEntry : Mod
                 ? this.gmcmStatusMessage
                 : this.gameModsClient?.SpawnStateReason ?? "Connect this player to their Spectrum Twitch account.";
 
-        return string.Join(Environment.NewLine, new[] { connection, role, adminOverride, safetyGate, state });
+        return string.Join(Environment.NewLine, new[] { connection, role, preference, adminOverride, safetyGate, state });
     }
 
     private void StartPairingOrOpenControlCenter()
