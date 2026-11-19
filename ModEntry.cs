@@ -173,7 +173,7 @@ internal sealed class ModEntry : Mod
             this.ModManifest,
             () => "Open the Spectrum control panel to connect Twitch, manage spawns, change settings, or clear loaded monsters."
         );
-        this.configMenuApi.AddComplexOptionWithGamepadSupport(
+        this.configMenuApi.AddComplexOption(
             mod: this.ModManifest,
             name: () => "Spectrum controls",
             draw: (batch, position) =>
