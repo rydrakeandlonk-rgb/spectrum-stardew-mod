@@ -62,7 +62,7 @@ The host does not need to pair with or listen to other streamers. It can accept 
 
 **Version 2.0.0 development build.** The original 1.0.0 gameplay integration remains the foundation; 2.0.0 adds game-to-stream events and the persistent challenge-series death counter. The current live build has been tested for Twitch redemption delivery, multiplayer host/farmhand spawning, and the Control Center one-shot Test Spawn action. The Test Spawn action was also verified after updating a second streamer to the current mod build.
 
-The release candidate includes the progression-aware vanilla monster catalogue, dangerous variants, native progression HUD notices, the rare ten-monster horde event, per-player broadcaster-scoped connections, typed multiplayer forwarding, settings synchronisation, host-authoritative world changes, and Control Center remote actions.
+The established gameplay foundation includes the progression-aware vanilla monster catalogue, dangerous variants, native progression HUD notices, the rare ten-monster horde event, per-player broadcaster-scoped connections, typed multiplayer forwarding, settings synchronisation, host-authoritative world changes, and Control Center remote actions. The new 2.0.0 challenge and overlay features are awaiting in-game validation.
 
 The final release gate is still to verify the refreshed one-click pairing action, a clean-install ZIP, the Control Center Kill All action, and the remaining release smoke tests. A successful CI build is not a substitute for in-game validation.
 
