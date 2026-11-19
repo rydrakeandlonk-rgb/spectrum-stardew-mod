@@ -287,11 +287,11 @@ internal sealed class ModEntry : Mod
 
     private void SaveGmcmOptions()
     {
-        if (this.pendingGmcmSettings is not null)
+        if (this.pendingGmcmSettings is HostSettings settings)
         {
             if (this.gameModsClient?.IsConnected == true)
             {
-                _ = this.gameModsClient.UpdateSettingsAsync(this.pendingGmcmSettings);
+                _ = this.gameModsClient.UpdateSettingsAsync(settings);
                 this.gmcmStatusMessage = "Streamer settings sent to Control Center.";
             }
             else
