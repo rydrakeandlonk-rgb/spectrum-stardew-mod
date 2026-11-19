@@ -1,5 +1,31 @@
 # Changelog
 
+## 2.0.0 — development build
+
+### Added
+- Persistent challenge-series name and death total in the local SMAPI config, independent of save files and streaming sessions.
+- Automatic local-player death detection with one increment per death.
+- GMCM controls to rename a challenge and manually override the series death total.
+- Transient stardew.player_died and stardew.challenge_state events over the existing authenticated WebSocket.
+- Challenge-state snapshots on game connection and overlay reconnect.
+- StreamElements challenge death counter that remains visible alongside temporary spawn animations.
+- Complete mod-plus-overlay source bundle in the GitHub Actions artifact.
+
+### Storage and performance
+- No D1 or KV schema changes.
+- No new Worker or polling loop.
+- No challenge/event history stored in Durable Object storage.
+- Only a local config write when the death total or challenge settings change; overlay updates are pushed over the existing WebSocket.
+
+### Validation still required
+- Verify one death increments exactly once in single-player and multiplayer.
+- Verify challenge name/count survive game restart and a different save.
+- Verify GMCM manual override updates the overlay immediately.
+- Verify overlay reconnect receives the latest snapshot.
+- Verify monster-spawn animation and death counter together in StreamElements and OBS.
+- Complete the existing 1.0.0 gameplay regression checks before distributing 2.0.0.
+
+
 ## 1.0.0 — release candidate
 
 This is the first feature-complete release candidate for the private Spectrum Stardew integration.
