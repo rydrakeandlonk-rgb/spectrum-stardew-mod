@@ -22,9 +22,8 @@ public sealed class ForwardedSpawnCommand
     public int MinCount { get; set; } = 1;
     public int MaxCount { get; set; } = 3;
     public string SourceBroadcasterUserId { get; set; } = "";
-    public bool ChatResponses { get; set; } = true;
 
-    internal static ForwardedSpawnCommand FromCommand(GameCommand command, string broadcasterUserId, bool chatResponses) => new()
+    internal static ForwardedSpawnCommand FromCommand(GameCommand command, string broadcasterUserId) => new()
     {
         CommandId = command.CommandId,
         Game = command.Game,
@@ -39,8 +38,7 @@ public sealed class ForwardedSpawnCommand
         Count = command.Count,
         MinCount = command.MinCount,
         MaxCount = command.MaxCount,
-        SourceBroadcasterUserId = broadcasterUserId,
-        ChatResponses = chatResponses
+        SourceBroadcasterUserId = broadcasterUserId
     };
 
     internal GameCommand ToGameCommand() => new(

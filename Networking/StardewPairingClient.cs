@@ -15,7 +15,7 @@ internal sealed record PairingStart(
     int Interval
 );
 
-internal sealed record PairingResult(string BroadcasterUserId, string HostToken);
+internal sealed record PairingResult(string BroadcasterUserId, string BroadcasterLogin, string HostToken);
 
 /// <summary>Performs the short-lived device-code flow used to pair a Spectrum host.</summary>
 internal sealed class StardewPairingClient : IDisposable
@@ -77,10 +77,11 @@ internal sealed class StardewPairingClient : IDisposable
             if (status == "authorized")
             {
                 string broadcasterId = ReadString(root, "broadcaster_user_id");
+                string broadcasterLogin = ReadString(root, "broadcaster_login");
                 string hostToken = ReadString(root, "host_token");
                 if (string.IsNullOrWhiteSpace(broadcasterId) || string.IsNullOrWhiteSpace(hostToken))
                     throw new InvalidOperationException("The pairing response did not include valid host credentials.");
-                return new PairingResult(broadcasterId, hostToken);
+                return new PairingResult(broadcasterId, broadcasterLogin, hostToken);
             }
             if (status == "expired" || status == "consumed")
                 throw new InvalidOperationException("The pairing code has expired. Start a new connection request.");

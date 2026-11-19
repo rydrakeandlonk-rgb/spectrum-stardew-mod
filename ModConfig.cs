@@ -12,6 +12,7 @@ internal sealed class ModConfig
     public int ConfigVersion { get; set; }
     public string GatewayUrl { get; set; } = DefaultGatewayUrl;
     public string BroadcasterUserId { get; set; } = "";
+    public string BroadcasterLogin { get; set; } = "";
     public string HostToken { get; set; } = "";
     public string ChallengeName { get; set; } = "Spectrum Challenge";
     public int ChallengeDeathCount { get; set; }
@@ -57,6 +58,14 @@ internal sealed class ModConfig
             }
         }
 
+        string broadcasterLogin = Regex.Replace((this.BroadcasterLogin ?? "").Trim(), @"[^a-zA-Z0-9_]", "");
+        if (broadcasterLogin.Length > 25) broadcasterLogin = broadcasterLogin[..25];
+        if (this.BroadcasterLogin != broadcasterLogin)
+        {
+            this.BroadcasterLogin = broadcasterLogin;
+            changed = true;
+        }
+
         string broadcasterId = (this.BroadcasterUserId ?? "").Trim();
         string hostToken = (this.HostToken ?? "").Trim();
         bool hasAnyCredential = broadcasterId.Length > 0 || hostToken.Length > 0;
@@ -66,6 +75,7 @@ internal sealed class ModConfig
         if (hasAnyCredential && !validCredentials)
         {
             this.BroadcasterUserId = "";
+            this.BroadcasterLogin = "";
             this.HostToken = "";
             changed = true;
             monitor.Log("The saved Spectrum connection details were incomplete or invalid. Cleared them safely; connect Twitch again from the in-game menu.", LogLevel.Warn);
