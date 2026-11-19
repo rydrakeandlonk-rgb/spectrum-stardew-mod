@@ -122,3 +122,10 @@ Private Spectrum project. Redistribution and service access are not authorised.
 ## In-game menu access
 
 Spectrum's streamer settings and actions are registered directly in the vanilla Options menu through Generic Mod Config Menu (GMCM). Open **Options → Generic Mod Config Menu → Spectrum Stardew Monster Spawner**. There is no separate Spectrum launch panel or floating HUD button. GMCM is a required dependency and is included in the mod manifest.
+
+
+## Game-to-stream events (2.0.0 foundation)
+
+The mod reports a `stardew.monster_spawned` event only after the host has successfully placed the complete requested monster group. The event carries the redemption ID, viewer name, display names of the spawned monsters, count, location and horde flag. For farmhand-originated redemptions, the host includes this result in its existing typed multiplayer response; the originating farmhand then publishes it through its own broadcaster-scoped gateway connection. This preserves the one-channel-per-client model and avoids requiring the host to pair every farmhand's Twitch account.
+
+Events are sent over the existing authenticated WebSocket. They are not added to the save, local config, D1, KV or Durable Object storage. If the game connection is offline at the exact moment the event is sent, the transient announcement may be missed; the next milestone adds the persistent challenge-state snapshot separately.
