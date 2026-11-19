@@ -109,7 +109,7 @@ internal sealed class GameModsClient : IDisposable
         });
     }
 
-    public async Task AcknowledgeActionAsync(string actionId, bool success, int removedCount, string? error = null)
+    public async Task AcknowledgeActionAsync(string actionId, bool success, int removedCount, string? error = null, string? detail = null)
     {
         await this.SendMessageAsync(new
         {
@@ -117,7 +117,8 @@ internal sealed class GameModsClient : IDisposable
             action_id = actionId,
             success,
             removed_count = removedCount,
-            error
+            error,
+            detail
         });
     }
 
@@ -368,7 +369,7 @@ internal sealed class GameModsClient : IDisposable
                 string actionGame = ReadString(root, "game");
                 string actionName = ReadString(root, "name");
                 if (string.IsNullOrWhiteSpace(actionId) || actionGame != "stardew-valley" ||
-                    actionName != "stardew.clear_loaded_monsters")
+                    actionName is not ("stardew.clear_loaded_monsters" or "stardew.spawn_random_test"))
                 {
                     this.monitor.Log("Ignored an unsupported Spectrum game action.", LogLevel.Warn);
                     return;
