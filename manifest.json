@@ -1,7 +1,7 @@
 {
   "Name": "Spectrum Stardew Monster Spawner",
   "Author": "RydrakeAndLonk",
-  "Version": "0.8.2",
+  "Version": "0.8.3",
   "Description": "Private Spectrum integration with shared in-game and Control Center monster-spawner controls.",
   "UniqueID": "RydrakeAndLonk.SpectrumStardewMod",
   "EntryDll": "SpectrumStardewMod.dll",
