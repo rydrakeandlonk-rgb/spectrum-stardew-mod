@@ -19,7 +19,8 @@
   let requestTimer = null;
   let reconnectDelay = 1000;
   let activeEventId = "";
-  let lastCompletedEventId = "";
+  const seenRequestIds = new Set();
+  const completedEventIds = new Set();
   let isUnloading = false;
 
   function clearDisplayTimers() {
@@ -49,7 +50,9 @@
 
   function showSpawnRequested(event) {
     const id = String(event.event_id || "");
-    if (!id || id === activeEventId || id === lastCompletedEventId) return;
+    if (!id || seenRequestIds.has(id) || completedEventIds.has(id)) return;
+    seenRequestIds.add(id);
+    if (seenRequestIds.size > 200) seenRequestIds.delete(seenRequestIds.values().next().value);
 
     activeEventId = id;
     clearDisplayTimers();
@@ -75,10 +78,13 @@
 
   function showSpawned(event) {
     const id = String(event.event_id || "");
-    if (id && id === lastCompletedEventId) return;
+    if (id && completedEventIds.has(id)) return;
 
     activeEventId = id;
-    lastCompletedEventId = id;
+    if (id) {
+      completedEventIds.add(id);
+      if (completedEventIds.size > 200) completedEventIds.delete(completedEventIds.values().next().value);
+    }
     clearDisplayTimers();
     wheel.classList.remove("is-spinning");
     wheel.classList.add("is-landed");
