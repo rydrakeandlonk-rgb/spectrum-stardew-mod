@@ -21,7 +21,7 @@ The existing Spectrum Cloudflare project owns identity, permissions, dashboard m
 
 Twitch Channel Points → Spectrum Event Hub → that streamer's gateway session → their SMAPI mod → (SMAPI relay if farmhand) → host SMAPI mod → Stardew Valley
 
-- Control Center: administrator-only Stardew Valley page, per-member access, live game status, shared reward title, per-host safety gate, streamer preferences, administrator overrides and remote clear-monsters actions.
+- Control Center: administrator-only Stardew Valley page, per-member access, live game status, shared reward title, per-host safety gate, streamer preferences, administrator overrides, remote clear-monsters actions and one-shot random test spawns.
 - Event Hub: receives and verifies Twitch Channel Point redemption notifications and routes approved redemptions.
 - Stardew gateway: owns one authenticated session per enabled broadcaster, versioned per-streamer settings, administrator overrides, deduplication, pending requests and acknowledged remote actions.
 - SMAPI mod: each player connects only their own broadcaster session. Farmhands forward typed spawn requests to the host through SMAPI; only the host mutates the shared world and confirms completion back to the originating client.
@@ -37,7 +37,7 @@ The eight location groups are progression gates, not physical spawn restrictions
 
 Every Spectrum streamer who wants their own redemptions to trigger spawns pairs their own Twitch account. All players in the shared farm install the mod, but a non-streaming farmhand doesn't need to pair an account. A client never subscribes to every Spectrum channel and never needs another streamer's credentials. The gateway and Event Hub continue routing each interpreted redemption only to that broadcaster's own mod connection.
 
-If the connected player is the host, their mod queues the command locally. If they're a farmhand, their mod forwards the typed command to the host using SMAPI's multiplayer messaging API. The host validates that the message came from a connected player running this mod, resolves that sender to their online farmer, and creates the monster near that farmer in their current location. The host sends a completion response to the originating farmhand, which only then acknowledges the redemption to the gateway. Both sides retain command-ID deduplication so retries don't create duplicate monsters. Control Center clear-monsters actions received by a farmhand are forwarded to the host through the same SMAPI path and acknowledged after the host completes them.
+If the connected player is the host, their mod queues the command locally. If they're a farmhand, their mod forwards the typed command to the host using SMAPI's multiplayer messaging API. The host validates that the message came from a connected player running this mod, resolves that sender to their online farmer, and creates the monster near that farmer in their current location. The host sends a completion response to the originating farmhand, which only then acknowledges the redemption to the gateway. Both sides retain command-ID deduplication so retries don't create duplicate monsters. Control Center clear-monsters and random test-spawn actions received by a farmhand are forwarded to the host through the same SMAPI path and acknowledged after the host completes them.
 
 The host does not need to pair with or listen to other streamers. It can accept forwarded commands even if its own Spectrum connection is not paired; it only pairs if it also wants its own channel's redemptions to trigger spawns. Stardew remains responsible for synchronising the host-created vanilla monster to the other players. This multiplayer path still requires a real two-client runtime test.
 
@@ -56,9 +56,9 @@ The host does not need to pair with or listen to other streamers. It can accept 
 
 ## Current implementation status
 
-Version 0.7.5 is the last runtime-validated version. Its monster catalogue, progression profiles, reconnect safety, Twitch redemption handling and retry/acknowledgement behaviour passed the user's single-player checks. Multiplayer remains untested.
+Version 0.8.3 passed the user's single-player runtime checks for pairing, settings synchronisation and Twitch redemption spawning. Multiplayer remains untested.
 
-Version 0.8.2 adds independent per-player Spectrum connections and a typed SMAPI farmhand-to-host command relay. Each player manages only their own streamer settings; the host remains the sole authority for shared-world spawning and clearing. The gateway continues using the existing per-broadcaster Durable Objects; this multiplayer change adds no D1/KV schema, writes, or central channel fan-in. CI compilation and real multiplayer testing are required before calling this version runtime-validated.
+Version 0.8.4 adds an administrator-triggered random test-spawn action from Control Center. It is delivered as a typed one-shot game action, uses the mod's local progression-eligible monster catalogue, targets the requesting farmer in multiplayer, and does not open the normal spawn safety gate. The game reports the result to Control Center. This new action requires fresh in-game validation; CI compilation does not prove runtime or multiplayer behaviour.
 
 ## Connect each player in-game
 
@@ -95,7 +95,7 @@ Developer validation commands:
 
 The integration writes compact redemption and spawn results to the SMAPI console, retaining each command ID for deduplication and tracing. Successful spawns are announced through Stardew's existing in-game chat with the Twitch redeemer, monster type and location. The announcement is only shown after the game reports that a character was added.
 
-The integration currently accepts one typed behaviour: **Spawn Random Monster**. The mod chooses one progression-eligible vanilla variant locally from the explicit catalogue and constructs it using its supported vanilla setup. Spawn requests remain queued until Start Spawns is enabled in Control Center; each new connection defaults to stopped. Failed attempts remain pending and are retried rather than acknowledged.
+The integration currently accepts one Twitch redemption behaviour: **Spawn Random Monster**. Control Center also supports a separate administrator-only random test-spawn action for validating the dashboard-to-game connection. The mod chooses one progression-eligible vanilla variant locally from the explicit catalogue and constructs it using its supported vanilla setup. Spawn requests remain queued until Start Spawns is enabled in Control Center; each new connection defaults to stopped. Failed attempts remain pending and are retried rather than acknowledged.
 
 ## Security
 
