@@ -343,7 +343,7 @@ internal sealed class ModEntry : Mod
             if (challengeName.Length == 0) challengeName = "Spectrum Challenge";
             if (challengeName.Length > 80) challengeName = challengeName[..80];
 
-            string deathCountText = this.pendingChallengeDeathCount ?? this.config.ChallengeDeathCount.ToString(CultureInfo.InvariantCulture);
+            string deathCountText = (this.pendingChallengeDeathCount ?? this.config.ChallengeDeathCount.ToString(CultureInfo.InvariantCulture)).Trim();
             if (int.TryParse(deathCountText, NumberStyles.None, CultureInfo.InvariantCulture, out int deathCount) && deathCount is >= 0 and <= 1000000)
             {
                 bool changed = this.config.ChallengeName != challengeName || this.config.ChallengeDeathCount != deathCount;
@@ -1369,10 +1369,13 @@ internal sealed class ModEntry : Mod
         if (this.config is null)
             return;
 
-        if (this.config.ChallengeDeathCount < 1000000)
-            this.config.ChallengeDeathCount++;
-        else
+        if (this.config.ChallengeDeathCount >= 1000000)
+        {
             this.Monitor.Log("Challenge death counter reached its maximum supported value.", LogLevel.Warn);
+            return;
+        }
+
+        this.config.ChallengeDeathCount++;
 
         try
         {
