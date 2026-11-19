@@ -40,24 +40,26 @@ The current reference-assembly snapshot is based on Stardew Valley 1.6.15 and SM
 10. Run `spectrum_connection_status` to inspect the gateway connection.
 11. Check the compact SMAPI log entries for the redeemer, reward, redemption time, command ID and confirmed spawn result. Failed attempts stay queued for retry; only successful spawns are acknowledged. The latest 500 successful redemption IDs are also saved in the mod's local global data to prevent normal reconnect/restart replay.
 12. Confirm a successful redemption appears in Stardew's existing chat with the Twitch username, monster name and location. Failed spawns must not produce a success chat message.
-13. Repeat in a multiplayer farm with a farmhand connected; confirm exactly one monster appears for both players.
+13. Repeat in a multiplayer farm with at least one farmhand connected and paired to their own Twitch account. Confirm each client receives only its own channel's commands.
+14. Redeem on the host's channel and confirm the host spawns one monster near the host farmer.
+15. Redeem on the farmhand's channel and confirm the farmhand forwards one command, the host spawns one monster near the farmhand farmer, and both players see the same monster.
+16. Put the host and farmhand in different locations and confirm the monster appears near the redeeming farmer in that farmer's current location.
+17. Confirm the farmhand gateway command is acknowledged only after the host reports a successful spawn. Force a retry/reconnect and confirm no duplicate monster appears.
+18. Confirm the farmhand can receive commands when the host has not paired their own Twitch account, and confirm a closed source-streamer safety gate prevents that streamer's commands from spawning.
 
 The network client validates typed messages and queues them for the SMAPI update thread. It does not execute server-supplied command text or monster class names. The local catalogue filters explicit vanilla variant definitions through the mod installation's progression snapshot. See docs/MONSTER_POOLS.md for unlock rules, constructor mappings and dangerous-variant setup. Every entry still needs in-game validation.
 
 Back up saves before early gameplay testing.
 
-## Pair the host
+## Pair each player
 
-After an administrator enables the member in Control Center, use the Mods page's **Pair / re-pair** action. It displays the broadcaster's numeric Twitch user ID and a one-time host token.
+After an administrator enables each Spectrum member in Control Center, each player pairs their own Twitch account through the in-game **Connect Twitch account** button. Each installation receives a separate broadcaster-scoped game-session credential.
 
-1. Launch the mod once so SMAPI creates its local `config.json`.
-2. Open the generated config file in the mod folder.
-3. Set `BroadcasterUserId` to the numeric ID shown by Control Center.
-4. In the Stardew Valley dashboard, set the one shared **Spawn Random Monster** reward title used on every channel.
-5. Set `HostToken` to the one-time token shown by Control Center.
-6. Leave `GatewayUrl` at its default Spectrum Game Mods URL.
-7. Restart Stardew/SMAPI.
-8. Once `spectrum_connection_status` confirms the host is connected, click **Start Spawns** in Control Center. Every fresh connection defaults to stopped.
+1. Load the multiplayer save as host or farmhand.
+2. Open **Options → Generic Mod Config Menu → Spectrum Stardew Monster Spawner → Open Spectrum Control Panel**.
+3. Select **Connect Twitch account** and approve the pairing while signed into your own Twitch account.
+4. Return to Stardew and confirm `spectrum_connection_status` reports your broadcaster connection.
+5. Set your own streamer preference in the in-game panel or Control Center. Every fresh connection defaults to stopped.
 
 Use `spectrum_connection_status` in the SMAPI console to check the connection. Never commit the local config or share the host token. Re-pairing rotates the token and disconnects the previous host session.
 
@@ -80,7 +82,7 @@ Before any distribution, verify the ZIP on a clean SMAPI installation. It must c
 - Version 0.8.0 adds the in-game Spectrum HUD/menu, shared settings, remote administrator overrides and loaded-monster clearing. It must pass GitHub Actions compilation/package checks before an artifact is considered installable.
 - The in-game Connect button starts a ten-minute device-code flow. The streamer approves their own Twitch identity in Control Center; the mod then receives and stores its revocable host credential automatically. This self-service flow still needs end-to-end testing.
 - The new in-game menu, host-wide clear action, settings conflict handling and Control Center remote controls still require in-game testing.
-- Multiplayer replication and host/farmhand menu permissions must be verified with two actual game clients. A successful CI build does not prove runtime or multiplayer behaviour.
+- Multiplayer relay, host/farmhand spawn targeting, retry/acknowledgement behaviour, and Stardew monster replication must be verified with two actual game clients. A successful CI build does not prove runtime or multiplayer behaviour.
 - No public mod release is planned. Build ZIPs remain private GitHub Actions artifacts.
 
 
