@@ -20,15 +20,16 @@ internal sealed class MonsterSpawner
 
     public MonsterSpawner(IMonitor monitor) => this.monitor = monitor;
 
-    public bool TrySpawnRandomMonster(string difficulty = "normal")
+    public bool TrySpawnRandomMonster(string difficulty = "normal", Farmer? targetFarmer = null)
     {
-        if (!Context.IsWorldReady || Game1.player is null)
+        targetFarmer ??= Game1.player;
+        if (!Context.IsWorldReady || targetFarmer is null)
         {
             this.monitor.Log("[Spectrum] SPAWN FAILED | load a save before selecting a random monster", LogLevel.Warn);
             return false;
         }
 
-        return this.TrySpawnCandidate(MonsterCatalog.GetRandomType(difficulty), out _, out _);
+        return this.TrySpawnCandidate(MonsterCatalog.GetRandomType(difficulty), out _, out _, targetFarmer: targetFarmer);
     }
 
     public bool TrySpawnGreenSlime() =>
