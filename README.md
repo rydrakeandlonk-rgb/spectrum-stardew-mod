@@ -47,7 +47,7 @@ The host does not need to pair with or listen to other streamers. It can accept 
 - Gameplay/MonsterCatalog.cs — explicit vanilla monster variants, progression-filtered weighting and safe constructor dispatch.
 - Gameplay/MonsterProgression.cs and Gameplay/MonsterLocationPools.cs — vanilla save checks and location-group unlock rules.
 - docs/MONSTER_POOLS.md — complete progression rules, exclusions, and variant implementation requirements.
-- ModEntry.cs — SMAPI entry point, clickable HUD button, local test commands and game-thread command/action processing.
+- ModEntry.cs — SMAPI entry point, GMCM settings/actions, local test commands and game-thread command/action processing.
 - UI/SpectrumMenu.cs — in-game streamer settings, connection status, host-only controls and clear confirmation.
 - Networking/GameModsClient.cs — authenticated WebSocket connection, versioned settings sync, typed command/action validation, reconnect and acknowledgements.
 - Networking/HostSettings.cs and Networking/GameAction.cs — shared settings and typed remote action contracts.
@@ -63,20 +63,22 @@ Version 0.8.2 adds independent per-player Spectrum connections and a typed SMAPI
 
 ## Connect each player in-game
 
-An administrator first enables the Spectrum member's Stardew access in Control Center. The streamer can then connect without manually copying a host token:
+An administrator first enables the Spectrum member's Stardew access in Control Center. Each streamer then connects their own Twitch account:
 
 1. Load the multiplayer save as either host or farmhand.
-2. Open **Options → Generic Mod Config Menu → Spectrum Stardew Monster Spawner → Open Spectrum Control Panel**.
-3. Choose **Connect Twitch account**. The mod creates a short-lived pairing code and opens the Control Center approval page.
+2. Open **Options → Generic Mod Config Menu → Spectrum Stardew Monster Spawner**.
+3. Under **Connection actions**, choose **Connect Twitch / open Control Center**, then press GMCM's **Save** button.
 4. Sign in using the Twitch account that owns your active Spectrum channel.
 5. Confirm the pairing request. Control Center only authorises the signed-in member's own account, and only if an administrator has enabled Stardew access.
 6. Return to Stardew. Your mod receives its own revocable game-session credential securely and writes it to your local SMAPI config automatically.
 7. Your mod connects only to your broadcaster's gateway session. Spawning remains stopped until that streamer's Control Center safety gate is explicitly opened.
 
+The GMCM page contains the same streamer settings as the former Spectrum panel: spawning, difficulty, chat responses and debug messages. Change settings and press **Save** to send them to the gateway. Connection and host actions are explicit dropdown selections followed by Save. Clearing loaded monsters requires selecting **Arm clear**, saving, then selecting **Confirm clear** and saving again. Choose **No action** and save before repeating an action.
+
 Pairing codes expire after ten minutes. The private device code is separate from the visible approval code and is never shown in the dashboard. The game-session credential is not displayed to the streamer or sent to browser JavaScript. Revoke access in Control Center before moving your connection to another Twitch account.
 
-The local config carries a schema version and is migrated automatically on first launch after an update. Gateway URLs must use HTTPS, and incomplete or malformed saved credentials are cleared so the host can be paired again safely. The in-game menu and `spectrum_connection_status` explain whether spawning is stopped by the global safety gate, the administrator override, the streamer's preference, a revoked connection, or a gateway interruption. Temporary gateway interruptions retry automatically; revoked or rotated credentials stop retrying and require a fresh Twitch pairing. The older administrator **Pair / re-pair** action and manual config setup remain available as a fallback. Never commit or share the local config or host token.
- 
+The local config carries a schema version and is migrated automatically on first launch after an update. Gateway URLs must use HTTPS, and incomplete or malformed saved credentials are cleared so the host can be paired again safely. The status section explains whether spawning is stopped by the global safety gate, the administrator override, the streamer's preference, a revoked connection, or a gateway interruption. Temporary gateway interruptions retry automatically; revoked or rotated credentials stop retrying and require a fresh Twitch pairing. Never commit or share the local config or host token.
+
 ## In-game test commands
 
 After installing the GitHub Actions ZIP through SMAPI, enter these commands in the SMAPI in-game console:
@@ -112,4 +114,4 @@ Private Spectrum project. Redistribution and service access are not authorised.
 
 ## In-game menu access
 
-Spectrum controls are registered in the vanilla Options menu through Generic Mod Config Menu (GMCM). Open the in-game Options menu, choose the Generic Mod Config Menu entry for Spectrum Stardew Monster Spawner, then select **Open Spectrum Control Panel**. The floating HUD button has been removed. GMCM is a required dependency and is included in the mod manifest so SMAPI can identify a missing installation.
+Spectrum's streamer settings and actions are registered directly in the vanilla Options menu through Generic Mod Config Menu (GMCM). Open **Options → Generic Mod Config Menu → Spectrum Stardew Monster Spawner**. There is no separate Spectrum launch panel or floating HUD button. GMCM is a required dependency and is included in the mod manifest.
