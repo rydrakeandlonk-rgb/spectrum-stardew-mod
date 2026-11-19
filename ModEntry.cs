@@ -26,6 +26,9 @@ internal sealed class ModEntry : Mod
     private GenericModConfigMenu.IGenericModConfigMenuApi? configMenuApi;
     private Rectangle spectrumMenuButtonBounds;
     private readonly ConcurrentQueue<PairingResult> pairingResults = new();
+    private readonly Queue<SpawnWorkItem> pendingSpawnCommands = new();
+    private readonly HashSet<string> queuedSpawnCommandIds = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, PendingForwardedCommand> forwardedCommands = new(StringComparer.Ordinal);
     private CancellationTokenSource? pairingCancellation;
     private volatile bool pairingInProgress;
     private volatile string pairingStatus = "";
@@ -51,7 +54,7 @@ internal sealed class ModEntry : Mod
         helper.Events.GameLoop.SaveLoaded += this.OnSaveLoaded;
         helper.Events.GameLoop.ReturnedToTitle += this.OnReturnedToTitle;
         helper.Events.GameLoop.UpdateTicked += this.OnUpdateTicked;
-        helper.Events.Input.ButtonPressed += this.OnButtonPressed;
+        helper.Events.Input.ButtonPressed += this.OnButtonPressed;\n        helper.Events.Multiplayer.ModMessageReceived += this.OnModMessageReceived;
 
         helper.ConsoleCommands.Add(
             "spectrum_spawn_test",
@@ -106,12 +109,6 @@ internal sealed class ModEntry : Mod
 
     private void OnSaveLoaded(object? sender, SaveLoadedEventArgs e)
     {
-        if (!Context.IsMainPlayer)
-        {
-            this.Monitor.Log("Spectrum host connection skipped on a farmhand. Only the multiplayer host connects to the gateway.", LogLevel.Trace);
-            return;
-        }
-
         if (this.config is null ||
             string.IsNullOrWhiteSpace(this.config.BroadcasterUserId) ||
             string.IsNullOrWhiteSpace(this.config.HostToken))
@@ -136,6 +133,9 @@ internal sealed class ModEntry : Mod
         this.pairingStatus = "";
         this.pairingVerificationUri = "";
         this.retryCommandsAtUtc = DateTime.MinValue;
+        this.pendingSpawnCommands.Clear();
+        this.queuedSpawnCommandIds.Clear();
+        this.forwardedCommands.Clear();
     }
 
     private void OnGameLaunched(object? sender, GameLaunchedEventArgs e)
@@ -243,12 +243,6 @@ internal sealed class ModEntry : Mod
             this.pairingStatus.StartsWith("Twitch account authorised", StringComparison.OrdinalIgnoreCase))
         {
             this.OpenControlCenter();
-            return;
-        }
-
-        if (!Context.IsMainPlayer)
-        {
-            Game1.chatBox?.addInfoMessage("Only the multiplayer host can connect the Spectrum game session.");
             return;
         }
 
@@ -373,7 +367,7 @@ internal sealed class ModEntry : Mod
 
     private void OnUpdateTicked(object? sender, UpdateTickedEventArgs e)
     {
-        if (Context.IsWorldReady && Context.IsMainPlayer)
+        if (Context.IsWorldReady)
         {
             while (this.pairingResults.TryDequeue(out PairingResult? pairingResult) && pairingResult is not null)
             {
@@ -385,7 +379,7 @@ internal sealed class ModEntry : Mod
                 this.gameModsClient?.Dispose();
                 this.gameModsClient = new GameModsClient(this.config, this.Monitor);
                 this.pairingStatus = "Twitch account authorised · connecting…";
-                Game1.chatBox?.addInfoMessage("Spectrum Twitch connection authorised. Spawning remains paused until Control Center opens the safety gate.");
+                Game1.chatBox?.addInfoMessage("Your Spectrum Twitch connection is authorised. Spawning remains paused until Control Center opens its safety gate.");
             }
         }
 
@@ -396,117 +390,300 @@ internal sealed class ModEntry : Mod
             this.pairingVerificationUri = "";
         }
 
-        if (this.gameModsClient is null ||
-            this.monsterSpawner is null ||
-            !Context.IsWorldReady ||
-            !Context.IsMainPlayer)
-        {
+        if (!Context.IsWorldReady || this.monsterSpawner is null)
             return;
-        }
 
-        // One-shot world actions are independent of the spawn safety gate.
-        while (this.gameModsClient.TryDequeueAction(out GameAction? action) && action is not null)
+        // Every player consumes only the commands delivered to their own Twitch connection.
+        // Farmhands forward those typed commands to the host through SMAPI messaging.
+        if (this.gameModsClient is not null)
         {
-            if (action.Name != "stardew.clear_loaded_monsters")
+            if (Context.IsMainPlayer)
             {
-                _ = this.gameModsClient.AcknowledgeActionAsync(action.ActionId, false, 0, "Unsupported game action.");
-                continue;
-            }
-
-            int removed = this.monsterSpawner.ClearLoadedMonsters();
-            bool succeeded = removed >= 0;
-            if (this.gameModsClient.Settings.DebugMessages)
-                this.Monitor.Log($"[Spectrum] REMOTE ACTION | clear loaded monsters | {(succeeded ? $"removed {removed}" : "failed")}", succeeded ? LogLevel.Info : LogLevel.Warn);
-            _ = this.gameModsClient.AcknowledgeActionAsync(
-                action.ActionId,
-                succeeded,
-                Math.Max(0, removed),
-                succeeded ? null : "The host world was not ready."
-            );
-        }
-
-        if (!this.gameModsClient.SpawnsEnabled ||
-            DateTime.UtcNow < this.retryCommandsAtUtc)
-        {
-            return;
-        }
-
-        // Process one redemption at a time so Stop Spawns takes effect cleanly.
-        for (int i = 0; i < 1; i++)
-        {
-            if (!this.gameModsClient.SpawnsEnabled ||
-                !this.gameModsClient.TryDequeueCommand(out GameCommand? command) || command is null)
-                break;
-
-            if (this.processedCommandIds.Contains(command.CommandId))
-            {
-                this.Monitor.Log($"[Spectrum] DUPLICATE | {command.CommandId}", LogLevel.Trace);
-                if (!this.TryPersistProcessedCommands())
+                if (this.gameModsClient.SpawnsEnabled &&
+                    this.gameModsClient.TryDequeueCommand(out GameCommand? localCommand) &&
+                    localCommand is not null)
                 {
-                    this.gameModsClient.RequeueCommand(command);
-                    this.retryCommandsAtUtc = DateTime.UtcNow.AddSeconds(10);
-                    break;
+                    this.QueueSpawnCommand(localCommand, null, this.gameModsClient.Settings.ChatResponses);
                 }
-
-                _ = this.gameModsClient.AcknowledgeAsync(command.CommandId);
-                continue;
-            }
-
-            this.Monitor.Log(
-                $"[Spectrum] REDEEM | {DisplayValue(command.TwitchUserName)} | {DisplayValue(command.RewardTitle)} | {FormatRedeemedAt(command.RedeemedAt)} | {command.CommandId}",
-                LogLevel.Info
-            );
-
-            bool spawned = this.monsterSpawner.TryExecute(
-                command,
-                out int spawnedCount,
-                out int requestedCount,
-                out List<string> spawnedTypes,
-                out string locationName,
-                out string result
-            );
-
-            string monsterSummary = string.Join(", ", spawnedTypes
-                .GroupBy(type => type)
-                .Select(group =>
-                {
-                    string name = MonsterCatalog.GetDisplayName(group.Key);
-                    return group.Count() > 1 ? $"{name} x{group.Count()}" : name;
-                }));
-
-            this.Monitor.Log(
-                $"[Spectrum] SPAWN | {(string.IsNullOrWhiteSpace(monsterSummary) ? "none" : monsterSummary)} | {(string.IsNullOrWhiteSpace(locationName) ? "n/a" : locationName)} | {spawnedCount}/{requestedCount} | {result}",
-                spawned && result == "SUCCESS" ? LogLevel.Info : LogLevel.Warn
-            );
-
-            if (spawned && result == "SUCCESS" && spawnedCount == requestedCount)
-            {
-                string redeemer = DisplayValue(command.TwitchUserName);
-                string spawnDescription = spawnedCount == 1 ? $"a {monsterSummary}" : monsterSummary;
-                if (this.gameModsClient.Settings.ChatResponses)
-                    Game1.chatBox?.addInfoMessage($"{redeemer} spawned {spawnDescription} in the {locationName}!");
-
-                // Persist before acknowledgement so a reconnect or game restart
-                // cannot normally replay a redemption that already spawned.
-                if (!this.RememberProcessedCommand(command.CommandId))
-                {
-                    this.gameModsClient.RequeueCommand(command);
-                    this.retryCommandsAtUtc = DateTime.UtcNow.AddSeconds(10);
-                    break;
-                }
-
-                _ = this.gameModsClient.AcknowledgeAsync(command.CommandId);
             }
             else
             {
-                // Keep the durable server-side command pending and retry locally after a short delay.
-                this.gameModsClient.RequeueCommand(command);
+                this.ForwardFarmhandCommands();
+            }
+        }
+
+        // Only the host mutates the shared Stardew world.
+        if (!Context.IsMainPlayer)
+            return;
+
+        if (this.gameModsClient is not null)
+        {
+            // One-shot world actions are independent of the spawn safety gate.
+            while (this.gameModsClient.TryDequeueAction(out GameAction? action) && action is not null)
+            {
+                if (action.Name != "stardew.clear_loaded_monsters")
+                {
+                    _ = this.gameModsClient.AcknowledgeActionAsync(action.ActionId, false, 0, "Unsupported game action.");
+                    continue;
+                }
+
+                int removed = this.monsterSpawner.ClearLoadedMonsters();
+                bool succeeded = removed >= 0;
+                if (this.gameModsClient.Settings.DebugMessages)
+                    this.Monitor.Log($"[Spectrum] REMOTE ACTION | clear loaded monsters | {(succeeded ? $"removed {removed}" : "failed")}", succeeded ? LogLevel.Info : LogLevel.Warn);
+                _ = this.gameModsClient.AcknowledgeActionAsync(
+                    action.ActionId,
+                    succeeded,
+                    Math.Max(0, removed),
+                    succeeded ? null : "The host world was not ready."
+                );
+            }
+        }
+
+        if (this.pendingSpawnCommands.Count == 0 || DateTime.UtcNow < this.retryCommandsAtUtc)
+            return;
+
+        SpawnWorkItem work = this.pendingSpawnCommands.Dequeue();
+        GameCommand command = work.Command;
+
+        // A replay after a successful spawn is acknowledged without another world mutation.
+        if (this.processedCommandIds.Contains(command.CommandId))
+        {
+            this.queuedSpawnCommandIds.Remove(command.CommandId);
+            this.CompleteSpawnCommand(work, true, "Already processed.");
+            return;
+        }
+
+        Farmer? targetFarmer = work.ReplyToPlayerId is long playerId
+            ? Game1.getOnlineFarmers().FirstOrDefault(farmer => farmer.UniqueMultiplayerID == playerId)
+            : Game1.player;
+
+        if (targetFarmer is null)
+        {
+            this.queuedSpawnCommandIds.Remove(command.CommandId);
+            this.CompleteSpawnCommand(work, false, "The redeeming farmer is not currently connected to this farm.");
+            this.retryCommandsAtUtc = DateTime.UtcNow.AddSeconds(10);
+            return;
+        }
+
+        this.Monitor.Log(
+            $"[Spectrum] REDEEM | {DisplayValue(command.TwitchUserName)} | {DisplayValue(command.RewardTitle)} | {FormatRedeemedAt(command.RedeemedAt)} | {command.CommandId} | target {targetFarmer.Name}",
+            LogLevel.Info
+        );
+
+        bool spawned = this.monsterSpawner.TryExecute(
+            command,
+            targetFarmer,
+            out int spawnedCount,
+            out int requestedCount,
+            out List<string> spawnedTypes,
+            out string locationName,
+            out string result
+        );
+
+        string monsterSummary = string.Join(", ", spawnedTypes
+            .GroupBy(type => type)
+            .Select(group =>
+            {
+                string name = MonsterCatalog.GetDisplayName(group.Key);
+                return group.Count() > 1 ? $"{name} x{group.Count()}" : name;
+            }));
+
+        this.Monitor.Log(
+            $"[Spectrum] SPAWN | {(string.IsNullOrWhiteSpace(monsterSummary) ? "none" : monsterSummary)} | {(string.IsNullOrWhiteSpace(locationName) ? "n/a" : locationName)} | {spawnedCount}/{requestedCount} | target {targetFarmer.Name} | {result}",
+            spawned && result == "SUCCESS" ? LogLevel.Info : LogLevel.Warn
+        );
+
+        if (spawned && result == "SUCCESS" && spawnedCount == requestedCount)
+        {
+            if (!this.RememberProcessedCommand(command.CommandId))
+            {
+                this.pendingSpawnCommands.Enqueue(work);
                 this.retryCommandsAtUtc = DateTime.UtcNow.AddSeconds(10);
-                this.Monitor.Log($"[Spectrum] RETRY | {command.CommandId} | Spawn was not completed; retrying in 10 seconds.", LogLevel.Warn);
-                break;
+                this.Monitor.Log($"[Spectrum] RETRY | {command.CommandId} | Could not persist duplicate protection; acknowledgement held.", LogLevel.Error);
+                return;
+            }
+
+            this.queuedSpawnCommandIds.Remove(command.CommandId);
+            if (work.ChatResponses)
+            {
+                string redeemer = DisplayValue(command.TwitchUserName);
+                string spawnDescription = spawnedCount == 1 ? $"a {monsterSummary}" : monsterSummary;
+                Game1.chatBox?.addInfoMessage($"{redeemer} spawned {spawnDescription} near {targetFarmer.Name} in {locationName}!");
+            }
+
+            this.CompleteSpawnCommand(work, true, null);
+        }
+        else
+        {
+            // Keep the source command pending. The host retries placement without
+            // asking every farmhand to maintain a second gameplay queue.
+            this.pendingSpawnCommands.Enqueue(work);
+            this.retryCommandsAtUtc = DateTime.UtcNow.AddSeconds(10);
+            this.Monitor.Log($"[Spectrum] RETRY | {command.CommandId} | Spawn was not completed; retrying in 10 seconds.", LogLevel.Warn);
+        }
+    }
+
+    private void ForwardFarmhandCommands()
+    {
+        if (this.gameModsClient is null || !this.gameModsClient.SpawnsEnabled ||
+            Game1.MasterPlayer is null || DateTime.UtcNow < this.retryCommandsAtUtc)
+            return;
+
+        // Keep one in-flight relay per farmhand. The host replies only after the
+        // spawn is complete, so the gateway command isn't acknowledged early.
+        if (this.forwardedCommands.Count == 0 &&
+            this.gameModsClient.TryDequeueCommand(out GameCommand? command) &&
+            command is not null)
+        {
+            this.forwardedCommands[command.CommandId] = new PendingForwardedCommand(command, DateTime.MinValue);
+        }
+
+        foreach (string commandId in this.forwardedCommands.Keys.ToList())
+        {
+            PendingForwardedCommand pending = this.forwardedCommands[commandId];
+            if (pending.LastSentAtUtc != DateTime.MinValue &&
+                DateTime.UtcNow - pending.LastSentAtUtc < TimeSpan.FromSeconds(10))
+                continue;
+
+            ForwardedSpawnCommand message = ForwardedSpawnCommand.FromCommand(
+                pending.Command,
+                this.config?.BroadcasterUserId ?? "",
+                this.gameModsClient.Settings.ChatResponses
+            );
+            this.Helper.Multiplayer.SendMessage(
+                message,
+                "spectrum.spawn.forward",
+                modIDs: new[] { this.ModManifest.UniqueID },
+                playerIDs: new[] { Game1.MasterPlayer.UniqueMultiplayerID }
+            );
+            this.forwardedCommands[commandId] = pending with { LastSentAtUtc = DateTime.UtcNow };
+        }
+    }
+
+    private void QueueSpawnCommand(GameCommand command, long? replyToPlayerId, bool chatResponses)
+    {
+        if (string.IsNullOrWhiteSpace(command.CommandId) || this.processedCommandIds.Contains(command.CommandId))
+        {
+            if (!string.IsNullOrWhiteSpace(command.CommandId))
+                this.CompleteSpawnCommand(new SpawnWorkItem(command, replyToPlayerId, chatResponses), true, "Already processed.");
+            return;
+        }
+
+        if (this.queuedSpawnCommandIds.Add(command.CommandId))
+            this.pendingSpawnCommands.Enqueue(new SpawnWorkItem(command, replyToPlayerId, chatResponses));
+    }
+
+    private void CompleteSpawnCommand(SpawnWorkItem work, bool success, string? error)
+    {
+        if (work.ReplyToPlayerId is long playerId)
+        {
+            this.Helper.Multiplayer.SendMessage(
+                new SpawnCommandResult(work.Command.CommandId, success, error ?? ""),
+                "spectrum.spawn.result",
+                modIDs: new[] { this.ModManifest.UniqueID },
+                playerIDs: new[] { playerId }
+            );
+        }
+        else if (success)
+        {
+            _ = this.gameModsClient?.AcknowledgeAsync(work.Command.CommandId);
+        }
+        else
+        {
+            this.gameModsClient?.RequeueCommand(work.Command);
+        }
+    }
+
+    private void OnModMessageReceived(object? sender, ModMessageReceivedEventArgs e)
+    {
+        if (e.FromModID != this.ModManifest.UniqueID || !Context.IsWorldReady)
+            return;
+
+        if (e.Type == "spectrum.spawn.forward" && Context.IsMainPlayer)
+        {
+            ForwardedSpawnCommand message;
+            try { message = e.ReadAs<ForwardedSpawnCommand>(); }
+            catch (Exception ex)
+            {
+                this.Monitor.Log($"Ignored an invalid forwarded Spectrum command: {ex.Message}", LogLevel.Warn);
+                return;
+            }
+
+            IMultiplayerPeer? peer = this.Helper.Multiplayer.GetConnectedPlayer(e.FromPlayerID);
+            bool hasMod = peer?.GetMod(this.ModManifest.UniqueID) is not null;
+            bool farmerOnline = Game1.getOnlineFarmers().Any(farmer => farmer.UniqueMultiplayerID == e.FromPlayerID);
+            if (!hasMod || !farmerOnline ||
+                string.IsNullOrWhiteSpace(message.CommandId) ||
+                message.Game != "stardew-valley" ||
+                message.Name != "stardew.spawn_monster" ||
+                !SupportedForwardedBehaviors.Contains(message.BehaviorKey) ||
+                !System.Text.RegularExpressions.Regex.IsMatch(message.SourceBroadcasterUserId ?? "", @"^\d{1,30}$"))
+            {
+                this.Monitor.Log($"Rejected forwarded Spectrum command from multiplayer peer {e.FromPlayerID}.", LogLevel.Warn);
+                return;
+            }
+
+            GameCommand command = message.ToGameCommand();
+            if (this.processedCommandIds.Contains(command.CommandId))
+            {
+                this.CompleteSpawnCommand(new SpawnWorkItem(command, e.FromPlayerID, message.ChatResponses), true, "Already processed.");
+                return;
+            }
+
+            this.QueueSpawnCommand(command, e.FromPlayerID, message.ChatResponses);
+            return;
+        }
+
+        if (e.Type == "spectrum.spawn.result" && !Context.IsMainPlayer &&
+            e.FromPlayerID == Game1.MasterPlayer.UniqueMultiplayerID)
+        {
+            SpawnCommandResult result;
+            try { result = e.ReadAs<SpawnCommandResult>(); }
+            catch (Exception ex)
+            {
+                this.Monitor.Log($"Ignored an invalid host spawn result: {ex.Message}", LogLevel.Warn);
+                return;
+            }
+
+            if (!this.forwardedCommands.TryGetValue(result.CommandId, out PendingForwardedCommand? pending))
+                return;
+
+            if (result.Success)
+            {
+                if (!this.RememberProcessedCommand(result.CommandId))
+                {
+                    this.Monitor.Log($"Could not persist completed redemption {result.CommandId}; waiting for the host's duplicate-safe confirmation.", LogLevel.Error);
+                    this.forwardedCommands[result.CommandId] = pending with { LastSentAtUtc = DateTime.MinValue };
+                    return;
+                }
+
+                this.forwardedCommands.Remove(result.CommandId);
+                _ = this.gameModsClient?.AcknowledgeAsync(result.CommandId);
+                this.Monitor.Log($"[Spectrum] MULTIPLAYER SPAWN CONFIRMED | {result.CommandId}", LogLevel.Info);
+            }
+            else
+            {
+                this.forwardedCommands.Remove(result.CommandId);
+                this.gameModsClient?.RequeueCommand(pending.Command);
+                this.retryCommandsAtUtc = DateTime.UtcNow.AddSeconds(10);
+                this.Monitor.Log($"[Spectrum] MULTIPLAYER SPAWN RETRY | {result.CommandId} | {result.Error}", LogLevel.Warn);
             }
         }
     }
+
+    private static readonly HashSet<string> SupportedForwardedBehaviors = new(StringComparer.Ordinal)
+    {
+        "difficulty_random",
+        "chat_monster",
+        "random_count_random_monsters",
+        "fixed_count_random_monsters",
+        "random_count_specific_monster",
+        "fixed_count_specific_monster"
+    };
+
+    private sealed record SpawnWorkItem(GameCommand Command, long? ReplyToPlayerId, bool ChatResponses);
+    private sealed record PendingForwardedCommand(GameCommand Command, DateTime LastSentAtUtc);
 
     private static string DisplayValue(string value)
     {
