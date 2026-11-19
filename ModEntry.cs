@@ -219,7 +219,7 @@ internal sealed class ModEntry : Mod
             () => this.gameModsClient?.Settings ?? new HostSettings(),
             () => this.gameModsClient?.SpawnOverride ?? "follow",
             () => this.gameModsClient?.SafetyGateEnabled == true,
-            () => this.gameModsClient?.SpawnStateReason ?? "Connect this host to your Spectrum Twitch account.",
+            () => this.gameModsClient?.SpawnStateReason ?? "Connect this player to their Spectrum Twitch account.",
             settings =>
             {
                 if (this.gameModsClient is not null)
@@ -821,8 +821,8 @@ internal sealed class ModEntry : Mod
         {
             this.Monitor.Log(
                 string.IsNullOrWhiteSpace(this.config?.HostToken)
-                    ? "Spectrum Game Mods is not paired. Use the in-game Connect Twitch account button to pair this host."
-                    : "Spectrum Game Mods is not connected. Check the in-game connection status and retry pairing if needed.",
+                    ? "Spectrum Game Mods is not paired. Use the in-game Connect Twitch account button to pair this player's Twitch account."
+                    : "Spectrum Game Mods is not connected. Check this player's in-game connection status and retry pairing if needed.",
                 LogLevel.Warn
             );
             return;
