@@ -289,14 +289,18 @@ internal sealed class ModEntry : Mod
     {
         if (this.pendingGmcmSettings is HostSettings settings)
         {
-            if (this.gameModsClient?.IsConnected == true)
+            HostSettings current = this.gameModsClient?.Settings ?? new HostSettings();
+            if (settings != current)
             {
-                _ = this.gameModsClient.UpdateSettingsAsync(settings);
-                this.gmcmStatusMessage = "Streamer settings sent to Control Center.";
-            }
-            else
-            {
-                this.gmcmStatusMessage = "Settings were not sent because this player is not connected to the Spectrum gateway. Connect Twitch first.";
+                if (this.gameModsClient?.IsConnected == true)
+                {
+                    _ = this.gameModsClient.UpdateSettingsAsync(settings);
+                    this.gmcmStatusMessage = "Streamer settings sent to Control Center.";
+                }
+                else
+                {
+                    this.gmcmStatusMessage = "Settings were not sent because this player is not connected to the Spectrum gateway. Connect Twitch first.";
+                }
             }
 
             this.pendingGmcmSettings = null;
@@ -323,8 +327,15 @@ internal sealed class ModEntry : Mod
             case "arm_clear":
                 if (this.lastHandledGmcmHostAction != "arm_clear")
                 {
-                    this.gmcmClearArmed = true;
-                    this.gmcmStatusMessage = "Clear armed. Select Confirm clear and press Save to continue.";
+                    if (!Context.IsMainPlayer)
+                    {
+                        this.gmcmStatusMessage = "Only the multiplayer host can clear loaded monsters.";
+                    }
+                    else
+                    {
+                        this.gmcmClearArmed = true;
+                        this.gmcmStatusMessage = "Clear armed. Select Confirm clear and press Save to continue.";
+                    }
                     this.lastHandledGmcmHostAction = "arm_clear";
                 }
                 break;
