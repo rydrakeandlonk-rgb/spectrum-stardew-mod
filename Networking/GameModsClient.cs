@@ -93,6 +93,15 @@ internal sealed class GameModsClient : IDisposable
 
     public bool TryDequeueAction(out GameAction? action) => this.actions.TryDequeue(out action);
 
+    public Task SetSpawnsEnabledAsync(bool enabled)
+    {
+        return this.SendMessageAsync(new
+        {
+            type = "spawns.set",
+            enabled
+        });
+    }
+
     public async Task UpdateSettingsAsync(HostSettings next)
     {
         await this.SendMessageAsync(new
