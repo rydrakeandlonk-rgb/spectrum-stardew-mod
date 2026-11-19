@@ -37,12 +37,12 @@ The pinned reference-assembly snapshot is Stardew Valley 1.6.15 with SMAPI 4.4.0
 4. Launch Stardew Valley and confirm SMAPI loads **Spectrum Stardew Monster Spawner 1.0.0** without an error.
 5. Open **Options → Generic Mod Config Menu → Spectrum Stardew Monster Spawner**.
 6. An administrator must first enable the member in Control Center.
-7. Under **Connection actions**, select **Connect Twitch / open Control Center**. Pairing starts immediately and the browser opens; no GMCM Save click is required for this action.
+7. Under **Connection**, click **Link Twitch ↗**. Pairing starts immediately and the browser opens; no GMCM Save click is required.
 8. Approve the request while signed into the Twitch account that owns the enabled Spectrum channel.
 9. Return to Stardew and confirm `spectrum_connection_status` reports the correct broadcaster connection.
-10. Open the Control Center safety gate explicitly. Every fresh connection starts with spawning stopped.
+10. In **Monster controls**, click **Enable Monster Spawning**. Every fresh connection starts paused; the in-game toggle opens the gateway gate. Administrator Force disabled and access revocation still take priority.
 
-Settings such as spawn preference, difficulty, chat responses and debug messages still require GMCM's **Save** button. The host-only clear action remains a deliberate two-step action (Arm clear, Save; Confirm clear, Save).
+Difficulty, chat responses, debug messages and challenge-series settings still require GMCM's **Save** button. **Clear Enemies** is a single-click host-only action and immediately clears hostile monsters from loaded locations.
 
 If the browser does not open automatically, use the in-game status message and open Spectrum Control Center manually. Never copy, share or commit the local SMAPI config or host token.
 
@@ -80,12 +80,12 @@ The user has already confirmed live Twitch redemption spawning, multiplayer host
 - Only explicitly enabled Spectrum members can pair.
 - Network callbacks enqueue typed requests; game state changes only on the SMAPI game thread.
 - Never accept arbitrary C# types, commands or executable content from the service.
-- Keep the gateway's global safety gate closed on fresh connections and disconnects.
+- Keep the gateway spawn gate closed on fresh connections and disconnects; only the authenticated current host can open it from GMCM, and administrator Force disabled remains an independent hard stop.
 - Keep generated build outputs out of source control.
 
 ## Current release status
 
-The manifest is now **2.0.0** for the development build. The original 1.0.0 gameplay integration has prior live testing; the new challenge counter and combined overlay still require the 2.0.0 smoke tests above. Do not distribute this development build as a final release until those checks pass.
+The manifest is now **2.1.0** for the development build. The original 1.0.0 gameplay integration has prior live testing; the new challenge counter and combined overlay still require the 2.0.0 smoke tests above. Do not distribute this development build as a final release until those checks pass.
 
 
 ## 2.0.0 challenge and overlay smoke tests

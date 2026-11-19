@@ -1,5 +1,9 @@
 using System;
+using System.Collections.Generic;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
+using StardewValley.Menus;
 
 namespace GenericModConfigMenu
 {
@@ -14,6 +18,26 @@ namespace GenericModConfigMenu
         void AddSectionTitle(IManifest mod, Func<string> text, Func<string>? tooltip = null);
 
         void AddParagraph(IManifest mod, Func<string> text);
+
+        void AddComplexOptionWithGamepadSupport(
+            IManifest mod,
+            Func<string> name,
+            Action<SpriteBatch, Vector2> draw,
+            Func<string>? tooltip = null,
+            Action? beforeMenuOpened = null,
+            Action? beforeSave = null,
+            Action? afterSave = null,
+            Action? beforeReset = null,
+            Action? afterReset = null,
+            Action? beforeMenuClosed = null,
+            Func<IEnumerable<ClickableComponent>>? snapRegionsOverride = null,
+            Func<bool>? snapRegionsNeedRefreshing = null,
+            Func<bool?>? usingGamepadMovement = null,
+            Func<int>? height = null,
+            string? fieldId = null
+        );
+
+        bool TryGetCurrentMenu(out IManifest? mod, out string? page);
 
         void AddBoolOption(
             IManifest mod,

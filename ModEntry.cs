@@ -3,9 +3,12 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley;
+using StardewValley.Menus;
 using SpectrumStardewMod.Gameplay;
 using SpectrumStardewMod.Networking;
 
@@ -25,9 +28,9 @@ internal sealed class ModEntry : Mod
     private HostSettings? pendingGmcmSettings;
     private string? pendingChallengeName;
     private string? pendingChallengeDeathCount;
-    private string pendingGmcmHostAction = "none";
-    private string lastHandledGmcmHostAction = "none";
-    private bool gmcmClearArmed;
+    private Rectangle spawningButtonBounds = Rectangle.Empty;
+    private Rectangle linkTwitchButtonBounds = Rectangle.Empty;
+    private Rectangle clearEnemiesButtonBounds = Rectangle.Empty;
     private string gmcmStatusMessage = "";
     private readonly ConcurrentQueue<PairingResult> pairingResults = new();
     private readonly Queue<SpawnWorkItem> pendingSpawnCommands = new();
@@ -65,6 +68,7 @@ internal sealed class ModEntry : Mod
         helper.Events.GameLoop.SaveLoaded += this.OnSaveLoaded;
         helper.Events.GameLoop.ReturnedToTitle += this.OnReturnedToTitle;
         helper.Events.GameLoop.UpdateTicked += this.OnUpdateTicked;
+        helper.Events.Input.ButtonPressed += this.OnButtonPressed;
         helper.Events.Multiplayer.ModMessageReceived += this.OnModMessageReceived;
 
         helper.ConsoleCommands.Add(
@@ -192,15 +196,17 @@ internal sealed class ModEntry : Mod
         this.configMenuApi.AddSectionTitle(this.ModManifest, () => "Spectrum Stardew Monster Spawner");
         this.configMenuApi.AddParagraph(this.ModManifest, this.GetGmcmStatusText);
 
-        this.configMenuApi.AddSectionTitle(this.ModManifest, () => "Streamer settings");
-        this.configMenuApi.AddBoolOption(
+        this.configMenuApi.AddSectionTitle(this.ModManifest, () => "Monster controls");
+        this.configMenuApi.AddComplexOptionWithGamepadSupport(
             this.ModManifest,
-            () => this.GetGmcmSettings().SpawnEnabled,
-            value => this.SetGmcmSettings(settings => settings with { SpawnEnabled = value }),
-            () => "Streamer spawning preference",
-            () => "Shared with the Streamer preference in Control Center. Changes sync through the gateway; the Control Center safety gate and administrator override still take priority.",
-            "spectrum-spawning-enabled"
+            () => "Monster spawning",
+            this.DrawSpawningButton,
+            () => "Pause or resume Twitch monster redemptions. Administrator overrides and connection safety still apply.",
+            height: () => 72,
+            fieldId: "spectrum-spawning-toggle"
         );
+
+        this.configMenuApi.AddSectionTitle(this.ModManifest, () => "Streamer settings");
         this.configMenuApi.AddTextOption(
             this.ModManifest,
             () => this.GetGmcmSettings().Difficulty,
@@ -250,47 +256,35 @@ internal sealed class ModEntry : Mod
             fieldId: "spectrum-challenge-death-count"
         );
 
-        this.configMenuApi.AddSectionTitle(this.ModManifest, () => "Connection actions");
+        this.configMenuApi.AddSectionTitle(this.ModManifest, () => "Connection");
         this.configMenuApi.AddParagraph(
             this.ModManifest,
-            () => "Select Connect Twitch / open Control Center to start immediately. You do not need to press Save for this connection action."
+            () => "Link your Spectrum Twitch account or reopen the connection page. This button opens your browser."
         );
-        this.configMenuApi.AddTextOption(
+        this.configMenuApi.AddComplexOptionWithGamepadSupport(
             this.ModManifest,
-            () => "none",
-            value => { if (value == "connect") this.StartPairingOrOpenControlCenter(); },
-            () => "Twitch / Control Center",
-            () => "Connect this Stardew installation to its own Twitch account, continue an existing pairing, or open Control Center if already connected.",
-            new[] { "none", "connect" },
-            value => value == "connect" ? "Connect Twitch / open Control Center" : "No action",
-            "spectrum-connection-action"
+            () => "Twitch account",
+            this.DrawLinkTwitchButton,
+            () => "Open the Twitch linking or pairing page in your external browser.",
+            height: () => 72,
+            fieldId: "spectrum-link-twitch"
         );
 
         this.configMenuApi.AddSectionTitle(this.ModManifest, () => "Host actions");
         this.configMenuApi.AddParagraph(
             this.ModManifest,
-            () => this.gmcmClearArmed
-                ? "Clear is armed. Select Confirm clear and press Save to remove hostile monsters from all currently loaded locations."
-                : "Clearing is a two-step, host-only action. Select Arm clear and press Save, then select Confirm clear and press Save. Farmhand spawn requests are still executed by the host."
+            () => "Clear Enemies immediately removes hostile monsters from all currently loaded locations. Multiplayer host only."
         );
-        this.configMenuApi.AddTextOption(
+        this.configMenuApi.AddComplexOptionWithGamepadSupport(
             this.ModManifest,
-            () => "none",
-            value => this.pendingGmcmHostAction = value,
-            () => "Loaded monsters",
-            () => "Host only. Arm and confirm separately before clearing hostile monsters from all loaded locations.",
-            new[] { "none", "arm_clear", "confirm_clear", "cancel_clear" },
-            value => value switch
-            {
-                "arm_clear" => "Arm clear",
-                "confirm_clear" => "Confirm clear",
-                "cancel_clear" => "Cancel clear",
-                _ => "No action"
-            },
-            "spectrum-loaded-monster-action"
+            () => "Loaded enemies",
+            this.DrawClearEnemiesButton,
+            () => "Immediately clear hostile monsters from all loaded locations. Only the multiplayer host can use this action.",
+            height: () => 72,
+            fieldId: "spectrum-clear-enemies"
         );
 
-        this.Monitor.Log("Spectrum settings and actions registered directly in Generic Mod Config Menu.", LogLevel.Info);
+        this.Monitor.Log("Spectrum settings and controls registered directly in Generic Mod Config Menu.", LogLevel.Info);
     }
 
     private HostSettings GetGmcmSettings()
@@ -308,9 +302,6 @@ internal sealed class ModEntry : Mod
         this.pendingGmcmSettings = new HostSettings();
         this.pendingChallengeName = this.config?.ChallengeName ?? "Spectrum Challenge";
         this.pendingChallengeDeathCount = (this.config?.ChallengeDeathCount ?? 0).ToString(CultureInfo.InvariantCulture);
-        this.pendingGmcmHostAction = "none";
-        this.lastHandledGmcmHostAction = "none";
-        this.gmcmClearArmed = false;
         this.gmcmStatusMessage = "Settings reset to their defaults. Press Save to apply them.";
     }
 
@@ -364,83 +355,118 @@ internal sealed class ModEntry : Mod
             this.pendingChallengeDeathCount = null;
         }
 
-        switch (this.pendingGmcmHostAction)
-        {
-            case "none":
-                if (this.lastHandledGmcmHostAction == "arm_clear")
-                    this.gmcmClearArmed = false;
-                this.lastHandledGmcmHostAction = "none";
-                break;
-
-            case "arm_clear":
-                if (this.lastHandledGmcmHostAction != "arm_clear")
-                {
-                    if (!Context.IsMainPlayer)
-                    {
-                        this.gmcmStatusMessage = "Only the multiplayer host can clear loaded monsters.";
-                    }
-                    else
-                    {
-                        this.gmcmClearArmed = true;
-                        this.gmcmStatusMessage = "Clear armed. Select Confirm clear and press Save to continue.";
-                    }
-                    this.lastHandledGmcmHostAction = "arm_clear";
-                }
-                break;
-
-            case "confirm_clear":
-                if (this.lastHandledGmcmHostAction != "confirm_clear")
-                {
-                    this.lastHandledGmcmHostAction = "confirm_clear";
-                    if (!Context.IsMainPlayer)
-                    {
-                        this.gmcmStatusMessage = "Only the multiplayer host can clear loaded monsters.";
-                    }
-                    else if (!this.gmcmClearArmed)
-                    {
-                        this.gmcmStatusMessage = "Clear was not armed. Select Arm clear and save first.";
-                    }
-                    else if (!Context.IsWorldReady)
-                    {
-                        this.gmcmStatusMessage = "The world is not ready. No monsters were cleared.";
-                        this.gmcmClearArmed = false;
-                    }
-                    else
-                    {
-                        int removed = this.monsterSpawner?.ClearLoadedMonsters() ?? -1;
-                        this.gmcmClearArmed = false;
-                        this.gmcmStatusMessage = removed >= 0
-                            ? $"Spectrum cleared {removed} loaded monster(s)."
-                            : "Spectrum could not clear monsters because the world was not ready.";
-                        if (removed >= 0)
-                            Game1.chatBox?.addInfoMessage(this.gmcmStatusMessage);
-                    }
-                }
-                break;
-
-            case "cancel_clear":
-                this.gmcmClearArmed = false;
-                this.lastHandledGmcmHostAction = "cancel_clear";
-                this.gmcmStatusMessage = "Monster clearing cancelled.";
-                break;
-        }
     }
 
     private string GetGmcmStatusText()
     {
         bool connected = this.gameModsClient?.IsConnected == true;
-        string connection = connected ? "Gateway: Connected" : "Gateway: Not connected";
-        string role = Context.IsMainPlayer ? "World authority: Host" : "World authority: Farmhand (host executes spawns)";
-        string preference = "Shared streamer preference: " + (this.gameModsClient?.Settings.SpawnEnabled == true ? "ON" : "OFF");
-        string adminOverride = "Admin override: " + (this.gameModsClient?.SpawnOverride ?? "follow").Replace("_", " ");
-        string safetyGate = "Control Center safety gate: " + (this.gameModsClient?.SafetyGateEnabled == true ? "OPEN" : "CLOSED");
+        bool enabled = this.gameModsClient?.SpawnsEnabled == true;
+        string connection = "Connection: " + (connected ? "Connected" : "Disconnected");
+        string spawning = "Monster spawning: " + (enabled ? "Enabled" : "Paused");
+        string role = Context.IsMainPlayer ? "World authority: Host" : "World authority: Farmhand (host-only actions unavailable)";
+        string reason = this.gameModsClient?.SpawnStateReason
+            ?? "Link your Twitch account to connect this game to Spectrum.";
+        string adminOverride = "Administrator override: " + (this.gameModsClient?.SpawnOverride ?? "follow").Replace("_", " ");
         string state = !string.IsNullOrWhiteSpace(this.pairingStatus)
             ? this.pairingStatus
             : !string.IsNullOrWhiteSpace(this.gmcmStatusMessage)
                 ? this.gmcmStatusMessage
-                : this.gameModsClient?.SpawnStateReason ?? "Connect this player to their Spectrum Twitch account.";
+                : reason;
 
-        return string.Join(Environment.NewLine, new[] { connection, role, preference, adminOverride, safetyGate, state });
+        return string.Join(Environment.NewLine, new[] { connection, spawning, role, adminOverride, state });
+    }
+
+    private void DrawSpawningButton(SpriteBatch spriteBatch, Vector2 position)
+    {
+        GameModsClient? client = this.gameModsClient;
+        string label = client?.IsConnected == true
+            ? (client.SafetyGateEnabled ? "Pause Monster Spawning" : "Enable Monster Spawning")
+            : "Connect Twitch to control spawning";
+        this.spawningButtonBounds = this.DrawGmcmButton(spriteBatch, position, label, client?.IsConnected == true);
+    }
+
+    private void DrawLinkTwitchButton(SpriteBatch spriteBatch, Vector2 position)
+    {
+        this.linkTwitchButtonBounds = this.DrawGmcmButton(spriteBatch, position, "Link Twitch  ↗", true);
+    }
+
+    private void DrawClearEnemiesButton(SpriteBatch spriteBatch, Vector2 position)
+    {
+        bool canClear = Context.IsMainPlayer && Context.IsWorldReady;
+        this.clearEnemiesButtonBounds = this.DrawGmcmButton(spriteBatch, position, "Clear Enemies", canClear);
+    }
+
+    private Rectangle DrawGmcmButton(SpriteBatch spriteBatch, Vector2 position, string label, bool enabled)
+    {
+        Rectangle bounds = new((int)position.X + 12, (int)position.Y + 8, 380, 56);
+        IClickableMenu.drawTextureBox(spriteBatch, bounds.X, bounds.Y, bounds.Width, bounds.Height, enabled ? Color.White : Color.Gray);
+        Vector2 textSize = Game1.smallFont.MeasureString(label);
+        Vector2 textPosition = new(bounds.Center.X - textSize.X / 2f, bounds.Center.Y - textSize.Y / 2f);
+        spriteBatch.DrawString(Game1.smallFont, label, textPosition, enabled ? Game1.textColor : Color.DarkGray);
+        return bounds;
+    }
+
+    private void OnButtonPressed(object? sender, ButtonPressedEventArgs e)
+    {
+        if (e.Button != SButton.MouseLeft || this.configMenuApi is null ||
+            !this.configMenuApi.TryGetCurrentMenu(out IManifest? currentMod, out _) ||
+            currentMod?.UniqueID != this.ModManifest.UniqueID)
+            return;
+
+        Point cursor = e.Cursor.ScreenPixels.ToPoint();
+        if (this.spawningButtonBounds.Contains(cursor))
+        {
+            this.Helper.Input.Suppress(e.Button);
+            this.ToggleMonsterSpawning();
+        }
+        else if (this.linkTwitchButtonBounds.Contains(cursor))
+        {
+            this.Helper.Input.Suppress(e.Button);
+            this.StartPairingOrOpenControlCenter();
+        }
+        else if (this.clearEnemiesButtonBounds.Contains(cursor))
+        {
+            this.Helper.Input.Suppress(e.Button);
+            this.ClearEnemiesImmediately();
+        }
+    }
+
+    private void ToggleMonsterSpawning()
+    {
+        GameModsClient? client = this.gameModsClient;
+        if (client?.IsConnected != true)
+        {
+            this.gmcmStatusMessage = "Connect Twitch first. Spawning cannot be changed while disconnected.";
+            return;
+        }
+
+        bool enabled = !client.SafetyGateEnabled;
+        _ = client.SetSpawnsEnabledAsync(enabled);
+        this.gmcmStatusMessage = enabled
+            ? "Enabling monster spawning. Administrator overrides still apply."
+            : "Pausing monster spawning.";
+    }
+
+    private void ClearEnemiesImmediately()
+    {
+        if (!Context.IsMainPlayer)
+        {
+            this.gmcmStatusMessage = "Only the multiplayer host can clear loaded enemies.";
+            return;
+        }
+
+        if (!Context.IsWorldReady || this.monsterSpawner is null)
+        {
+            this.gmcmStatusMessage = "The world is not ready. No enemies were cleared.";
+            return;
+        }
+
+        int removed = this.monsterSpawner.ClearLoadedMonsters();
+        this.gmcmStatusMessage = removed >= 0
+            ? $"Spectrum cleared {removed} loaded enemy/enemies."
+            : "Spectrum could not clear enemies because the world was not ready.";
+        if (removed >= 0)
+            Game1.chatBox?.addInfoMessage(this.gmcmStatusMessage);
     }
 
     private void StartPairingOrOpenControlCenter()
