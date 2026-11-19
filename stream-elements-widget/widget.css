@@ -8,6 +8,12 @@
 
 * { box-sizing: border-box; }
 
+@font-face {
+  font-family: "Stardew Valley";
+  src: url("https://raw.githubusercontent.com/rydrakeandlonk-rgb/custom-stream-elements-assets/main/fonts/Stardew_Valley.ttf") format("truetype");
+  font-display: swap;
+}
+
 html, body {
   margin: 0;
   width: 100%;
@@ -29,25 +35,43 @@ html, body {
 
 .death-counter {
   position: absolute;
-  right: 18px;
-  bottom: 18px;
-  min-width: 235px;
-  max-width: min(340px, calc(100% - 36px));
-  padding: 13px 17px 12px;
-  border: 2px solid var(--spectrum-border);
-  border-radius: 11px;
-  background: linear-gradient(135deg, rgba(28, 30, 45, 0.97), var(--spectrum-panel));
-  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.38), inset 0 0 0 2px rgba(0, 0, 0, 0.2);
+  right: 38px;
+  bottom: 22px;
+  min-width: 250px;
+  max-width: min(340px, calc(100% - 70px));
+  padding: 13px 24px 13px 18px;
+  border-style: solid;
+  border-width: 5px;
+  border-image-slice: 20 fill;
+  border-image-width: 10px 20px;
+  border-image-outset: 0 20px;
+  border-image-repeat: round;
+  border-image-source: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAAAwCAYAAABHTnUeAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAFJSURBVHhe7d2xLkNRAMbxthODwWjRSMoksQkmDB7AzANYvYA38BQewAtglLAaJU0sRgOJ2KSnR1LtIHfSm+/3S5p+D3D/OT1Lb7czo79QR7G3Mzirs1h7f72sE1pnuLRyXmfRq98QSQBEEwDRZu4Au9sHh3UWpxtfN3UWR/3HuqB9Lq7X6xpzAhBNAEQTANEa3wGO9+uollc364L/9/byVNfYx/D3ndUdACYIgGgCIFrjAEa/+Sc/ME+aPp9OAKIJgGgCIJoAiCYAogmAaAIgmgCIJgCiCYBoAiCaAIgmAKIJgGgCIJoAiCYAogmAaAIgmgCIJgCiCYBoAiBa4wBG/704+YF50vT5dAIQTQBEEwDR/nw/QLfX26qzOBl8ek8wrXX1vOg9wfBDAEQTANFm7gDTpu8E0Gb3D3e3dRZOAKIJgGgCIFin8w1hGzcGhh+qLAAAAABJRU5ErkJggg==");
+  background: #F9BA66;
+  color: #5B2B2A;
+  font-family: "Stardew Valley", sans-serif;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(calc(100% + 70px));
+  pointer-events: none;
+  transition: transform 420ms cubic-bezier(0.2, 0.75, 0.25, 1), opacity 260ms ease, visibility 0s linear 420ms;
+}
+
+.death-counter.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(0);
+  transition-delay: 0s;
 }
 
 .counter-kicker {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--spectrum-muted);
+  color: #5B2B2A;
   font-size: 10px;
   font-weight: 900;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.12em;
 }
 
 .status-indicator {
@@ -55,14 +79,14 @@ html, body {
   height: 7px;
   flex: 0 0 7px;
   border-radius: 50%;
-  background: var(--spectrum-accent);
-  box-shadow: 0 0 9px var(--spectrum-accent);
+  background: #5B2B2A;
 }
 
 .challenge-name {
   margin-top: 7px;
-  color: var(--spectrum-text);
-  font-size: 15px;
+  color: #5B2B2A;
+  font-family: "Stardew Valley", sans-serif;
+  font-size: 17px;
   font-weight: 800;
   overflow-wrap: anywhere;
 }
@@ -75,19 +99,20 @@ html, body {
 }
 
 .death-count {
-  color: var(--spectrum-accent);
-  font-size: 46px;
+  color: #5B2B2A;
+  font-family: "Stardew Valley", sans-serif;
+  font-size: 42px;
   line-height: 1;
   font-weight: 1000;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
 }
 
 .death-label {
-  color: var(--spectrum-muted);
+  color: #5B2B2A;
+  font-family: "Stardew Valley", sans-serif;
   font-size: 12px;
   font-weight: 900;
-  letter-spacing: 0.13em;
+  letter-spacing: 0.08em;
 }
 
 .death-counter.death-bump .death-count {
@@ -95,11 +120,7 @@ html, body {
 }
 
 .counter-connection {
-  margin-top: 6px;
-  color: var(--spectrum-muted);
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
+  display: none;
 }
 
 .event-panel {
@@ -279,7 +300,7 @@ html, body {
 }
 
 @media (max-width: 520px) {
-  .death-counter { right: 10px; bottom: 10px; min-width: 190px; padding: 10px 13px; }
+  .death-counter { right: 30px; bottom: 14px; min-width: 190px; padding: 10px 20px 10px 14px; }
   .death-count { font-size: 38px; }
   .event-panel { top: 10px; padding: 12px 14px; }
   .event-body { gap: 13px; }
@@ -294,4 +315,6 @@ html, body {
     animation: none;
   }
   .event-panel { transition: none; }
+  .death-counter { transition: none; }
+  .death-counter.is-visible { transform: translateX(0); }
 }
