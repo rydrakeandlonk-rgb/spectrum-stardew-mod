@@ -46,6 +46,7 @@ The current reference-assembly snapshot is based on Stardew Valley 1.6.15 and SM
 16. Put the host and farmhand in different locations and confirm the monster appears near the redeeming farmer in that farmer's current location.
 17. Confirm the farmhand gateway command is acknowledged only after the host reports a successful spawn. Force a retry/reconnect and confirm no duplicate monster appears.
 18. Confirm the farmhand can receive commands when the host has not paired their own Twitch account, and confirm a closed source-streamer safety gate prevents that streamer's commands from spawning.
+19. Trigger a Control Center clear-loaded-monsters action for the farmhand's broadcaster and confirm the farmhand forwards it to the host, the host clears loaded locations, and the gateway action is acknowledged only after completion.
 
 The network client validates typed messages and queues them for the SMAPI update thread. It does not execute server-supplied command text or monster class names. The local catalogue filters explicit vanilla variant definitions through the mod installation's progression snapshot. See docs/MONSTER_POOLS.md for unlock rules, constructor mappings and dangerous-variant setup. Every entry still needs in-game validation.
 
