@@ -72,13 +72,15 @@ public sealed class ForwardedClearAction
 {
     public string ActionId { get; set; } = "";
     public string Name { get; set; } = "";
+    public string Difficulty { get; set; } = "normal";
 
     public ForwardedClearAction() { }
 
-    public ForwardedClearAction(string actionId, string name)
+    public ForwardedClearAction(string actionId, string name, string difficulty = "normal")
     {
         this.ActionId = actionId;
         this.Name = name;
+        this.Difficulty = difficulty;
     }
 }
 
