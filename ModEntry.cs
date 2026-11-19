@@ -211,8 +211,20 @@ internal sealed class ModEntry : Mod
             return;
         }
 
-        Vector2 cursor = e.Cursor.GetScaledScreenPixels();
-        if (!this.spectrumMenuButtonBounds.Contains((int)cursor.X, (int)cursor.Y))
+        // GMCM draws custom options in its UI coordinate space, while SMAPI
+        // exposes cursor positions in more than one coordinate system. Check
+        // both the scaled cursor position and Stardew's menu mouse coordinates
+        // so the hit test remains correct with UI scaling and window sizes.
+        Vector2 scaledCursor = e.Cursor.GetScaledScreenPixels();
+        Vector2 screenCursor = e.Cursor.ScreenPixels;
+        Point gameMouse = new(Game1.getMouseX(), Game1.getMouseY());
+
+        bool clickedButton =
+            this.spectrumMenuButtonBounds.Contains((int)scaledCursor.X, (int)scaledCursor.Y) ||
+            this.spectrumMenuButtonBounds.Contains((int)screenCursor.X, (int)screenCursor.Y) ||
+            this.spectrumMenuButtonBounds.Contains(gameMouse);
+
+        if (!clickedButton)
             return;
 
         this.Helper.Input.Suppress(e.Button);
