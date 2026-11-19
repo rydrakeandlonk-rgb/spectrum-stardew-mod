@@ -15,7 +15,7 @@ internal sealed class SpectrumMenu : IClickableMenu
     private readonly Func<HostSettings> getSettings;
     private readonly Func<string> getOverride;
     private readonly Func<bool> getSafetyGate;
-    private readonly Func<bool> getEffectiveSpawnState;
+    private readonly Func<string> getSpawnStateReason;
     private readonly Action<HostSettings> updateSettings;
     private readonly Action clearLoadedMonsters;
     private readonly Func<string> getPairingStatus;
@@ -38,7 +38,7 @@ internal sealed class SpectrumMenu : IClickableMenu
         Func<HostSettings> getSettings,
         Func<string> getOverride,
         Func<bool> getSafetyGate,
-        Func<bool> getEffectiveSpawnState,
+        Func<string> getSpawnStateReason,
         Action<HostSettings> updateSettings,
         Action clearLoadedMonsters,
         Func<string> getPairingStatus,
@@ -50,7 +50,7 @@ internal sealed class SpectrumMenu : IClickableMenu
         this.getSettings = getSettings;
         this.getOverride = getOverride;
         this.getSafetyGate = getSafetyGate;
-        this.getEffectiveSpawnState = getEffectiveSpawnState;
+        this.getSpawnStateReason = getSpawnStateReason;
         this.updateSettings = updateSettings;
         this.clearLoadedMonsters = clearLoadedMonsters;
         this.getPairingStatus = getPairingStatus;
@@ -248,15 +248,9 @@ internal sealed class SpectrumMenu : IClickableMenu
         {
             string status = pairingStatus.Length > 0
                 ? pairingStatus
-                : !connected
-                    ? "Connect this host to your Spectrum Twitch account to enable shared settings."
-                    : !host
-                        ? "Only the multiplayer host can change settings or clear the shared world."
-                        : this.getEffectiveSpawnState()
-                            ? "Spawning is currently permitted."
-                            : settings.SpawnEnabled && !this.getSafetyGate()
-                                ? "Your preference is enabled, but the Control Center safety gate is closed."
-                                : "Spawning is currently stopped.";
+                : !host
+                    ? "Only the multiplayer host can change settings or clear the shared world."
+                    : this.getSpawnStateReason();
             b.DrawString(Game1.smallFont, status,
                 new Vector2(this.xPositionOnScreen + 52, this.yPositionOnScreen + 485), Game1.textColor);
         }

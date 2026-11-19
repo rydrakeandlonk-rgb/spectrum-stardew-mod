@@ -47,7 +47,7 @@ The farm host is authoritative. Only the host's mod connection processes externa
 - UI/SpectrumMenu.cs — in-game streamer settings, connection status, host-only controls and clear confirmation.
 - Networking/GameModsClient.cs — authenticated WebSocket connection, versioned settings sync, typed command/action validation, reconnect and acknowledgements.
 - Networking/HostSettings.cs and Networking/GameAction.cs — shared settings and typed remote action contracts.
-- ModConfig.cs — local broadcaster ID and revocable host token.
+- ModConfig.cs — versioned local configuration, validated gateway URL, broadcaster ID and revocable host token.
 - manifest.json and SpectrumStardewMod.csproj — SMAPI project metadata.
 - docs/ — architecture, development and roadmap.
 
@@ -71,7 +71,7 @@ An administrator first enables the Spectrum member's Stardew access in Control C
 
 Pairing codes expire after ten minutes. The private device code is separate from the visible approval code and is never shown in the dashboard. The host credential is not displayed to the streamer or sent to browser JavaScript. Revoke access in Control Center before moving the connection to another Twitch account.
 
-The older administrator **Pair / re-pair** action and manual config setup remain available as a fallback. Never commit or share the local config or host token.
+The local config carries a schema version and is migrated automatically on first launch after an update. Gateway URLs must use HTTPS, and incomplete or malformed saved credentials are cleared so the host can be paired again safely. The in-game menu and `spectrum_connection_status` explain whether spawning is stopped by the global safety gate, the administrator override, the streamer's preference, a revoked connection, or a gateway interruption. Temporary gateway interruptions retry automatically; revoked or rotated credentials stop retrying and require a fresh Twitch pairing. The older administrator **Pair / re-pair** action and manual config setup remain available as a fallback. Never commit or share the local config or host token.
  
 ## In-game test commands
 

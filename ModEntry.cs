@@ -37,6 +37,9 @@ internal sealed class ModEntry : Mod
         this.LoadProcessedCommands(helper);
 
         this.config = helper.ReadConfig<ModConfig>();
+        if (this.config.Normalize(this.Monitor))
+            helper.WriteConfig(this.config);
+
         if (string.IsNullOrWhiteSpace(this.config.BroadcasterUserId) ||
             string.IsNullOrWhiteSpace(this.config.HostToken))
         {
@@ -176,7 +179,7 @@ internal sealed class ModEntry : Mod
             () => this.gameModsClient?.Settings ?? new HostSettings(),
             () => this.gameModsClient?.SpawnOverride ?? "follow",
             () => this.gameModsClient?.SafetyGateEnabled == true,
-            () => this.gameModsClient?.SpawnsEnabled == true,
+            () => this.gameModsClient?.SpawnStateReason ?? "Connect this host to your Spectrum Twitch account.",
             settings =>
             {
                 if (this.gameModsClient is not null)
@@ -338,6 +341,7 @@ internal sealed class ModEntry : Mod
                 this.config ??= new ModConfig();
                 this.config.BroadcasterUserId = pairingResult.BroadcasterUserId;
                 this.config.HostToken = pairingResult.HostToken;
+                this.config.ConfigVersion = ModConfig.CurrentConfigVersion;
                 this.Helper.WriteConfig(this.config);
                 this.gameModsClient?.Dispose();
                 this.gameModsClient = new GameModsClient(this.config, this.Monitor);
@@ -592,21 +596,18 @@ internal sealed class ModEntry : Mod
     {
         if (this.gameModsClient is null)
         {
-            this.Monitor.Log("Spectrum Game Mods is not paired. Add BroadcasterUserId and HostToken to the local mod config.", LogLevel.Warn);
-            return;
-        }
-
-        if (!this.gameModsClient.IsConnected)
-        {
-            this.Monitor.Log("Spectrum Game Mods is not connected. Check GatewayUrl, BroadcasterUserId, HostToken and the SMAPI log.", LogLevel.Warn);
+            this.Monitor.Log(
+                string.IsNullOrWhiteSpace(this.config?.HostToken)
+                    ? "Spectrum Game Mods is not paired. Use the in-game Connect Twitch account button to pair this host."
+                    : "Spectrum Game Mods is not connected. Check the in-game connection status and retry pairing if needed.",
+                LogLevel.Warn
+            );
             return;
         }
 
         this.Monitor.Log(
-            this.gameModsClient.SpawnsEnabled
-                ? "Spectrum Game Mods is connected; monster spawns are ENABLED by Control Center."
-                : "Spectrum Game Mods is connected; monster spawns are PAUSED by Control Center.",
-            LogLevel.Info
+            this.gameModsClient.SpawnStateReason,
+            this.gameModsClient.IsConnected ? LogLevel.Info : LogLevel.Warn
         );
     }
 

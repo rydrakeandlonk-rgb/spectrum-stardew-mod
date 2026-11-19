@@ -38,6 +38,8 @@ internal sealed class GameModsClient : IDisposable
     private readonly Task connectionTask;
     private volatile bool connected;
     private volatile bool spawnsEnabled;
+    private volatile bool accessRevoked;
+    private volatile string connectionStatusMessage = "Waiting to connect to Spectrum Game Mods.";
 
     public GameModsClient(ModConfig config, IMonitor monitor)
     {
@@ -48,6 +50,28 @@ internal sealed class GameModsClient : IDisposable
 
     public bool IsConnected => this.connected;
     public bool SpawnsEnabled => this.spawnsEnabled;
+    public string ConnectionStatusMessage => this.connectionStatusMessage;
+    public string SpawnStateReason
+    {
+        get
+        {
+            if (!this.connected)
+                return this.connectionStatusMessage;
+
+            if (!this.safetyGateEnabled)
+                return "Spawning paused: the Control Center safety gate is closed.";
+
+            if (this.spawnOverride == "force_off")
+                return "Spawning paused: the administrator override is forcing it off.";
+
+            if (this.spawnOverride == "follow" && !this.settings.SpawnEnabled)
+                return "Spawning paused: your streamer preference is set to stopped.";
+
+            return this.spawnsEnabled
+                ? "Spawning is enabled."
+                : "Spawning is paused by Control Center.";
+        }
+    }
     public HostSettings Settings => this.settings;
     public int SettingsRevision => this.settingsRevision;
     public string SpawnOverride => this.spawnOverride;
@@ -168,21 +192,25 @@ internal sealed class GameModsClient : IDisposable
         if (string.IsNullOrWhiteSpace(this.config.BroadcasterUserId) ||
             string.IsNullOrWhiteSpace(this.config.HostToken))
         {
-            this.monitor.Log("Spectrum Game Mods is not connected. Add BroadcasterUserId and HostToken to the local mod config to pair this host.", LogLevel.Info);
+            this.connectionStatusMessage = "This host is not paired. Choose Connect Twitch account to start pairing.";
+            this.monitor.Log("Spectrum Game Mods is not paired. Use the in-game Connect Twitch account button.", LogLevel.Info);
             return;
         }
 
-        if (!System.Text.RegularExpressions.Regex.IsMatch(this.config.BroadcasterUserId, @"^\d{1,30}$"))
+        if (!System.Text.RegularExpressions.Regex.IsMatch(this.config.BroadcasterUserId, @"^\d{1,30}$") ||
+            !System.Text.RegularExpressions.Regex.IsMatch(this.config.HostToken, @"^[a-fA-F0-9]{64}$"))
         {
-            this.monitor.Log("Spectrum Game Mods connection disabled: BroadcasterUserId must be a numeric Twitch user ID.", LogLevel.Error);
+            this.connectionStatusMessage = "Saved host credentials are invalid. Connect Twitch account to pair this host again.";
+            this.monitor.Log("Spectrum Game Mods connection disabled because the saved host credentials are invalid.", LogLevel.Error);
             return;
         }
 
-        while (!token.IsCancellationRequested)
+        while (!token.IsCancellationRequested && !this.accessRevoked)
         {
             ClientWebSocket? current = null;
             try
             {
+                this.connectionStatusMessage = "Connecting to the Spectrum gateway…";
                 Uri gatewayUri = this.BuildGatewayUri();
                 current = new ClientWebSocket();
                 current.Options.SetRequestHeader("Authorization", "Bearer " + this.config.HostToken);
@@ -192,9 +220,24 @@ internal sealed class GameModsClient : IDisposable
                 this.socket = current;
                 this.connected = true;
                 this.spawnsEnabled = false;
+                this.connectionStatusMessage = "Connected to Spectrum Game Mods.";
                 this.monitor.Log("Connected to Spectrum Game Mods. Spawning remains paused until enabled in Control Center.", LogLevel.Info);
 
                 await this.ReceiveLoopAsync(current, token);
+                if (current.CloseStatusDescription?.Contains("Host access revoked", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    this.accessRevoked = true;
+                    this.connectionStatusMessage = "Host access was revoked in Control Center. Connect Twitch account to authorise this host again.";
+                }
+                else if (current.CloseStatusDescription?.Contains("Host token rotated", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    this.accessRevoked = true;
+                    this.connectionStatusMessage = "Host credentials changed. Connect Twitch account to pair this game host again.";
+                }
+                else if (!token.IsCancellationRequested)
+                {
+                    this.connectionStatusMessage = "The gateway connection closed. Reconnecting automatically…";
+                }
             }
             catch (OperationCanceledException)
             {
@@ -202,6 +245,7 @@ internal sealed class GameModsClient : IDisposable
             }
             catch (Exception ex)
             {
+                this.connectionStatusMessage = "The Spectrum gateway is unavailable or rejected the connection. Retrying automatically; use Connect Twitch account if this continues.";
                 this.monitor.Log($"Spectrum Game Mods connection interrupted: {ex.Message}", LogLevel.Warn);
             }
             finally
@@ -215,8 +259,9 @@ internal sealed class GameModsClient : IDisposable
                 current?.Dispose();
             }
 
-            if (!token.IsCancellationRequested)
+            if (!token.IsCancellationRequested && !this.accessRevoked)
             {
+                this.connectionStatusMessage = "Gateway unavailable. Retrying automatically in a few seconds…";
                 try { await Task.Delay(TimeSpan.FromSeconds(8), token); }
                 catch (OperationCanceledException) { break; }
             }
@@ -252,7 +297,11 @@ internal sealed class GameModsClient : IDisposable
             );
 
             if (result.MessageType == WebSocketMessageType.Close)
+            {
+                if (string.IsNullOrWhiteSpace(current.CloseStatusDescription))
+                    this.connectionStatusMessage = "The gateway closed the connection. Reconnecting automatically…";
                 break;
+            }
 
             if (result.MessageType != WebSocketMessageType.Text)
                 continue;
