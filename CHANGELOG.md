@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.1.0 — development build
+
+### Added
+- One-click GMCM controls for pausing and resuming monster redemptions through the authenticated Game Mods WebSocket.
+- One-click **Link Twitch ↗** browser action and immediate host-only **Clear Enemies** action.
+- Live connection and effective spawning status in the in-game menu.
+- Gateway validation for host-session spawn toggles, preserving queued redemptions while paused and respecting administrator Force disabled.
+
+### Improved
+- Removed the connection and clear-enemies action dropdowns and the two-step clear confirmation.
+- Kept ordinary difficulty, chat-response, debug and challenge settings on GMCM Save.
+- Day-to-day pause/resume no longer requires opening Control Center.
+
+### Validation still required
+- Build the mod against GMCM 1.16.0 and test the three in-game buttons with mouse input.
+- Verify the browser opens from Link Twitch ↗ and the existing pairing approval flow completes.
+- Verify pause/resume round-trips through the gateway, queued redemptions remain pending while paused, and administrator Force disabled still blocks delivery.
+- Verify Clear Enemies works once for the host and remains unavailable to farmhands.
+- Run the existing 2.0.0 gameplay and overlay regression checks.
+
 ## 2.0.0 — development build
 
 ### Added
