@@ -37,6 +37,8 @@ internal sealed class ModEntry : Mod
     private readonly HashSet<string> queuedClearActionIds = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> completedClearActionCounts = new(StringComparer.Ordinal);
     private readonly Dictionary<string, PendingForwardedClearAction> forwardedClearActions = new(StringComparer.Ordinal);
+    private readonly List<PendingChatMessage> pendingChatMessages = new();
+    private MonsterProgressionSnapshot? lastObservedProgression;
     private CancellationTokenSource? pairingCancellation;
     private volatile bool pairingInProgress;
     private volatile string pairingStatus = "";
@@ -117,6 +119,10 @@ internal sealed class ModEntry : Mod
 
     private void OnSaveLoaded(object? sender, SaveLoadedEventArgs e)
     {
+        this.lastObservedProgression = Context.IsMainPlayer && Game1.player is not null
+            ? MonsterProgressionSnapshot.Read(Game1.player, useTestOverride: false)
+            : null;
+
         if (this.config is null ||
             string.IsNullOrWhiteSpace(this.config.BroadcasterUserId) ||
             string.IsNullOrWhiteSpace(this.config.HostToken))
@@ -148,6 +154,8 @@ internal sealed class ModEntry : Mod
         this.queuedClearActionIds.Clear();
         this.completedClearActionCounts.Clear();
         this.forwardedClearActions.Clear();
+        this.pendingChatMessages.Clear();
+        this.lastObservedProgression = null;
     }
 
     private void OnGameLaunched(object? sender, GameLaunchedEventArgs e)
@@ -517,6 +525,11 @@ internal sealed class ModEntry : Mod
     {
         if (Context.IsWorldReady)
         {
+            if (Context.IsMainPlayer && Game1.player is not null && e.IsMultipleOf(60))
+                this.CheckProgressionUnlocks();
+
+            this.ProcessPendingChatMessages();
+
             while (this.pairingResults.TryDequeue(out PairingResult? pairingResult) && pairingResult is not null)
             {
                 this.config ??= new ModConfig();
@@ -648,6 +661,15 @@ internal sealed class ModEntry : Mod
             LogLevel.Info
         );
 
+        if (!work.HordeRollCompleted)
+        {
+            work = work with
+            {
+                HordeRollCompleted = true,
+                IsHorde = this.monsterSpawner.ShouldTriggerHorde(command)
+            };
+        }
+
         bool spawned = this.monsterSpawner.TryExecute(
             command,
             targetFarmer,
@@ -655,7 +677,8 @@ internal sealed class ModEntry : Mod
             out int requestedCount,
             out List<string> spawnedTypes,
             out string locationName,
-            out string result
+            out string result,
+            forceHorde: work.IsHorde
         );
 
         string monsterSummary = string.Join(", ", spawnedTypes
@@ -682,9 +705,17 @@ internal sealed class ModEntry : Mod
             }
 
             this.queuedSpawnCommandIds.Remove(command.CommandId);
-            if (work.ChatResponses)
+            string redeemer = DisplayValue(command.TwitchUserName);
+            if (work.IsHorde)
             {
-                string redeemer = DisplayValue(command.TwitchUserName);
+                Game1.chatBox?.addInfoMessage("Oh no... something is happening.");
+                this.pendingChatMessages.Add(new PendingChatMessage(
+                    DateTime.UtcNow.AddSeconds(3),
+                    $"{redeemer} HAS SPAWNED A HORDE!"
+                ));
+            }
+            else if (work.ChatResponses)
+            {
                 string spawnDescription = spawnedCount == 1 ? $"a {monsterSummary}" : monsterSummary;
                 Game1.chatBox?.addInfoMessage($"{redeemer} spawned {spawnDescription} near {targetFarmer.Name} in {locationName}!");
             }
@@ -1002,7 +1033,14 @@ internal sealed class ModEntry : Mod
         "fixed_count_specific_monster"
     };
 
-    private sealed record SpawnWorkItem(GameCommand Command, long? ReplyToPlayerId, bool ChatResponses);
+    private sealed record SpawnWorkItem(
+        GameCommand Command,
+        long? ReplyToPlayerId,
+        bool ChatResponses,
+        bool HordeRollCompleted = false,
+        bool IsHorde = false
+    );
+    private sealed record PendingChatMessage(DateTime ShowAtUtc, string Message);
     private sealed record PendingForwardedCommand(GameCommand Command, DateTime LastSentAtUtc);
     private sealed record PendingClearWorkItem(string ActionId, string Name, string Difficulty, long SenderPlayerId);
     private sealed record PendingForwardedClearAction(GameAction Action, DateTime LastSentAtUtc);
@@ -1128,6 +1166,57 @@ internal sealed class ModEntry : Mod
             $"Monster constructor/setup test complete: {passed} passed, {failed} failed, {passed + failed} tested. No monsters were added to the world.",
             failed == 0 ? LogLevel.Info : LogLevel.Error
         );
+    }
+
+    private void CheckProgressionUnlocks()
+    {
+        if (Game1.player is null)
+            return;
+
+        MonsterProgressionSnapshot current = MonsterProgressionSnapshot.Read(Game1.player, useTestOverride: false);
+        MonsterProgressionSnapshot? previous = this.lastObservedProgression;
+        this.lastObservedProgression = current;
+
+        // The first snapshot for a save is a baseline, so loading an already-progressed
+        // farm never replays old unlock announcements.
+        if (previous is null)
+            return;
+
+        if (!previous.DangerousMinesUnlocked && current.DangerousMinesUnlocked)
+            this.NotifyPoolUnlocked("The Dangerous Mines Have Awakened");
+        if (!previous.QuarryMineUnlocked && current.QuarryMineUnlocked)
+            this.NotifyPoolUnlocked("The Quarry Mine Has Awakened");
+        if (!previous.SkullCavernUnlocked && current.SkullCavernUnlocked)
+            this.NotifyPoolUnlocked("The Skull Caverns Have Awakened");
+        if (!previous.SkullCavern100Reached && current.SkullCavern100Reached)
+            this.NotifyPoolUnlocked("The Skull Caverns Have Grown More Dangerous");
+        if (!previous.DangerousSkullCavernUnlocked && current.DangerousSkullCavernUnlocked)
+            this.NotifyPoolUnlocked("A Greater Danger Stirs in the Skull Caverns");
+        if (!previous.BugLairUnlocked && current.BugLairUnlocked)
+            this.NotifyPoolUnlocked("The Mutant Bug Lair Has Awakened");
+        if (!previous.VolcanoDungeonUnlocked && current.VolcanoDungeonUnlocked)
+            this.NotifyPoolUnlocked("The Volcano Dungeon Has Awakened");
+    }
+
+    private static void NotifyPoolUnlocked(string message)
+    {
+        Game1.addHUDMessage(new HUDMessage(message, HUDMessage.achievement_type));
+    }
+
+    private void ProcessPendingChatMessages()
+    {
+        for (int i = 0; i < this.pendingChatMessages.Count;)
+        {
+            PendingChatMessage pending = this.pendingChatMessages[i];
+            if (DateTime.UtcNow < pending.ShowAtUtc || Game1.chatBox is null)
+            {
+                i++;
+                continue;
+            }
+
+            Game1.chatBox.addInfoMessage(pending.Message);
+            this.pendingChatMessages.RemoveAt(i);
+        }
     }
 
     private void OnConnectionStatusCommand(string command, string[] args)

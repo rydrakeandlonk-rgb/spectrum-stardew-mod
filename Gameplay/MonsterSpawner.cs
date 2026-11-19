@@ -20,6 +20,20 @@ internal sealed class MonsterSpawner
 
     public MonsterSpawner(IMonitor monitor) => this.monitor = monitor;
 
+    public bool ShouldTriggerHorde(GameCommand command)
+    {
+        bool isSingleMonsterRequest = command.BehaviorKey switch
+        {
+            "difficulty_random" or "chat_monster" => true,
+            "fixed_count_random_monsters" or "fixed_count_specific_monster" => command.Count == 1,
+            "random_count_random_monsters" or "random_count_specific_monster" =>
+                command.MinCount == 1 && command.MaxCount == 1,
+            _ => false
+        };
+
+        return isSingleMonsterRequest && Random.Shared.Next(1000) == 0;
+    }
+
     public bool TrySpawnRandomMonster(string difficulty = "normal", Farmer? targetFarmer = null)
     {
         targetFarmer ??= Game1.player;
@@ -93,7 +107,8 @@ internal sealed class MonsterSpawner
         out int requestedCount,
         out List<string> spawnedTypes,
         out string locationName,
-        out string result)
+        out string result,
+        bool forceHorde = false)
     {
         spawnedCount = 0;
         requestedCount = 0;
@@ -149,6 +164,9 @@ internal sealed class MonsterSpawner
             default:
                 return false;
         }
+
+        if (forceHorde && count == 1)
+            count = 10;
 
         if (!Context.IsWorldReady || !Context.IsMainPlayer)
         {

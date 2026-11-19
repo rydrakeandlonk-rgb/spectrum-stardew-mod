@@ -32,6 +32,10 @@ The mod uses an explicit, variant-aware allowlist. Each entry identifies the van
 
 The spawner creates the selected vanilla monster on a valid nearby tile and adds it to the current location, following Stardew's own monster construction patterns. Dangerous entries receive an additional-difficulty stat step and use the matching `_dangerous` texture when the game provides one. The gateway never supplies a class name or constructor argument.
 
+Newly unlocked monster pools use Stardew's native achievement-style HUD notification. The host checks the local progression snapshot once per second while a save is active; the initial snapshot is a baseline, so already-unlocked pools are not announced again when loading a save. No save flags, database records, or background network work are added.
+
+A redemption that would normally spawn exactly one monster has a 1-in-1,000 chance to become a horde of ten. The event is rolled once per redemption and remains the same if safe placement needs to retry. After all ten monsters are successfully placed, in-game chat displays `Oh no... something is happening.`, then three seconds later announces `USERNAME HAS SPAWNED A HORDE!`. The rare-event messages are shown even when ordinary chat responses are disabled. Existing configured multi-monster counts are unchanged; single-count random/specific behaviours can trigger the event.
+
 The eight location groups are progression gates, not physical spawn restrictions. All unlocked groups contribute to one global pool; duplicate definition IDs are counted once. Random selection targets a threat band across three permanent milestones: before Mines floor 120, after Mines floor 120, and after Skull Cavern floor 100. Combat Level is a secondary adjustment within each stage. The threat score is derived from vanilla `Data/Monsters` health, attack, defence, speed, experience, miss chance and glider behaviour. Missing entries fall back to the catalogue estimate. This changes selection only, not monster stats. See [docs/MONSTER_POOLS.md](docs/MONSTER_POOLS.md) for the full pool list, unlock checks, exclusions and variant mapping.
 ## Multiplayer
 
@@ -58,7 +62,9 @@ The host does not need to pair with or listen to other streamers. It can accept 
 
 Version 0.8.3 passed the user's single-player runtime checks for pairing, settings synchronisation and Twitch redemption spawning. Multiplayer remains untested.
 
-Version 0.8.4 adds an administrator-triggered random test-spawn action from Control Center. It is delivered as a typed one-shot game action, uses the mod's local progression-eligible monster catalogue, targets the requesting farmer in multiplayer, and does not open the normal spawn safety gate. The game reports the result to Control Center. This new action requires fresh in-game validation; CI compilation does not prove runtime or multiplayer behaviour.
+Version 0.8.4 adds an administrator-triggered random test-spawn action from Control Center. It is delivered as a typed one-shot game action, uses the mod's local progression-eligible monster catalogue, targets the requesting farmer in multiplayer, and does not open the normal spawn safety gate. The game reports the result to Control Center.
+
+Version 0.8.5 adds native HUD milestone notifications and the rare 1-in-1,000 ten-monster horde event. Both features are host-authoritative and require fresh in-game validation; CI compilation does not prove runtime or multiplayer behaviour.
 
 ## Connect each player in-game
 
@@ -93,7 +99,7 @@ Developer validation commands:
 - `spectrum_monster_catalog_test` executes every supported constructor and special setup without adding monsters to the world.
 - `spectrum_spawn_random_test [easy|normal|hard]` exercises the three selection difficulty modes.
 
-The integration writes compact redemption and spawn results to the SMAPI console, retaining each command ID for deduplication and tracing. Successful spawns are announced through Stardew's existing in-game chat with the Twitch redeemer, monster type and location. The announcement is only shown after the game reports that a character was added.
+The integration writes compact redemption and spawn results to the SMAPI console, retaining each command ID for deduplication and tracing. Successful normal spawns are announced through Stardew's existing in-game chat with the Twitch redeemer, monster type and location. Horde spawns use their two-stage rare-event announcement instead, and only after all ten monsters have been added successfully.
 
 The integration currently accepts one Twitch redemption behaviour: **Spawn Random Monster**. Control Center also supports a separate administrator-only random test-spawn action for validating the dashboard-to-game connection. The mod chooses one progression-eligible vanilla variant locally from the explicit catalogue and constructs it using its supported vanilla setup. Spawn requests remain queued until Start Spawns is enabled in Control Center; each new connection defaults to stopped. Failed attempts remain pending and are retried rather than acknowledged.
 

@@ -46,11 +46,11 @@ The progression reader uses existing save state:
 
 The Skull Cavern milestone uses the completed Cryptic Note story quest (quest ID 30), read through reflection because the completed-quest collection is not available in every supported game reference. On older builds, it falls back to the permanent `qiCave` mail flag, which is set after the player consumes the Iridium Snake Milk reward. This avoids relying on whether the consumable is still in inventory. The Mines milestone uses the save's deepest regular-mine floor. The Qi challenges are repeatable Special Orders, so their permanent completion history is read from `completedSpecialOrders`, not the active quest list or `questsCompleted`. The Skull Key property is used instead of checking whether the door was opened.
 
-## Efficiency
+## Unlock notifications and efficiency
 
-`MonsterProgressionSnapshot.Read` runs when a monster is selected, not from the update-tick loop. It performs a small number of local save-state lookups and does not create a new saved flag, database record, or background polling task.
+The host compares the existing progression snapshot once per second while a save is active. A snapshot captured when the save is loaded is the baseline, so only newly reached milestones are announced. Each optional pool has its own one-time-per-session transition notification using Stardew's native achievement-style HUD banner. The watcher performs local save-state reads only; it adds no save flags, database records, network requests, or background task.
 
-Reading on selection means progression acquired during a running save can be recognised on the next spawn request. The current save's `Farmer` is the source of truth, so loading a different save naturally uses that save's progress.
+`MonsterProgressionSnapshot.Read` is also used when a monster is selected. The current host farmer remains the source of truth for the shared spawn pool, so loading a different save naturally uses that save's progress.
 
 ## Exclusions
 
