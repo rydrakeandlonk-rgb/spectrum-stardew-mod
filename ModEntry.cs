@@ -416,17 +416,17 @@ internal sealed class ModEntry : Mod
         Point cursor = e.Cursor.ScreenPixels.ToPoint();
         if (this.spawningButtonBounds.Contains(cursor))
         {
-            e.SuppressButton();
+            this.Helper.Input.Suppress(e.Button);
             this.ToggleMonsterSpawning();
         }
         else if (this.linkTwitchButtonBounds.Contains(cursor))
         {
-            e.SuppressButton();
+            this.Helper.Input.Suppress(e.Button);
             this.StartPairingOrOpenControlCenter();
         }
         else if (this.clearEnemiesButtonBounds.Contains(cursor))
         {
-            e.SuppressButton();
+            this.Helper.Input.Suppress(e.Button);
             this.ClearEnemiesImmediately();
         }
     }
