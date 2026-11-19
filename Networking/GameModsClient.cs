@@ -109,6 +109,36 @@ internal sealed class GameModsClient : IDisposable
         });
     }
 
+    public Task SendMonsterSpawnedAsync(
+        string commandId,
+        string redeemer,
+        IReadOnlyList<string> monsterNames,
+        int spawnedCount,
+        string location,
+        bool isHorde)
+    {
+        if (string.IsNullOrWhiteSpace(commandId) || monsterNames.Count != spawnedCount ||
+            spawnedCount is < 1 or > 10)
+            return Task.CompletedTask;
+
+        return this.SendMessageAsync(new
+        {
+            type = "game.event",
+            event_id = commandId,
+            game = "stardew-valley",
+            name = "stardew.monster_spawned",
+            occurred_at = DateTimeOffset.UtcNow.ToString("O"),
+            payload = new
+            {
+                redeemer = string.IsNullOrWhiteSpace(redeemer) ? "Unknown" : redeemer,
+                monster_names = monsterNames,
+                spawned_count = spawnedCount,
+                location = string.IsNullOrWhiteSpace(location) ? "Unknown" : location,
+                is_horde = isHorde
+            }
+        });
+    }
+
     public async Task AcknowledgeActionAsync(string actionId, bool success, int removedCount, string? error = null, string? detail = null)
     {
         await this.SendMessageAsync(new
