@@ -135,4 +135,4 @@ Events are sent over the existing authenticated WebSocket. They are not added to
 
 The initial custom widget source is bundled in `stream-elements-widget/`. Copy its HTML, CSS, JS and fields JSON into a StreamElements Custom Widget. The widget connects to the broadcaster-scoped read-only Game Mods WebSocket and animates a spawn request before revealing the monster names confirmed by the game. See `stream-elements-widget/README.md` for setup.
 
-The widget does not use StreamElements persistent storage, polling, D1 or KV. The StreamElements account still requires a one-time manual Custom Widget setup; the source is bundled with the mod repository so the integration remains a single Spectrum project.
+The widget does not use StreamElements persistent storage, polling, D1 or KV. The StreamElements account still requires a one-time manual Custom Widget setup. The GitHub Actions build publishes a complete bundle ZIP containing the installable mod ZIP, widget source files and setup instructions, alongside the mod-only ZIP.
