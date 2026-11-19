@@ -64,6 +64,11 @@ internal sealed class MonsterSpawner
         var locations = new HashSet<GameLocation>(Game1.locations);
         if (Game1.currentLocation is not null)
             locations.Add(Game1.currentLocation);
+        foreach (Farmer farmer in Game1.getOnlineFarmers())
+        {
+            if (farmer.currentLocation is not null)
+                locations.Add(farmer.currentLocation);
+        }
 
         int removed = 0;
         foreach (GameLocation location in locations)
