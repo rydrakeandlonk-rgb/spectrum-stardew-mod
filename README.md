@@ -7,7 +7,7 @@ Only Spectrum members explicitly enabled by an administrator in Spectrum Control
 ## Intended experience
 
 1. Each enabled Spectrum streamer installs the Spectrum mod through SMAPI.
-2. Each player pairs their own game installation with their own Twitch account through Control Center.
+2. Each player links their own game installation to their Twitch account from the in-game GMCM menu.
 3. Control Center verifies the signed-in Twitch identity and administrator-controlled activation record.
 4. Event Hub interprets that streamer's redemptions using the approved Control Center configuration.
 5. Each mod connects only to its own broadcaster-specific gateway session and receives only that streamer's commands.
@@ -21,7 +21,7 @@ The existing Spectrum Cloudflare project owns identity, permissions, dashboard m
 
 Twitch Channel Points → Spectrum Event Hub → that streamer's gateway session → their SMAPI mod → (SMAPI relay if farmhand) → host SMAPI mod → Stardew Valley
 
-- Control Center: administrator-only Stardew Valley page, per-member access, live game status, shared reward title, per-host safety gate, streamer preferences, administrator overrides, remote clear-monsters actions and one-shot random test spawns.
+- Control Center: administrator-only Stardew Valley page, per-member access, live game status, shared reward title, administrator overrides, remote clear-monsters actions and one-shot random test spawns. The connected game host controls day-to-day pause/resume from GMCM; administrator Force disabled and access revocation remain authoritative.
 - Event Hub: receives and verifies Twitch Channel Point redemption notifications and routes approved redemptions.
 - Stardew gateway: owns one authenticated session per enabled broadcaster, versioned per-streamer settings, administrator overrides, deduplication, pending requests and acknowledged remote actions.
 - SMAPI mod: each player connects only their own broadcaster session. Farmhands forward typed spawn requests to the host through SMAPI; only the host mutates the shared world and confirms completion back to the originating client.
@@ -51,7 +51,7 @@ The host does not need to pair with or listen to other streamers. It can accept 
 - Gameplay/MonsterCatalog.cs — explicit vanilla monster variants, progression-filtered weighting and safe constructor dispatch.
 - Gameplay/MonsterProgression.cs and Gameplay/MonsterLocationPools.cs — vanilla save checks and location-group unlock rules.
 - docs/MONSTER_POOLS.md — complete progression rules, exclusions, and variant implementation requirements.
-- ModEntry.cs — SMAPI entry point, GMCM settings/actions, local test commands and game-thread command/action processing.
+- ModEntry.cs — SMAPI entry point, GMCM settings and one-click controls, local test commands and game-thread command/action processing.
 - Networking/GameModsClient.cs — authenticated WebSocket connection, versioned settings sync, typed command/action validation, reconnect and acknowledgements.
 - Networking/HostSettings.cs and Networking/GameAction.cs — shared settings and typed remote action contracts.
 - ModConfig.cs — versioned local configuration, validated gateway URL, broadcaster ID and revocable host token.
@@ -60,7 +60,7 @@ The host does not need to pair with or listen to other streamers. It can accept 
 
 ## Current implementation status
 
-**Version 2.0.0 development build.** The original 1.0.0 gameplay integration remains the foundation; 2.0.0 adds game-to-stream events and the persistent challenge-series death counter. The current live build has been tested for Twitch redemption delivery, multiplayer host/farmhand spawning, and the Control Center one-shot Test Spawn action. The Test Spawn action was also verified after updating a second streamer to the current mod build.
+**Version 2.1.0 development build.** The original 1.0.0 gameplay integration remains the foundation; 2.0.0 adds game-to-stream events and the persistent challenge-series death counter. The current live build has been tested for Twitch redemption delivery, multiplayer host/farmhand spawning, and the Control Center one-shot Test Spawn action. The Test Spawn action was also verified after updating a second streamer to the current mod build.
 
 The established gameplay foundation includes the progression-aware vanilla monster catalogue, dangerous variants, native progression HUD notices, the rare ten-monster horde event, per-player broadcaster-scoped connections, typed multiplayer forwarding, settings synchronisation, host-authoritative world changes, and Control Center remote actions. The new 2.0.0 challenge and overlay features are awaiting in-game validation.
 
@@ -68,21 +68,21 @@ The final release gate is still to verify the refreshed one-click pairing action
 
 ## Connect each player in-game
 
-An administrator first enables the Spectrum member's Stardew access in Control Center. Each streamer then connects their own Twitch account:
+Each streamer links their own Twitch account from the game:
 
 1. Load the multiplayer save as either host or farmhand.
 2. Open **Options → Generic Mod Config Menu → Spectrum Stardew Monster Spawner**.
-3. Under **Connection actions**, select **Connect Twitch / open Control Center**. The connection starts immediately and opens the pairing page in your browser; you do not need to press GMCM's **Save** button for this action.
-4. Sign in using the Twitch account that owns your active Spectrum channel.
-5. Confirm the pairing request. Control Center only authorises the signed-in member's own account, and only if an administrator has enabled Stardew access.
-6. Return to Stardew. Your mod receives its own revocable game-session credential securely and writes it to your local SMAPI config automatically.
-7. Your mod connects only to your broadcaster's gateway session. Spawning remains stopped until that streamer's Control Center safety gate is explicitly opened.
+3. Under **Connection**, click **Link Twitch ↗**. This opens the pairing page in your external browser.
+4. Sign in using the Twitch account that owns your active Spectrum channel and approve the pairing.
+5. Return to Stardew. The menu status changes to **Connected** when the broadcaster-scoped gateway session is ready.
 
-The GMCM page contains the same streamer settings as the former Spectrum panel: spawning, difficulty, chat responses and debug messages. Change settings and press **Save** to send them to the gateway. The connection action starts immediately when selected. Settings still require GMCM's **Save** button. Clearing loaded monsters remains a two-step host action: select **Arm clear** and save, then select **Confirm clear** and save.
+Use **Monster controls → Enable Monster Spawning / Pause Monster Spawning** to control redemptions directly in game. A fresh connection starts paused. The gateway confirms the state back to GMCM, queued redemptions are retained while paused, and eligible queued requests are released when spawning is enabled. Administrator **Force disabled** and access revocation still take priority and cannot be bypassed by the in-game control.
+
+The **Clear Enemies** button immediately removes hostile monsters from all currently loaded locations. It is a single-click, host-only action; farmhands cannot change the shared world.
+
+Difficulty, chat responses, debug messages, and challenge-series values remain ordinary settings and use GMCM's **Save** button. The Link Twitch and action buttons run immediately and do not require Save.
 
 Pairing codes expire after ten minutes. The private device code is separate from the visible approval code and is never shown in the dashboard. The game-session credential is not displayed to the streamer or sent to browser JavaScript. Revoke access in Control Center before moving your connection to another Twitch account.
-
-The local config carries a schema version and is migrated automatically on first launch after an update. Gateway URLs must use HTTPS, and incomplete or malformed saved credentials are cleared so the host can be paired again safely. The status section explains whether spawning is stopped by the global safety gate, the administrator override, the streamer's preference, a revoked connection, or a gateway interruption. Temporary gateway interruptions retry automatically; revoked or rotated credentials stop retrying and require a fresh Twitch pairing. Never commit or share the local config or host token.
 
 ## Challenge-series controls
 
@@ -107,7 +107,7 @@ Developer validation commands:
 
 The integration writes compact redemption and spawn results to the SMAPI console, retaining each command ID for deduplication and tracing. Successful normal spawns are announced through Stardew's existing in-game chat with the Twitch redeemer, monster type and location. Horde spawns use their two-stage rare-event announcement instead, and only after all ten monsters have been added successfully.
 
-The integration currently accepts one Twitch redemption behaviour: **Spawn Random Monster**. Control Center also supports a separate administrator-only random test-spawn action for validating the dashboard-to-game connection. The mod chooses one progression-eligible vanilla variant locally from the explicit catalogue and constructs it using its supported vanilla setup. Spawn requests remain queued until Start Spawns is enabled in Control Center; each new connection defaults to stopped. Failed attempts remain pending and are retried rather than acknowledged.
+The integration currently accepts one Twitch redemption behaviour: **Spawn Random Monster**. Control Center also supports a separate administrator-only random test-spawn action for validating the dashboard-to-game connection. The mod chooses one progression-eligible vanilla variant locally from the explicit catalogue and constructs it using its supported vanilla setup. Spawn requests remain queued while the host has spawning paused; each new connection defaults to stopped. The host can resume from GMCM, while administrator Force disabled and access revocation remain authoritative. Failed attempts remain pending and are retried rather than acknowledged.
 
 ## Security
 
