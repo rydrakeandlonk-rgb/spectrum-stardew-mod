@@ -12,6 +12,7 @@ internal sealed class ModConfig
     public int ConfigVersion { get; set; }
     public string GatewayUrl { get; set; } = DefaultGatewayUrl;
     public string BroadcasterUserId { get; set; } = "";
+    public string BroadcasterLogin { get; set; } = "";
     public string HostToken { get; set; } = "";
     public string ChallengeName { get; set; } = "Spectrum Challenge";
     public int ChallengeDeathCount { get; set; }
@@ -55,6 +56,14 @@ internal sealed class ModConfig
                 this.GatewayUrl = normalisedGateway;
                 changed = true;
             }
+        }
+
+        string broadcasterLogin = Regex.Replace((this.BroadcasterLogin ?? "").Trim(), @"[^a-zA-Z0-9_]", "");
+        if (broadcasterLogin.Length > 25) broadcasterLogin = broadcasterLogin[..25];
+        if (this.BroadcasterLogin != broadcasterLogin)
+        {
+            this.BroadcasterLogin = broadcasterLogin;
+            changed = true;
         }
 
         string broadcasterId = (this.BroadcasterUserId ?? "").Trim();
