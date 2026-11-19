@@ -79,6 +79,12 @@ internal sealed class ModEntry : Mod
         );
 
         helper.ConsoleCommands.Add(
+            "spectrum_spawn_horde_test",
+            "Developer test: force the rare ten-monster horde event near the host player. Usage: spectrum_spawn_horde_test",
+            this.OnSpawnHordeTestCommand
+        );
+
+        helper.ConsoleCommands.Add(
             "spectrum_spawn_monster_test",
             "Spawn one progression-eligible catalogue monster by name or ID. Usage: spectrum_spawn_monster_test <monster name or ID>",
             this.OnSpawnMonsterTestCommand
@@ -708,11 +714,7 @@ internal sealed class ModEntry : Mod
             string redeemer = DisplayValue(command.TwitchUserName);
             if (work.IsHorde)
             {
-                Game1.chatBox?.addInfoMessage("Oh no... something is happening.");
-                this.pendingChatMessages.Add(new PendingChatMessage(
-                    DateTime.UtcNow.AddSeconds(3),
-                    $"{redeemer} HAS SPAWNED A HORDE!"
-                ));
+                this.AnnounceHorde(redeemer);
             }
             else if (work.ChatResponses)
             {
@@ -1102,6 +1104,52 @@ internal sealed class ModEntry : Mod
         this.monsterSpawner?.TrySpawnRandomMonster(difficulty);
     }
 
+    private void OnSpawnHordeTestCommand(string command, string[] args)
+    {
+        if (!Context.IsWorldReady || !Context.IsMainPlayer || Game1.player is null || this.monsterSpawner is null)
+        {
+            this.Monitor.Log("Load a save as the host before testing a horde spawn.", LogLevel.Warn);
+            return;
+        }
+
+        var testCommand = new GameCommand(
+            "local-horde-test",
+            "stardew-valley",
+            "stardew.spawn_monster",
+            "Local Test",
+            "Local horde test",
+            DateTimeOffset.Now.ToString("O"),
+            "difficulty_random",
+            "",
+            "",
+            "normal",
+            1,
+            1,
+            1
+        );
+
+        bool spawned = this.monsterSpawner.TryExecute(
+            testCommand,
+            Game1.player,
+            out int spawnedCount,
+            out int requestedCount,
+            out _,
+            out string locationName,
+            out string result,
+            forceHorde: true
+        );
+
+        if (spawned && result == "SUCCESS" && spawnedCount == 10 && requestedCount == 10)
+        {
+            this.AnnounceHorde("LOCAL TEST");
+            this.Monitor.Log($"[Spectrum] HORDE TEST PASSED | {spawnedCount} monsters | {locationName}", LogLevel.Info);
+        }
+        else
+        {
+            this.Monitor.Log($"[Spectrum] HORDE TEST FAILED | {spawnedCount}/{requestedCount} monsters | {locationName} | {result}", LogLevel.Warn);
+        }
+    }
+
     private void OnSpawnMonsterTestCommand(string command, string[] args)
     {
         if (args.Length == 0)
@@ -1201,7 +1249,7 @@ internal sealed class ModEntry : Mod
         if (Game1.player is null)
             return;
 
-        MonsterProgressionSnapshot current = MonsterProgressionSnapshot.Read(Game1.player, useTestOverride: false);
+        MonsterProgressionSnapshot current = MonsterProgressionSnapshot.Read(Game1.player);
         MonsterProgressionSnapshot? previous = this.lastObservedProgression;
         this.lastObservedProgression = current;
 
@@ -1247,6 +1295,15 @@ internal sealed class ModEntry : Mod
                 playerIDs: recipients
             );
         }
+    }
+
+    private void AnnounceHorde(string redeemer)
+    {
+        Game1.chatBox?.addInfoMessage("Oh no... something is happening.");
+        this.pendingChatMessages.Add(new PendingChatMessage(
+            DateTime.UtcNow.AddSeconds(3),
+            $"{redeemer} HAS SPAWNED A HORDE!"
+        ));
     }
 
     private void ProcessPendingChatMessages()
