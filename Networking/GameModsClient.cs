@@ -59,7 +59,7 @@ internal sealed class GameModsClient : IDisposable
                 return this.connectionStatusMessage;
 
             if (!this.safetyGateEnabled)
-                return "Spawning paused: the Control Center safety gate is closed.";
+                return "Spawning paused: the in-game spawn control is paused.";
 
             if (this.spawnOverride == "force_off")
                 return "Spawning paused: the administrator override is forcing it off.";
@@ -69,7 +69,7 @@ internal sealed class GameModsClient : IDisposable
 
             return this.spawnsEnabled
                 ? "Spawning is enabled."
-                : "Spawning is paused by Control Center.";
+                : "Spawning is paused.";
         }
     }
     public HostSettings Settings => this.settings;
@@ -300,7 +300,7 @@ internal sealed class GameModsClient : IDisposable
                 this.connected = true;
                 this.spawnsEnabled = false;
                 this.connectionStatusMessage = "Connected to Spectrum Game Mods.";
-                this.monitor.Log("Connected to Spectrum Game Mods. Spawning remains paused until enabled in Control Center.", LogLevel.Info);
+                this.monitor.Log("Connected to Spectrum Game Mods. Spawning remains paused until enabled from the in-game menu.", LogLevel.Info);
                 await this.SendChallengeStateAsync(this.config.ChallengeName, this.config.ChallengeDeathCount);
 
                 await this.ReceiveLoopAsync(current, token);
