@@ -24,7 +24,7 @@ public sealed class ForwardedSpawnCommand
     public string SourceBroadcasterUserId { get; set; } = "";
     public bool ChatResponses { get; set; } = true;
 
-    public static ForwardedSpawnCommand FromCommand(GameCommand command, string broadcasterUserId, bool chatResponses) => new()
+    internal static ForwardedSpawnCommand FromCommand(GameCommand command, string broadcasterUserId, bool chatResponses) => new()
     {
         CommandId = command.CommandId,
         Game = command.Game,
@@ -43,7 +43,7 @@ public sealed class ForwardedSpawnCommand
         ChatResponses = chatResponses
     };
 
-    public GameCommand ToGameCommand() => new(
+    internal GameCommand ToGameCommand() => new(
         this.CommandId, this.Game, this.Name, this.TwitchUserName, this.RewardTitle,
         this.RedeemedAt, this.BehaviorKey, this.UserInput, this.MonsterType,
         this.Difficulty, this.Count, this.MinCount, this.MaxCount
