@@ -54,7 +54,8 @@ internal sealed class ModEntry : Mod
         helper.Events.GameLoop.SaveLoaded += this.OnSaveLoaded;
         helper.Events.GameLoop.ReturnedToTitle += this.OnReturnedToTitle;
         helper.Events.GameLoop.UpdateTicked += this.OnUpdateTicked;
-        helper.Events.Input.ButtonPressed += this.OnButtonPressed;\n        helper.Events.Multiplayer.ModMessageReceived += this.OnModMessageReceived;
+        helper.Events.Input.ButtonPressed += this.OnButtonPressed;
+        helper.Events.Multiplayer.ModMessageReceived += this.OnModMessageReceived;
 
         helper.ConsoleCommands.Add(
             "spectrum_spawn_test",
