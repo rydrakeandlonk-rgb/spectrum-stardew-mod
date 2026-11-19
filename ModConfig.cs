@@ -75,6 +75,7 @@ internal sealed class ModConfig
         if (hasAnyCredential && !validCredentials)
         {
             this.BroadcasterUserId = "";
+            this.BroadcasterLogin = "";
             this.HostToken = "";
             changed = true;
             monitor.Log("The saved Spectrum connection details were incomplete or invalid. Cleared them safely; connect Twitch again from the in-game menu.", LogLevel.Warn);
