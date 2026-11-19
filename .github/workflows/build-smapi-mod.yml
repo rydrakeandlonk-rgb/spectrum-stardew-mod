@@ -10,7 +10,6 @@ on:
       - ".github/workflows/build-smapi-mod.yml"
       - ".github/scripts/validate-monster-catalog.py"
       - "stream-elements-widget/**"
-      - "stream-elements-widget/**"
   pull_request:
     branches: [main]
     paths:
@@ -19,6 +18,7 @@ on:
       - "manifest.json"
       - ".github/workflows/build-smapi-mod.yml"
       - ".github/scripts/validate-monster-catalog.py"
+      - "stream-elements-widget/**"
   workflow_dispatch:
 
 permissions:
