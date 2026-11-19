@@ -56,14 +56,32 @@ public sealed class SpawnCommandResult
     public string CommandId { get; set; } = "";
     public bool Success { get; set; }
     public string Error { get; set; } = "";
+    public string[] MonsterNames { get; set; } = Array.Empty<string>();
+    public int SpawnedCount { get; set; }
+    public string LocationName { get; set; } = "";
+    public string RedeemerName { get; set; } = "";
+    public bool IsHorde { get; set; }
 
     public SpawnCommandResult() { }
 
-    public SpawnCommandResult(string commandId, bool success, string error)
+    public SpawnCommandResult(
+        string commandId,
+        bool success,
+        string error,
+        string[]? monsterNames = null,
+        int spawnedCount = 0,
+        string locationName = "",
+        string redeemerName = "",
+        bool isHorde = false)
     {
         this.CommandId = commandId;
         this.Success = success;
         this.Error = error;
+        this.MonsterNames = monsterNames ?? Array.Empty<string>();
+        this.SpawnedCount = spawnedCount;
+        this.LocationName = locationName;
+        this.RedeemerName = redeemerName;
+        this.IsHorde = isHorde;
     }
 }
 
