@@ -23,7 +23,8 @@ internal sealed class ModEntry : Mod
     private const string ProcessedCommandGlobalKey = "processed-spectrum-command-ids";
     private bool processedCommandsLoaded;
     private DateTime retryCommandsAtUtc = DateTime.MinValue;
-    private Rectangle spectrumHudButtonBounds;
+    private GenericModConfigMenu.IGenericModConfigMenuApi? configMenuApi;
+    private Rectangle spectrumMenuButtonBounds;
     private readonly ConcurrentQueue<PairingResult> pairingResults = new();
     private CancellationTokenSource? pairingCancellation;
     private volatile bool pairingInProgress;
@@ -46,10 +47,10 @@ internal sealed class ModEntry : Mod
             this.Monitor.Log("Spectrum Game Mods connection is not paired yet. Local test commands remain available.", LogLevel.Info);
         }
 
+        helper.Events.GameLoop.GameLaunched += this.OnGameLaunched;
         helper.Events.GameLoop.SaveLoaded += this.OnSaveLoaded;
         helper.Events.GameLoop.ReturnedToTitle += this.OnReturnedToTitle;
         helper.Events.GameLoop.UpdateTicked += this.OnUpdateTicked;
-        helper.Events.Display.RenderedHud += this.OnRenderedHud;
         helper.Events.Input.ButtonPressed += this.OnButtonPressed;
 
         helper.ConsoleCommands.Add(
@@ -137,34 +138,72 @@ internal sealed class ModEntry : Mod
         this.retryCommandsAtUtc = DateTime.MinValue;
     }
 
-    private void OnRenderedHud(object? sender, RenderedHudEventArgs e)
+    private void OnGameLaunched(object? sender, GameLaunchedEventArgs e)
     {
-        if (!Context.IsWorldReady || Game1.activeClickableMenu is not null)
-            return;
+        this.configMenuApi = this.Helper.ModRegistry.GetApi<GenericModConfigMenu.IGenericModConfigMenuApi>(
+            "spacechase0.GenericModConfigMenu"
+        );
 
-        this.spectrumHudButtonBounds = new Rectangle(
-            Math.Max(12, Game1.uiViewport.Width - 172),
-            18,
-            154,
-            42
+        if (this.configMenuApi is null)
+        {
+            this.Monitor.Log(
+                "Generic Mod Config Menu is not installed. Install it to access Spectrum controls from the vanilla Options menu.",
+                LogLevel.Warn
+            );
+            return;
+        }
+
+        this.configMenuApi.Register(
+            mod: this.ModManifest,
+            reset: () => { },
+            save: () => { },
+            titleScreenOnly: false
         );
-        e.SpriteBatch.Draw(Game1.staminaRect, this.spectrumHudButtonBounds, new Color(67, 46, 98, 225));
-        const string label = "Spectrum";
-        Vector2 textSize = Game1.smallFont.MeasureString(label);
-        Vector2 textPosition = new(
-            this.spectrumHudButtonBounds.X + (this.spectrumHudButtonBounds.Width - textSize.X) / 2f,
-            this.spectrumHudButtonBounds.Y + (this.spectrumHudButtonBounds.Height - textSize.Y) / 2f
+        this.configMenuApi.AddSectionTitle(this.ModManifest, () => "Spectrum Stardew Monster Spawner");
+        this.configMenuApi.AddParagraph(
+            this.ModManifest,
+            () => "Open the Spectrum control panel to connect Twitch, manage spawns, change settings, or clear loaded monsters."
         );
-        e.SpriteBatch.DrawString(Game1.smallFont, label, textPosition, Color.White);
+        this.configMenuApi.AddComplexOptionWithGamepadSupport(
+            mod: this.ModManifest,
+            name: () => "Spectrum controls",
+            draw: (batch, position) =>
+            {
+                this.spectrumMenuButtonBounds = new Rectangle(
+                    (int)position.X,
+                    (int)position.Y,
+                    520,
+                    64
+                );
+                batch.Draw(Game1.staminaRect, this.spectrumMenuButtonBounds, new Color(67, 46, 98, 235));
+                const string label = "Open Spectrum Control Panel";
+                Vector2 size = Game1.smallFont.MeasureString(label);
+                Vector2 textPosition = new(
+                    this.spectrumMenuButtonBounds.X + (this.spectrumMenuButtonBounds.Width - size.X) / 2f,
+                    this.spectrumMenuButtonBounds.Y + (this.spectrumMenuButtonBounds.Height - size.Y) / 2f
+                );
+                batch.DrawString(Game1.smallFont, label, textPosition, Color.White);
+            },
+            tooltip: () => "Open the full in-game Spectrum controls.",
+            height: () => 76,
+            fieldId: "spectrum-open-controls"
+        );
+        this.Monitor.Log("Spectrum controls registered in Generic Mod Config Menu.", LogLevel.Info);
     }
 
     private void OnButtonPressed(object? sender, ButtonPressedEventArgs e)
     {
-        if (!Context.IsWorldReady || Game1.activeClickableMenu is not null || e.Button != SButton.MouseLeft)
+        if (e.Button != SButton.MouseLeft || this.configMenuApi is null)
             return;
 
+        if (!this.configMenuApi.TryGetCurrentMenu(out IManifest? currentMod, out _) ||
+            currentMod?.UniqueID != this.ModManifest.UniqueID)
+        {
+            return;
+        }
+
         Vector2 cursor = e.Cursor.GetScaledScreenPixels();
-        if (!this.spectrumHudButtonBounds.Contains((int)cursor.X, (int)cursor.Y))
+        if (!this.spectrumMenuButtonBounds.Contains((int)cursor.X, (int)cursor.Y))
             return;
 
         this.Helper.Input.Suppress(e.Button);
