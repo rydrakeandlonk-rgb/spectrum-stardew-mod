@@ -60,6 +60,7 @@ A dedicated service in the Spectrum Cloudflare repository.
 - Constructs the selected vanilla Monster through its known constructor, applies required variant setup and dangerous-mode treatment, then adds it to the redeeming farmer's current location on a valid tile.
 - Confirms the location's character count increases before reporting success. For farmhand-originated commands, the host sends a completion response to that farmhand; the farmhand acknowledges the gateway only after the host confirms success.
 - Each player's settings, safety gate and gateway connection remain independent. The host does not subscribe to other streamers' channels.
+- The paired installer's local player death count and challenge name live in its local SMAPI config, independent of Stardew save files. GMCM can manually override both values. The mod pushes transient death events and challenge-state snapshots through the existing broadcaster-scoped WebSocket; no challenge history is persisted in Cloudflare storage.
 
 ## Random monster selection
 
@@ -152,3 +153,12 @@ The per-broadcaster Durable Object is the source of truth for:
 Effective spawning requires a valid, connected host, an open global safety gate and a positive effective preference. The administrator override changes only the preference result. It cannot bypass the global gate or host authorisation. Settings revisions prevent a stale game client from overwriting a newer Control Center update. Game-side setting changes are stored in the Durable Object; they do not create D1/KV writes.
 
 The typed stardew.clear_loaded_monsters action is sent to the broadcaster's paired game client and acknowledged with the number of removed monsters; only a client that is the Stardew multiplayer host executes it. The in-game menu can perform the same host-only clear locally, with confirmation. Each player's in-game Connect button starts a short-lived device-code flow, opens Control Center for approval by that member's own Twitch identity, then receives and stores their revocable game-session credential automatically. The browser never receives the credential.
+
+
+## Challenge-series state and stream events
+
+The local SMAPI config is the source of truth for the challenge name and death count. Config schema version 2 adds ChallengeName and ChallengeDeathCount. These values are deliberately separate from Stardew save data, so one streamer's series continues across multiple saves and streaming sessions. A manual GMCM override supports corrections and challenge continuation.
+
+The paired client observes its local farmer's health on the normal SMAPI update loop and increments once when health reaches zero, guarded by a death latch until the farmer is revived. It writes the updated local config and publishes stardew.player_died. On connection, and when the gateway asks for overlay state after an overlay reconnect, the mod publishes stardew.challenge_state with the current challenge name and total. The gateway validates and fans out these messages to connected read-only overlay sockets without persisting them.
+
+The StreamElements widget displays the challenge counter persistently and spawn events temporarily. It reconnects with backoff and relies on the mod's state snapshot for recovery. No StreamElements store, polling, D1, KV or Durable Object event history is used.

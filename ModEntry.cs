@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using StardewModdingAPI;
@@ -22,6 +23,8 @@ internal sealed class ModEntry : Mod
     private DateTime retryCommandsAtUtc = DateTime.MinValue;
     private GenericModConfigMenu.IGenericModConfigMenuApi? configMenuApi;
     private HostSettings? pendingGmcmSettings;
+    private string? pendingChallengeName;
+    private string? pendingChallengeDeathCount;
     private string pendingGmcmHostAction = "none";
     private string lastHandledGmcmHostAction = "none";
     private bool gmcmClearArmed;
@@ -36,6 +39,7 @@ internal sealed class ModEntry : Mod
     private readonly Dictionary<string, PendingForwardedClearAction> forwardedClearActions = new(StringComparer.Ordinal);
     private readonly List<PendingChatMessage> pendingChatMessages = new();
     private MonsterProgressionSnapshot? lastObservedProgression;
+    private bool playerDeathLatched;
     private CancellationTokenSource? pairingCancellation;
     private volatile bool pairingInProgress;
     private volatile string pairingStatus = "";
@@ -125,6 +129,7 @@ internal sealed class ModEntry : Mod
         this.lastObservedProgression = Context.IsMainPlayer && Game1.player is not null
             ? MonsterProgressionSnapshot.Read(Game1.player, useTestOverride: false)
             : null;
+        this.playerDeathLatched = Game1.player is null || Game1.player.health <= 0;
 
         if (this.config is null ||
             string.IsNullOrWhiteSpace(this.config.BroadcasterUserId) ||
@@ -159,6 +164,7 @@ internal sealed class ModEntry : Mod
         this.forwardedClearActions.Clear();
         this.pendingChatMessages.Clear();
         this.lastObservedProgression = null;
+        this.playerDeathLatched = false;
     }
 
     private void OnGameLaunched(object? sender, GameLaunchedEventArgs e)
@@ -222,6 +228,28 @@ internal sealed class ModEntry : Mod
             "spectrum-debug-messages"
         );
 
+        this.configMenuApi.AddSectionTitle(this.ModManifest, () => "Challenge series");
+        this.configMenuApi.AddParagraph(
+            this.ModManifest,
+            () => "This counter follows this installation's local player across saves and streaming sessions. It is stored in the mod config, not in a database. Set the series name and manually correct the death count here, then press Save."
+        );
+        this.configMenuApi.AddTextOption(
+            this.ModManifest,
+            () => this.pendingChallengeName ?? this.config?.ChallengeName ?? "Spectrum Challenge",
+            value => this.pendingChallengeName = value,
+            () => "Challenge name",
+            () => "The title shown on the StreamElements overlay. Maximum 80 characters.",
+            fieldId: "spectrum-challenge-name"
+        );
+        this.configMenuApi.AddTextOption(
+            this.ModManifest,
+            () => this.pendingChallengeDeathCount ?? (this.config?.ChallengeDeathCount ?? 0).ToString(CultureInfo.InvariantCulture),
+            value => this.pendingChallengeDeathCount = value,
+            () => "Challenge death count",
+            () => "Manually override the series total. Enter a whole number from 0 to 1,000,000, then press Save.",
+            fieldId: "spectrum-challenge-death-count"
+        );
+
         this.configMenuApi.AddSectionTitle(this.ModManifest, () => "Connection actions");
         this.configMenuApi.AddParagraph(
             this.ModManifest,
@@ -278,6 +306,8 @@ internal sealed class ModEntry : Mod
     private void ResetGmcmOptions()
     {
         this.pendingGmcmSettings = new HostSettings();
+        this.pendingChallengeName = this.config?.ChallengeName ?? "Spectrum Challenge";
+        this.pendingChallengeDeathCount = (this.config?.ChallengeDeathCount ?? 0).ToString(CultureInfo.InvariantCulture);
         this.pendingGmcmHostAction = "none";
         this.lastHandledGmcmHostAction = "none";
         this.gmcmClearArmed = false;
@@ -305,6 +335,34 @@ internal sealed class ModEntry : Mod
             this.pendingGmcmSettings = null;
         }
 
+        if (this.config is not null &&
+            (this.pendingChallengeName is not null || this.pendingChallengeDeathCount is not null))
+        {
+            string challengeName = (this.pendingChallengeName ?? this.config.ChallengeName ?? "Spectrum Challenge").Trim();
+            challengeName = string.Join(" ", challengeName.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+            if (challengeName.Length == 0) challengeName = "Spectrum Challenge";
+            if (challengeName.Length > 80) challengeName = challengeName[..80];
+
+            string deathCountText = (this.pendingChallengeDeathCount ?? this.config.ChallengeDeathCount.ToString(CultureInfo.InvariantCulture)).Trim();
+            if (int.TryParse(deathCountText, NumberStyles.None, CultureInfo.InvariantCulture, out int deathCount) && deathCount is >= 0 and <= 1000000)
+            {
+                bool changed = this.config.ChallengeName != challengeName || this.config.ChallengeDeathCount != deathCount;
+                this.config.ChallengeName = challengeName;
+                this.config.ChallengeDeathCount = deathCount;
+                if (changed)
+                {
+                    this.Helper.WriteConfig(this.config);
+                    _ = this.gameModsClient?.SendChallengeStateAsync(this.config.ChallengeName, this.config.ChallengeDeathCount);
+                    this.gmcmStatusMessage = "Challenge series settings saved and sent to the stream overlay.";
+                }
+            }
+            else
+            {
+                this.gmcmStatusMessage = "Challenge death count must be a whole number between 0 and 1,000,000. No challenge changes were saved.";
+            }
+            this.pendingChallengeName = null;
+            this.pendingChallengeDeathCount = null;
+        }
 
         switch (this.pendingGmcmHostAction)
         {
@@ -516,6 +574,8 @@ internal sealed class ModEntry : Mod
     {
         if (Context.IsWorldReady)
         {
+            this.CheckLocalPlayerDeath();
+
             if (Context.IsMainPlayer && Game1.player is not null && e.IsMultipleOf(60))
                 this.CheckProgressionUnlocks();
 
@@ -1287,6 +1347,49 @@ internal sealed class ModEntry : Mod
         this.Monitor.Log(
             $"Monster constructor/setup test complete: {passed} passed, {failed} failed, {passed + failed} tested. No monsters were added to the world.",
             failed == 0 ? LogLevel.Info : LogLevel.Error
+        );
+    }
+
+    private void CheckLocalPlayerDeath()
+    {
+        if (Game1.player is null)
+            return;
+
+        bool isDead = Game1.player.health <= 0;
+        if (!isDead)
+        {
+            this.playerDeathLatched = false;
+            return;
+        }
+
+        if (this.playerDeathLatched)
+            return;
+
+        this.playerDeathLatched = true;
+        if (this.config is null)
+            return;
+
+        if (this.config.ChallengeDeathCount >= 1000000)
+        {
+            this.Monitor.Log("Challenge death counter reached its maximum supported value.", LogLevel.Warn);
+            return;
+        }
+
+        this.config.ChallengeDeathCount++;
+
+        try
+        {
+            this.Helper.WriteConfig(this.config);
+        }
+        catch (Exception ex)
+        {
+            this.Monitor.Log("Could not persist the updated challenge death count: " + ex.Message, LogLevel.Error);
+        }
+
+        _ = this.gameModsClient?.SendPlayerDiedAsync(this.config.ChallengeDeathCount);
+        this.Monitor.Log(
+            $"[Spectrum] CHALLENGE DEATH | {this.config.ChallengeName} | {this.config.ChallengeDeathCount}",
+            LogLevel.Info
         );
     }
 

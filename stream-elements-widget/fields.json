@@ -11,7 +11,7 @@
   },
   "displaySeconds": {
     "type": "slider",
-    "label": "Result display duration",
+    "label": "Spawn result display duration",
     "value": 7,
     "min": 3,
     "max": 15,
@@ -20,6 +20,11 @@
   "showLocation": {
     "type": "checkbox",
     "label": "Show spawn location",
+    "value": true
+  },
+  "showDeathCounter": {
+    "type": "checkbox",
+    "label": "Show challenge death counter",
     "value": true
   }
 }

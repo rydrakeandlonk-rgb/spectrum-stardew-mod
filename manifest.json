@@ -1,8 +1,8 @@
 {
   "Name": "Spectrum Stardew Monster Spawner",
   "Author": "RydrakeAndLonk",
-  "Version": "1.0.0",
-  "Description": "Twitch Channel Point monster encounters for authorised Spectrum streamers.",
+  "Version": "2.0.0",
+  "Description": "Twitch-driven monster encounters and live challenge-series overlays for authorised Spectrum streamers.",
   "UniqueID": "RydrakeAndLonk.SpectrumStardewMod",
   "EntryDll": "SpectrumStardewMod.dll",
   "MinimumApiVersion": "4.5.0",

@@ -4,6 +4,11 @@
   const GATEWAY = "wss://spectrum-game-mods.rydrakeandlonk.workers.dev/overlay/stardew/";
   const root = document.getElementById("spectrum-stardew-widget");
   const setupHint = document.getElementById("spectrum-stardew-setup");
+  const counter = document.getElementById("death-counter");
+  const challengeNameElement = document.getElementById("challenge-name");
+  const deathCountElement = document.getElementById("death-count");
+  const connectionElement = document.getElementById("counter-connection");
+  const eventPanel = document.getElementById("event-panel");
   const wheel = document.getElementById("summon-wheel");
   const wheelSymbol = document.getElementById("wheel-symbol");
   const title = document.getElementById("event-title");
@@ -22,6 +27,7 @@
   let activeEventId = "";
   const seenRequestIds = new Set();
   const completedEventIds = new Set();
+  const seenDeathEventIds = new Set();
   let isUnloading = false;
 
   function clearDisplayTimers() {
@@ -33,20 +39,38 @@
     hideAnimationTimer = null;
   }
 
-  function show() {
+  function showEvent() {
     if (hideAnimationTimer) clearTimeout(hideAnimationTimer);
     hideAnimationTimer = null;
-    root.classList.remove("is-hidden");
-    requestAnimationFrame(() => root.classList.add("is-visible"));
+    eventPanel.classList.remove("is-hidden");
+    requestAnimationFrame(() => eventPanel.classList.add("is-visible"));
   }
 
-  function hide() {
-    root.classList.remove("is-visible");
+  function hideEvent() {
+    eventPanel.classList.remove("is-visible");
     if (hideAnimationTimer) clearTimeout(hideAnimationTimer);
     hideAnimationTimer = setTimeout(() => {
-      root.classList.add("is-hidden");
+      eventPanel.classList.add("is-hidden");
       hideAnimationTimer = null;
     }, 240);
+  }
+
+  function setDeathCount(value, animate) {
+    if (!Number.isInteger(value) || value < 0 || value > 1000000) return;
+    deathCountElement.textContent = value.toLocaleString();
+    if (animate) {
+      counter.classList.remove("death-bump");
+      void counter.offsetWidth;
+      counter.classList.add("death-bump");
+    }
+  }
+
+  function applyChallengeState(payload) {
+    if (!payload || typeof payload !== "object") return;
+    if (typeof payload.challenge_name === "string" && payload.challenge_name.trim()) {
+      challengeNameElement.textContent = payload.challenge_name.slice(0, 80);
+    }
+    setDeathCount(payload.death_count, false);
   }
 
   function formatMonsterNames(names) {
@@ -73,7 +97,7 @@
     monsters.textContent = "Something is coming...";
     locationLabel.textContent = "";
     stateLabel.textContent = "IN PROGRESS";
-    show();
+    showEvent();
 
     requestTimer = setTimeout(() => {
       if (activeEventId !== id) return;
@@ -81,7 +105,7 @@
       viewer.textContent = "The game is still processing this spawn";
       monsters.textContent = "";
       stateLabel.textContent = "PENDING";
-      hideTimer = setTimeout(hide, 7000);
+      hideTimer = setTimeout(hideEvent, 7000);
     }, 25000);
   }
 
@@ -105,11 +129,11 @@
     const showLocation = fields.showLocation !== false && fields.showLocation !== "false";
     locationLabel.textContent = !showLocation || !location ? "" : "LOCATION  ·  " + location;
     stateLabel.textContent = event.payload?.is_horde ? "HORDE" : "CONFIRMED";
-    show();
+    showEvent();
 
     const duration = Math.max(3, Math.min(15, Number(fields.displaySeconds) || 7));
     hideTimer = setTimeout(() => {
-      hide();
+      hideEvent();
       activeEventId = "";
     }, duration * 1000);
   }
@@ -119,7 +143,7 @@
     try { message = JSON.parse(raw); } catch { return; }
 
     if (message.type === "overlay.ready") {
-      stateLabel.textContent = "CONNECTED";
+      connectionElement.textContent = "LIVE CONNECTION";
       reconnectDelay = 1000;
       return;
     }
@@ -130,6 +154,16 @@
       showSpawnRequested(message);
     } else if (message.event_name === "stardew.monster_spawned") {
       showSpawned(message);
+    } else if (message.event_name === "stardew.challenge_state") {
+      applyChallengeState(message.payload);
+    } else if (message.event_name === "stardew.player_died") {
+      const id = String(message.event_id || "");
+      if (id && seenDeathEventIds.has(id)) return;
+      if (id) {
+        seenDeathEventIds.add(id);
+        if (seenDeathEventIds.size > 200) seenDeathEventIds.delete(seenDeathEventIds.values().next().value);
+      }
+      setDeathCount(message.payload?.death_count, true);
     }
   }
 
@@ -152,20 +186,23 @@
     }
 
     setupHint.classList.add("is-hidden");
+    root.classList.remove("is-hidden");
     try {
       socket = new WebSocket(GATEWAY + encodeURIComponent(broadcasterId));
     } catch {
+      connectionElement.textContent = "RECONNECTING";
       scheduleReconnect();
       return;
     }
 
     socket.addEventListener("open", () => {
       reconnectDelay = 1000;
-      stateLabel.textContent = "CONNECTED";
+      connectionElement.textContent = "CONNECTED";
     });
     socket.addEventListener("message", event => handleMessage(event.data));
     socket.addEventListener("close", () => {
       socket = null;
+      connectionElement.textContent = "RECONNECTING";
       scheduleReconnect();
     });
     socket.addEventListener("error", () => {
@@ -175,6 +212,8 @@
 
   window.addEventListener("onWidgetLoad", event => {
     fields = event.detail?.fieldData || {};
+    const showCounter = fields.showDeathCounter !== false && fields.showDeathCounter !== "false";
+    if (!showCounter) counter.classList.add("is-hidden");
     connect();
   });
 

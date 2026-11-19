@@ -139,6 +139,45 @@ internal sealed class GameModsClient : IDisposable
         });
     }
 
+    public Task SendPlayerDiedAsync(int deathCount)
+    {
+        if (deathCount is < 1 or > 1000000)
+            return Task.CompletedTask;
+
+        return this.SendMessageAsync(new
+        {
+            type = "game.event",
+            event_id = "death-" + Guid.NewGuid().ToString("N"),
+            game = "stardew-valley",
+            name = "stardew.player_died",
+            occurred_at = DateTimeOffset.UtcNow.ToString("O"),
+            payload = new { death_count = deathCount }
+        });
+    }
+
+    public Task SendChallengeStateAsync(string challengeName, int deathCount)
+    {
+        string safeName = string.IsNullOrWhiteSpace(challengeName)
+            ? "Spectrum Challenge"
+            : challengeName.Trim();
+        if (safeName.Length > 80)
+            safeName = safeName[..80];
+
+        return this.SendMessageAsync(new
+        {
+            type = "game.event",
+            event_id = "challenge-" + Guid.NewGuid().ToString("N"),
+            game = "stardew-valley",
+            name = "stardew.challenge_state",
+            occurred_at = DateTimeOffset.UtcNow.ToString("O"),
+            payload = new
+            {
+                challenge_name = safeName,
+                death_count = Math.Clamp(deathCount, 0, 1000000)
+            }
+        });
+    }
+
     public async Task AcknowledgeActionAsync(string actionId, bool success, int removedCount, string? error = null, string? detail = null)
     {
         await this.SendMessageAsync(new
@@ -253,6 +292,7 @@ internal sealed class GameModsClient : IDisposable
                 this.spawnsEnabled = false;
                 this.connectionStatusMessage = "Connected to Spectrum Game Mods.";
                 this.monitor.Log("Connected to Spectrum Game Mods. Spawning remains paused until enabled in Control Center.", LogLevel.Info);
+                await this.SendChallengeStateAsync(this.config.ChallengeName, this.config.ChallengeDeathCount);
 
                 await this.ReceiveLoopAsync(current, token);
                 if (current.CloseStatusDescription?.Contains("Host access revoked", StringComparison.OrdinalIgnoreCase) == true)
@@ -360,6 +400,12 @@ internal sealed class GameModsClient : IDisposable
             if (type == "session.ready")
             {
                 this.monitor.Log("Spectrum host session is ready.", LogLevel.Trace);
+                return;
+            }
+
+            if (type == "overlay.state.request")
+            {
+                _ = this.SendChallengeStateAsync(this.config.ChallengeName, this.config.ChallengeDeathCount);
                 return;
             }
 
