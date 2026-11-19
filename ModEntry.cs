@@ -19,7 +19,6 @@ internal sealed class ModEntry : Mod
     private readonly HashSet<string> processedCommandIds = new(StringComparer.Ordinal);
     private readonly Queue<string> processedCommandOrder = new();
     private const string ProcessedCommandGlobalKey = "processed-spectrum-command-ids";
-    private bool processedCommandsLoaded;
     private DateTime retryCommandsAtUtc = DateTime.MinValue;
     private GenericModConfigMenu.IGenericModConfigMenuApi? configMenuApi;
     private HostSettings? pendingGmcmSettings;
@@ -482,7 +481,6 @@ internal sealed class ModEntry : Mod
                 this.processedCommandOrder.Enqueue(id);
         }
 
-        this.processedCommandsLoaded = true;
         this.Monitor.Log($"Loaded {this.processedCommandIds.Count} saved Spectrum redemption IDs for duplicate protection.", LogLevel.Trace);
     }
 

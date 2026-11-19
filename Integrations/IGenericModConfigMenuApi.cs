@@ -11,7 +11,7 @@ namespace GenericModConfigMenu
     {
         void Register(IManifest mod, Action reset, Action save, bool titleScreenOnly = false);
 
-        void AddSectionTitle(IManifest mod, Func<string> text, Func<string> tooltip = null);
+        void AddSectionTitle(IManifest mod, Func<string> text, Func<string>? tooltip = null);
 
         void AddParagraph(IManifest mod, Func<string> text);
 
@@ -20,8 +20,8 @@ namespace GenericModConfigMenu
             Func<bool> getValue,
             Action<bool> setValue,
             Func<string> name,
-            Func<string> tooltip = null,
-            string fieldId = null
+            Func<string>? tooltip = null,
+            string? fieldId = null
         );
 
         void AddTextOption(
@@ -29,10 +29,10 @@ namespace GenericModConfigMenu
             Func<string> getValue,
             Action<string> setValue,
             Func<string> name,
-            Func<string> tooltip = null,
-            string[] allowedValues = null,
-            Func<string, string> formatAllowedValue = null,
-            string fieldId = null
+            Func<string>? tooltip = null,
+            string[]? allowedValues = null,
+            Func<string, string>? formatAllowedValue = null,
+            string? fieldId = null
         );
     }
 }
