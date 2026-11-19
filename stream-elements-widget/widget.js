@@ -23,6 +23,7 @@
   let hideTimer = null;
   let requestTimer = null;
   let hideAnimationTimer = null;
+  let deathHideTimer = null;
   let reconnectDelay = 1000;
   let activeEventId = "";
   const seenRequestIds = new Set();
@@ -55,10 +56,21 @@
     }, 240);
   }
 
+  function showDeathCounter() {
+    if (counter.classList.contains("is-hidden")) return;
+    if (deathHideTimer) clearTimeout(deathHideTimer);
+    counter.classList.add("is-visible");
+    deathHideTimer = setTimeout(() => {
+      counter.classList.remove("is-visible");
+      deathHideTimer = null;
+    }, 4000);
+  }
+
   function setDeathCount(value, animate) {
     if (!Number.isInteger(value) || value < 0 || value > 1000000) return;
     deathCountElement.textContent = value.toLocaleString();
     if (animate) {
+      showDeathCounter();
       counter.classList.remove("death-bump");
       void counter.offsetWidth;
       counter.classList.add("death-bump");
@@ -221,6 +233,7 @@
     isUnloading = true;
     clearDisplayTimers();
     if (reconnectTimer) clearTimeout(reconnectTimer);
+    if (deathHideTimer) clearTimeout(deathHideTimer);
     try { socket?.close(); } catch {}
     socket = null;
   });
