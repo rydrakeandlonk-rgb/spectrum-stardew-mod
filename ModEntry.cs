@@ -707,7 +707,15 @@ internal sealed class ModEntry : Mod
                 Game1.chatBox?.addInfoMessage($"{redeemer} spawned {spawnDescription} near {targetFarmer.Name} in {locationName}!");
             }
 
-            this.CompleteSpawnCommand(work, true, null);
+            this.CompleteSpawnCommand(
+                work,
+                true,
+                null,
+                spawnedTypes.Select(MonsterCatalog.GetDisplayName).ToArray(),
+                spawnedCount,
+                locationName,
+                work.IsHorde
+            );
         }
         else
         {
@@ -853,12 +861,27 @@ internal sealed class ModEntry : Mod
             this.pendingSpawnCommands.Enqueue(new SpawnWorkItem(command, replyToPlayerId, chatResponses));
     }
 
-    private void CompleteSpawnCommand(SpawnWorkItem work, bool success, string? error)
+    private void CompleteSpawnCommand(
+        SpawnWorkItem work,
+        bool success,
+        string? error,
+        string[]? monsterNames = null,
+        int spawnedCount = 0,
+        string locationName = "",
+        bool isHorde = false)
     {
         if (work.ReplyToPlayerId is long playerId)
         {
             this.Helper.Multiplayer.SendMessage(
-                new SpawnCommandResult(work.Command.CommandId, success, error ?? ""),
+                new SpawnCommandResult(
+                    work.Command.CommandId,
+                    success,
+                    error ?? "",
+                    monsterNames,
+                    spawnedCount,
+                    locationName,
+                    DisplayValue(work.Command.TwitchUserName),
+                    isHorde),
                 "spectrum.spawn.result",
                 modIDs: new[] { this.ModManifest.UniqueID },
                 playerIDs: new[] { playerId }
@@ -866,6 +889,17 @@ internal sealed class ModEntry : Mod
         }
         else if (success)
         {
+            if (monsterNames is { Length: > 0 } && spawnedCount == monsterNames.Length)
+            {
+                _ = this.gameModsClient?.SendMonsterSpawnedAsync(
+                    work.Command.CommandId,
+                    DisplayValue(work.Command.TwitchUserName),
+                    monsterNames,
+                    spawnedCount,
+                    locationName,
+                    isHorde
+                );
+            }
             _ = this.gameModsClient?.AcknowledgeAsync(work.Command.CommandId);
         }
         else
@@ -1030,6 +1064,17 @@ internal sealed class ModEntry : Mod
                 }
 
                 this.forwardedCommands.Remove(result.CommandId);
+                if (result.MonsterNames is { Length: > 0 } && result.SpawnedCount == result.MonsterNames.Length)
+                {
+                    _ = this.gameModsClient?.SendMonsterSpawnedAsync(
+                        result.CommandId,
+                        DisplayValue(result.RedeemerName),
+                        result.MonsterNames,
+                        result.SpawnedCount,
+                        DisplayValue(result.LocationName),
+                        result.IsHorde
+                    );
+                }
                 _ = this.gameModsClient?.AcknowledgeAsync(result.CommandId);
                 this.Monitor.Log($"[Spectrum] MULTIPLAYER SPAWN CONFIRMED | {result.CommandId}", LogLevel.Info);
             }
