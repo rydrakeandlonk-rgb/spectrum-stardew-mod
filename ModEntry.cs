@@ -197,7 +197,7 @@ internal sealed class ModEntry : Mod
         this.configMenuApi.AddParagraph(this.ModManifest, this.GetGmcmStatusText);
 
         this.configMenuApi.AddSectionTitle(this.ModManifest, () => "Monster controls");
-        this.configMenuApi.AddComplexOptionWithGamepadSupport(
+        this.configMenuApi.AddComplexOption(
             this.ModManifest,
             () => "Monster spawning",
             this.DrawSpawningButton,
@@ -261,7 +261,7 @@ internal sealed class ModEntry : Mod
             this.ModManifest,
             () => "Link your Spectrum Twitch account or reopen the connection page. This button opens your browser."
         );
-        this.configMenuApi.AddComplexOptionWithGamepadSupport(
+        this.configMenuApi.AddComplexOption(
             this.ModManifest,
             () => "Twitch account",
             this.DrawLinkTwitchButton,
@@ -275,7 +275,7 @@ internal sealed class ModEntry : Mod
             this.ModManifest,
             () => "Clear Enemies immediately removes hostile monsters from all currently loaded locations. Multiplayer host only."
         );
-        this.configMenuApi.AddComplexOptionWithGamepadSupport(
+        this.configMenuApi.AddComplexOption(
             this.ModManifest,
             () => "Loaded enemies",
             this.DrawClearEnemiesButton,

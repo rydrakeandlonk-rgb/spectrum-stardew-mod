@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
@@ -19,7 +18,7 @@ namespace GenericModConfigMenu
 
         void AddParagraph(IManifest mod, Func<string> text);
 
-        void AddComplexOptionWithGamepadSupport(
+        void AddComplexOption(
             IManifest mod,
             Func<string> name,
             Action<SpriteBatch, Vector2> draw,
@@ -30,9 +29,6 @@ namespace GenericModConfigMenu
             Action? beforeReset = null,
             Action? afterReset = null,
             Action? beforeMenuClosed = null,
-            Func<IEnumerable<ClickableComponent>>? snapRegionsOverride = null,
-            Func<bool>? snapRegionsNeedRefreshing = null,
-            Func<bool?>? usingGamepadMovement = null,
             Func<int>? height = null,
             string? fieldId = null
         );
