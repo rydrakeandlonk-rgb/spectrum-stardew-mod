@@ -118,7 +118,7 @@ internal sealed class ModEntry : Mod
 
         this.gameModsClient?.Dispose();
         this.gameModsClient = new GameModsClient(this.config, this.Monitor);
-        this.Monitor.Log("Starting the Spectrum host connection for the loaded host save.", LogLevel.Info);
+        this.Monitor.Log("Starting this player’s Spectrum connection for the loaded Stardew save.", LogLevel.Info);
     }
 
     private void OnReturnedToTitle(object? sender, ReturnedToTitleEventArgs e)
@@ -536,6 +536,12 @@ internal sealed class ModEntry : Mod
             this.gameModsClient.TryDequeueCommand(out GameCommand? command) &&
             command is not null)
         {
+            if (this.processedCommandIds.Contains(command.CommandId))
+            {
+                _ = this.gameModsClient.AcknowledgeAsync(command.CommandId);
+                return;
+            }
+
             this.forwardedCommands[command.CommandId] = new PendingForwardedCommand(command, DateTime.MinValue);
         }
 
