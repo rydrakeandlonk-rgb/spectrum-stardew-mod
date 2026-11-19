@@ -7,7 +7,7 @@ using SpectrumStardewMod.Networking;
 
 namespace SpectrumStardewMod.UI;
 
-/// <summary>The in-game Spectrum controls for the multiplayer host.</summary>
+/// <summary>In-game Spectrum controls for this player's own Twitch connection.</summary>
 internal sealed class SpectrumMenu : IClickableMenu
 {
     private readonly Func<bool> isConnected;
@@ -78,11 +78,11 @@ internal sealed class SpectrumMenu : IClickableMenu
     }
 
     private bool CanControl => this.isHost();
-    private bool CanSyncSettings => this.isHost() && this.isConnected();
+    private bool CanSyncSettings => this.isConnected();
 
     private void Save(HostSettings settings)
     {
-        if (this.CanControl)
+        if (this.CanSyncSettings)
             this.updateSettings(settings);
     }
 
@@ -119,9 +119,6 @@ internal sealed class SpectrumMenu : IClickableMenu
             return;
         }
 
-        if (!this.CanControl)
-            return;
-
         HostSettings settings = this.getSettings();
         if (this.spawnBounds.Contains(x, y))
         {
@@ -153,7 +150,7 @@ internal sealed class SpectrumMenu : IClickableMenu
             this.Save(settings with { DebugMessages = !settings.DebugMessages });
             Game1.playSound("smallSelect");
         }
-        else if (this.clearBounds.Contains(x, y))
+        else if (this.clearBounds.Contains(x, y) && this.CanControl)
         {
             this.confirmClear = true;
             Game1.playSound("smallSelect");
@@ -197,7 +194,7 @@ internal sealed class SpectrumMenu : IClickableMenu
             new Vector2(this.xPositionOnScreen + 52, this.yPositionOnScreen + 112),
             connected ? Color.LightGreen : Color.OrangeRed);
 
-        string authorityText = host ? "World authority: Host" : "World authority: Farmhand (view only)";
+        string authorityText = host ? "World authority: Host" : "World authority: Farmhand (host executes spawns)";
         b.DrawString(Game1.smallFont, authorityText,
             new Vector2(this.xPositionOnScreen + 300, this.yPositionOnScreen + 112),
             host ? Color.LightGreen : Color.LightGray);
@@ -249,7 +246,7 @@ internal sealed class SpectrumMenu : IClickableMenu
             string status = pairingStatus.Length > 0
                 ? pairingStatus
                 : !host
-                    ? "Only the multiplayer host can change settings or clear the shared world."
+                    ? "Your Twitch settings are independent; the host executes your shared-world spawns."
                     : this.getSpawnStateReason();
             b.DrawString(Game1.smallFont, status,
                 new Vector2(this.xPositionOnScreen + 52, this.yPositionOnScreen + 485), Game1.textColor);
