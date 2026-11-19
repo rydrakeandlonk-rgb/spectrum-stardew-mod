@@ -6,12 +6,12 @@ Only Spectrum members explicitly enabled by an administrator in Spectrum Control
 
 ## Intended experience
 
-1. An enabled Spectrum streamer installs the Spectrum mod through SMAPI.
-2. They launch Stardew Valley and pair the host game with Spectrum Control Center.
+1. Each enabled Spectrum streamer installs the Spectrum mod through SMAPI.
+2. Each player pairs their own game installation with their own Twitch account through Control Center.
 3. Control Center verifies the signed-in Twitch identity and administrator-controlled activation record.
-4. An administrator sets the shared **Spawn Random Monster** Channel Point reward title in Control Center.
-5. The host game connects to the Spectrum gateway and receives typed random-monster spawn requests.
-6. The host selects an explicit monster variant from the local allowlist and constructs it using its vanilla game constructor.
+4. Event Hub interprets that streamer's redemptions using the approved Control Center configuration.
+5. Each mod connects only to its own broadcaster-specific gateway session and receives only that streamer's commands.
+6. If the redeemer is a farmhand, their mod forwards the typed command to the host through SMAPI. The host selects and constructs the vanilla monster near that farmer.
 
 No Twitch password, Twitch client secret, or long-lived Twitch token is stored in the mod.
 
@@ -19,12 +19,12 @@ No Twitch password, Twitch client secret, or long-lived Twitch token is stored i
 
 The existing Spectrum Cloudflare project owns identity, permissions, dashboard management, Twitch authorisation, EventSub and the live gateway.
 
-Twitch Channel Points → Spectrum Event Hub → Stardew gateway → host SMAPI mod → Stardew Valley
+Twitch Channel Points → Spectrum Event Hub → that streamer's gateway session → their SMAPI mod → (SMAPI relay if farmhand) → host SMAPI mod → Stardew Valley
 
 - Control Center: administrator-only Stardew Valley page, per-member access, live game status, shared reward title, per-host safety gate, streamer preferences, administrator overrides and remote clear-monsters actions.
 - Event Hub: receives and verifies Twitch Channel Point redemption notifications and routes approved redemptions.
-- Stardew gateway: owns authenticated host sessions, versioned settings, administrator overrides, deduplication, pending requests and acknowledged remote actions.
-- SMAPI mod: provides a clickable in-game Spectrum menu, synchronises streamer settings, processes host-only world actions, chooses and constructs vanilla monsters on the game thread, and acknowledges completed actions.
+- Stardew gateway: owns one authenticated session per enabled broadcaster, versioned per-streamer settings, administrator overrides, deduplication, pending requests and acknowledged remote actions.
+- SMAPI mod: each player connects only their own broadcaster session. Farmhands forward typed spawn requests to the host through SMAPI; only the host mutates the shared world and confirms completion back to the originating client.
 
 ## Monster spawning
 
@@ -35,7 +35,11 @@ The spawner creates the selected vanilla monster on a valid nearby tile and adds
 The eight location groups are progression gates, not physical spawn restrictions. All unlocked groups contribute to one global pool; duplicate definition IDs are counted once. Random selection targets a threat band across three permanent milestones: before Mines floor 120, after Mines floor 120, and after Skull Cavern floor 100. Combat Level is a secondary adjustment within each stage. The threat score is derived from vanilla `Data/Monsters` health, attack, defence, speed, experience, miss chance and glider behaviour. Missing entries fall back to the catalogue estimate. This changes selection only, not monster stats. See [docs/MONSTER_POOLS.md](docs/MONSTER_POOLS.md) for the full pool list, unlock checks, exclusions and variant mapping.
 ## Multiplayer
 
-The farm host is authoritative. Only the host's mod connection processes external redemption requests and creates monsters. Farmhands do not need separate Twitch connections. Monster replication must be verified in a real host/farmhand test.
+Every player connects their own Spectrum/Twitch account. A client never subscribes to every Spectrum channel and never needs another streamer's credentials. The gateway and Event Hub continue routing each interpreted redemption only to that broadcaster's own mod connection.
+
+If the connected player is the host, their mod queues the command locally. If they're a farmhand, their mod forwards the typed command to the host using SMAPI's multiplayer messaging API. The host validates that the message came from a connected player running this mod, resolves that sender to their online farmer, and creates the monster near that farmer in their current location. The host sends a completion response to the originating farmhand, which only then acknowledges the redemption to the gateway. Both sides retain command-ID deduplication so retries don't create duplicate monsters.
+
+The host does not need to pair with or listen to other streamers. It can accept forwarded commands even if its own Spectrum connection is not paired. Stardew remains responsible for synchronising the host-created vanilla monster to the other players. This multiplayer path still requires a real two-client runtime test.
 
 ## Repository contents
 
@@ -55,21 +59,21 @@ The farm host is authoritative. Only the host's mod connection processes externa
 
 Version 0.7.5 is the last runtime-validated version. Its monster catalogue, progression profiles, reconnect safety, Twitch redemption handling and retry/acknowledgement behaviour passed the user's single-player checks. Multiplayer remains untested.
 
-Version 0.8.0 is the current development target. It adds a clickable HUD entry point and dedicated Spectrum menu; streamer preference, difficulty, chat-response and debug settings; host-only in-game controls; host-wide clearing of loaded hostile monsters; versioned settings synchronisation; administrator override modes; and Control Center remote actions. The gateway stores these settings in the existing per-host Durable Object rather than adding D1/KV writes. This development version still needs a successful CI build and in-game validation before installation. The in-game Connect button currently opens Control Center; the existing one-time host pairing/config setup is still required.
+Version 0.8.2 adds independent per-player Spectrum connections and a typed SMAPI farmhand-to-host command relay. Each player manages only their own streamer settings; the host remains the sole authority for shared-world spawning and clearing. The gateway continues using the existing per-broadcaster Durable Objects; this multiplayer change adds no D1/KV schema, writes, or central channel fan-in. CI compilation and real multiplayer testing are required before calling this version runtime-validated.
 
-## Connect the host in-game
+## Connect each player in-game
 
 An administrator first enables the Spectrum member's Stardew access in Control Center. The streamer can then connect without manually copying a host token:
 
-1. Load a Stardew save as the multiplayer host.
-2. Click the **Spectrum** HUD button and choose **Connect Twitch account**.
-3. The mod creates a short-lived pairing code and opens the Control Center approval page.
-4. Sign in using the Twitch account that owns the active Spectrum channel.
+1. Load the multiplayer save as either host or farmhand.
+2. Open **Options → Generic Mod Config Menu → Spectrum Stardew Monster Spawner → Open Spectrum Control Panel**.
+3. Choose **Connect Twitch account**. The mod creates a short-lived pairing code and opens the Control Center approval page.
+4. Sign in using the Twitch account that owns your active Spectrum channel.
 5. Confirm the pairing request. Control Center only authorises the signed-in member's own account, and only if an administrator has enabled Stardew access.
-6. Return to Stardew. The mod receives its revocable host credential securely and writes it to its local SMAPI config automatically.
-7. The host connects to the gateway. Spawning remains stopped until the Control Center global safety gate is explicitly opened.
+6. Return to Stardew. Your mod receives its own revocable game-session credential securely and writes it to your local SMAPI config automatically.
+7. Your mod connects only to your broadcaster's gateway session. Spawning remains stopped until that streamer's Control Center safety gate is explicitly opened.
 
-Pairing codes expire after ten minutes. The private device code is separate from the visible approval code and is never shown in the dashboard. The host credential is not displayed to the streamer or sent to browser JavaScript. Revoke access in Control Center before moving the connection to another Twitch account.
+Pairing codes expire after ten minutes. The private device code is separate from the visible approval code and is never shown in the dashboard. The host credential is not displayed to the streamer or sent to browser JavaScript. Revoke access in Control Center before moving your connection to another Twitch account.
 
 The local config carries a schema version and is migrated automatically on first launch after an update. Gateway URLs must use HTTPS, and incomplete or malformed saved credentials are cleared so the host can be paired again safely. The in-game menu and `spectrum_connection_status` explain whether spawning is stopped by the global safety gate, the administrator override, the streamer's preference, a revoked connection, or a gateway interruption. Temporary gateway interruptions retry automatically; revoked or rotated credentials stop retrying and require a fresh Twitch pairing. The older administrator **Pair / re-pair** action and manual config setup remain available as a fallback. Never commit or share the local config or host token.
  
