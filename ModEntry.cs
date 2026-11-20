@@ -664,7 +664,7 @@ internal sealed class ModEntry : Mod
                 detail = "Unsupported game action";
             }
 
-            if (!succeeded && actionWork.Name is "stardew.community_horde" or "stardew.community_mega_horde" && detail.StartsWith("PENDING:", StringComparison.Ordinal))
+            if (!succeeded && (actionWork.Name is "stardew.community_horde" or "stardew.community_mega_horde") && detail.StartsWith("PENDING:", StringComparison.Ordinal))
             {
                 this.pendingClearActions.Enqueue(actionWork with { HasAttempted = true });
                 this.Monitor.Log($"[Spectrum] COMMUNITY PENDING | {actionWork.ActionId} | waiting for the target farmer's next location change.", LogLevel.Warn);
@@ -849,7 +849,7 @@ internal sealed class ModEntry : Mod
             return;
         }
 
-        if (!succeeded && action.Name is "stardew.community_horde" or "stardew.community_mega_horde" && detail.StartsWith("PENDING:", StringComparison.Ordinal))
+        if (!succeeded && (action.Name is "stardew.community_horde" or "stardew.community_mega_horde") && detail.StartsWith("PENDING:", StringComparison.Ordinal))
         {
             this.pendingClearActions.Enqueue(new PendingClearWorkItem(action.ActionId, action.Name, action.Difficulty, action.Outcome, Game1.player?.UniqueMultiplayerID ?? -1, IsLocal: true, HasAttempted: true));
             return;
