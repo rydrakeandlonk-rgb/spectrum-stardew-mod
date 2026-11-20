@@ -540,7 +540,7 @@ internal sealed class ModEntry : Mod
 
     private void OnPlayerWarped(object? sender, WarpedEventArgs e)
     {
-        if (Context.IsMainPlayer && this.pendingSpawnCommands.Count > 0)
+        if (Context.IsMainPlayer && (this.pendingSpawnCommands.Count > 0 || this.pendingClearActions.Count > 0))
             this.pendingSpawnRetryPlayers.Add(e.Player.UniqueMultiplayerID);
     }
 
@@ -612,7 +612,21 @@ internal sealed class ModEntry : Mod
 
         if (this.pendingClearActions.Count > 0)
         {
-            PendingClearWorkItem actionWork = this.pendingClearActions.Dequeue();
+            PendingClearWorkItem? readyAction = null;
+            int actionQueueCount = this.pendingClearActions.Count;
+            for (int i = 0; i < actionQueueCount; i++)
+            {
+                PendingClearWorkItem candidate = this.pendingClearActions.Dequeue();
+                if (!candidate.HasAttempted || this.pendingSpawnRetryPlayers.Remove(candidate.SenderPlayerId))
+                {
+                    readyAction = candidate;
+                    break;
+                }
+                this.pendingClearActions.Enqueue(candidate);
+            }
+            if (readyAction is not null)
+            {
+            PendingClearWorkItem actionWork = readyAction;
             int removed = 0;
             string detail = "";
             bool succeeded;
@@ -640,13 +654,21 @@ internal sealed class ModEntry : Mod
                     actionWork.Difficulty,
                     target,
                     out removed,
-                    out detail
+                    out detail,
+                    actionWork.ActionId
                 );
             }
             else
             {
                 succeeded = false;
                 detail = "Unsupported game action";
+            }
+
+            if (!succeeded && actionWork.Name is "stardew.community_horde" or "stardew.community_mega_horde" && detail.StartsWith("PENDING:", StringComparison.Ordinal))
+            {
+                this.pendingClearActions.Enqueue(actionWork with { HasAttempted = true });
+                this.Monitor.Log($"[Spectrum] COMMUNITY PENDING | {actionWork.ActionId} | waiting for the target farmer's next location change.", LogLevel.Warn);
+                return;
             }
 
             this.queuedClearActionIds.Remove(actionWork.ActionId);
@@ -657,14 +679,11 @@ internal sealed class ModEntry : Mod
                     this.completedClearActionCounts.Remove(this.completedClearActionCounts.Keys.First());
             }
 
-            this.CompleteForwardedClearAction(
-                actionWork.SenderPlayerId,
-                actionWork.ActionId,
-                succeeded,
-                Math.Max(0, removed),
-                succeeded ? "" : detail,
-                detail
-            );
+            if (actionWork.IsLocal)
+                _ = this.gameModsClient?.AcknowledgeActionAsync(actionWork.ActionId, succeeded, Math.Max(0, removed), succeeded ? null : detail, detail);
+            else
+                this.CompleteForwardedClearAction(actionWork.SenderPlayerId, actionWork.ActionId, succeeded, Math.Max(0, removed), succeeded ? "" : detail, detail);
+            }
         }
 
         if (this.pendingSpawnCommands.Count == 0)
@@ -814,7 +833,8 @@ internal sealed class ModEntry : Mod
                     action.Difficulty,
                     Game1.player,
                     out removed,
-                    out detail
+                    out detail,
+                    action.ActionId
                 );
             }
             else
@@ -826,6 +846,12 @@ internal sealed class ModEntry : Mod
         else
         {
             _ = this.gameModsClient?.AcknowledgeActionAsync(action.ActionId, false, 0, "Unsupported game action.");
+            return;
+        }
+
+        if (!succeeded && action.Name is "stardew.community_horde" or "stardew.community_mega_horde" && detail.StartsWith("PENDING:", StringComparison.Ordinal))
+        {
+            this.pendingClearActions.Enqueue(new PendingClearWorkItem(action.ActionId, action.Name, action.Difficulty, action.Outcome, Game1.player?.UniqueMultiplayerID ?? -1, IsLocal: true, HasAttempted: true));
             return;
         }
 
@@ -1198,7 +1224,7 @@ internal sealed class ModEntry : Mod
     );
     private sealed record PendingChatMessage(DateTime ShowAtUtc, string Message);
     private sealed record PendingForwardedCommand(GameCommand Command, DateTime LastSentAtUtc);
-    private sealed record PendingClearWorkItem(string ActionId, string Name, string Difficulty, string Outcome, long SenderPlayerId);
+    private sealed record PendingClearWorkItem(string ActionId, string Name, string Difficulty, string Outcome, long SenderPlayerId, bool IsLocal = false, bool HasAttempted = false);
     private sealed record PendingForwardedClearAction(GameAction Action, DateTime LastSentAtUtc);
 
     private static string DisplayValue(string value)
