@@ -10,6 +10,7 @@
   const connectionElement = document.getElementById("counter-connection");
   const eventPanel = document.getElementById("event-panel");
   const wheel = document.getElementById("summon-wheel");
+  const wheelSegments = document.querySelector("#summon-wheel .wheel-segments");
   const wheelSymbol = document.getElementById("wheel-symbol");
   const title = document.getElementById("event-title");
   const viewer = document.getElementById("event-viewer");
@@ -109,6 +110,79 @@
     }, 25000);
   }
 
+  function showCommunityRoulette(event) {
+    const id = String(event.event_id || "");
+    if (!id || completedEventIds.has(id) || seenRequestIds.has(id)) return;
+    seenRequestIds.add(id);
+    if (seenRequestIds.size > 200) seenRequestIds.delete(seenRequestIds.values().next().value);
+
+    const weights = event.payload?.weights || {};
+    const nothing = Math.max(0, Number(weights.nothing) || 0);
+    const single = Math.max(0, Number(weights.single) || 0);
+    const horde = Math.max(0, Number(weights.horde) || 0);
+    const total = nothing + single + horde;
+    if (!Number.isFinite(total) || total <= 0) return;
+
+    const nothingEnd = 360 * nothing / total;
+    const singleEnd = nothingEnd + 360 * single / total;
+    wheelSegments.style.background = `conic-gradient(
+      #64748b 0deg ${nothingEnd}deg,
+      #78a86b ${nothingEnd}deg ${singleEnd}deg,
+      #a65ac7 ${singleEnd}deg 360deg
+    )`;
+    wheelSegments.style.transform = "rotate(0deg)";
+
+    activeEventId = id;
+    clearDisplayTimers();
+    wheel.classList.remove("is-landed");
+    wheel.classList.add("is-spinning");
+    wheelSymbol.textContent = "?";
+    title.textContent = "COMMUNITY ROULETTE";
+    viewer.textContent = "Chat has spun the shared wheel";
+    monsters.textContent = "The wheel is deciding...";
+    locationLabel.textContent = "";
+    stateLabel.textContent = "SPINNING";
+    showEvent();
+
+    const outcome = String(event.payload?.outcome || "");
+    const start = outcome === "nothing" ? 0
+      : outcome === "single" ? nothingEnd
+      : outcome === "horde" ? singleEnd : NaN;
+    const size = outcome === "nothing" ? nothingEnd
+      : outcome === "single" ? singleEnd - nothingEnd
+      : outcome === "horde" ? 360 - singleEnd : 0;
+    if (!Number.isFinite(start) || size <= 0) {
+      monsters.textContent = "The wheel result was unavailable";
+      stateLabel.textContent = "ERROR";
+      return;
+    }
+
+    const rotation = 360 * 5 + (360 - (start + size / 2));
+    window.setTimeout(() => {
+      if (activeEventId !== id) return;
+      wheel.classList.remove("is-spinning");
+      wheel.classList.add("is-landed");
+      wheelSegments.style.transform = `rotate(${rotation}deg)`;
+      wheelSymbol.textContent = outcome === "nothing" ? "·" : outcome === "single" ? "!" : "!!";
+      title.textContent = "COMMUNITY ROULETTE";
+      viewer.textContent = Number(event.payload?.eligible_players) > 0
+        ? "For " + Number(event.payload.eligible_players) + " enabled player(s)"
+        : "Shared Spectrum event";
+      monsters.textContent = outcome === "nothing"
+        ? "Nothing this time"
+        : outcome === "single"
+          ? "One enemy for every enabled player!"
+          : "A HORDE for every enabled player!";
+      stateLabel.textContent = outcome === "nothing" ? "NO SPAWN"
+        : outcome === "single" ? "SINGLE ENEMY" : "HORDE";
+      const duration = Math.max(3, Math.min(15, Number(fields.displaySeconds) || 7));
+      hideTimer = setTimeout(() => {
+        hideEvent();
+        activeEventId = "";
+      }, duration * 1000);
+    }, 2300);
+  }
+
   function showSpawned(event) {
     const id = String(event.event_id || "");
     if (id && completedEventIds.has(id)) return;
@@ -150,7 +224,9 @@
 
     if (message.type !== "stream.event" || message.game !== "stardew-valley") return;
 
-    if (message.event_name === "stardew.monster_spawn_requested") {
+    if (message.event_name === "stardew.community_roulette") {
+      showCommunityRoulette(message);
+    } else if (message.event_name === "stardew.monster_spawn_requested") {
       showSpawnRequested(message);
     } else if (message.event_name === "stardew.monster_spawned") {
       showSpawned(message);
