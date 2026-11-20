@@ -358,6 +358,38 @@ internal sealed class MonsterSpawner
     private static int ClampCount(int value, int fallback) =>
         Math.Clamp(value <= 0 ? fallback : value, 1, MaximumMonstersPerRedemption);
 
+    private bool TryCreateAtTile(
+        GameLocation location,
+        string candidateId,
+        Vector2 tile,
+        out Monster? spawnedMonster,
+        out string error,
+        bool ignoreProgression,
+        bool useTestProgression)
+    {
+        spawnedMonster = null;
+        error = "";
+        if (!location.CanSpawnCharacterHere(tile))
+            return false;
+
+        if (!MonsterCatalog.TryCreateMonster(candidateId, tile * 64f, out Monster? monster, out error, ignoreProgression, useTestProgression) || monster is null)
+        {
+            this.monitor.Log($"[Spectrum] SPAWN FAILED | {MonsterCatalog.GetDisplayName(candidateId)} | {error}", LogLevel.Warn);
+            return false;
+        }
+
+        int before = location.characters.Count;
+        location.characters.Add(monster);
+        if (location.characters.Count <= before)
+        {
+            this.monitor.Log($"[Spectrum] SPAWN FAILED | {MonsterCatalog.GetDisplayName(candidateId)} | {location.Name} | character wasn't added", LogLevel.Warn);
+            return false;
+        }
+
+        spawnedMonster = monster;
+        return true;
+    }
+
     private bool TrySpawnCandidate(string candidateId, out string locationName, out Monster? spawnedMonster, bool ignoreProgression = false, bool useTestProgression = true, Farmer? targetFarmer = null)
     {
         locationName = "";
@@ -379,28 +411,40 @@ internal sealed class MonsterSpawner
         foreach (Point offset in NearbyTileOffsets)
         {
             Vector2 tile = new(playerTile.X + offset.X, playerTile.Y + offset.Y);
-            if (!location.CanSpawnCharacterHere(tile))
-                continue;
-
-            int before = location.characters.Count;
-            if (!MonsterCatalog.TryCreateMonster(candidateId, tile * 64f, out Monster? monster, out string error, ignoreProgression, useTestProgression) || monster is null)
+            if (this.TryCreateAtTile(location, candidateId, tile, out spawnedMonster, out string error, ignoreProgression, useTestProgression))
             {
-                this.monitor.Log($"[Spectrum] SPAWN FAILED | {MonsterCatalog.GetDisplayName(candidateId)} | {error}", LogLevel.Warn);
-                return false;
+                locationName = location.Name;
+                return true;
             }
-
-            location.characters.Add(monster);
-            if (location.characters.Count <= before)
-            {
-                this.monitor.Log($"[Spectrum] SPAWN FAILED | {MonsterCatalog.GetDisplayName(candidateId)} | {location.Name} | character wasn't added", LogLevel.Warn);
-                return false;
-            }
-            spawnedMonster = monster;
-            locationName = location.Name;
-            return true;
         }
 
-        this.monitor.Log($"[Spectrum] SPAWN FAILED | {MonsterCatalog.GetDisplayName(candidateId)} | no clear tile", LogLevel.Warn);
+        // Single-monster features use the same nearby-first, same-map fallback
+        // as group encounters. The map is scanned once for this request.
+        int width = location.map?.Layers?.Count > 0 ? location.map.Layers[0].LayerWidth : 0;
+        int height = location.map?.Layers?.Count > 0 ? location.map.Layers[0].LayerHeight : 0;
+        var fallbackTiles = new List<Vector2>();
+        for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
+        {
+            var tile = new Vector2(x, y);
+            if (location.CanSpawnCharacterHere(tile))
+                fallbackTiles.Add(tile);
+        }
+        for (int i = fallbackTiles.Count - 1; i > 0; i--)
+        {
+            int j = Random.Shared.Next(i + 1);
+            (fallbackTiles[i], fallbackTiles[j]) = (fallbackTiles[j], fallbackTiles[i]);
+        }
+        foreach (Vector2 tile in fallbackTiles)
+        {
+            if (this.TryCreateAtTile(location, candidateId, tile, out spawnedMonster, out _, ignoreProgression, useTestProgression))
+            {
+                locationName = location.Name;
+                return true;
+            }
+        }
+
+        this.monitor.Log($"[Spectrum] SPAWN FAILED | {MonsterCatalog.GetDisplayName(candidateId)} | no valid tile anywhere on the current map", LogLevel.Warn);
         return false;
     }
 }
