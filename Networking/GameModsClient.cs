@@ -465,7 +465,10 @@ internal sealed class GameModsClient : IDisposable
                     this.monitor.Log("Ignored a community action with an invalid outcome.", LogLevel.Warn);
                     return;
                 }
-                this.EnqueueAction(new GameAction(actionId, actionGame, actionName, actionDifficulty, outcome));
+                int monsterCount = root.TryGetProperty("monster_count", out JsonElement countElement) && countElement.TryGetInt32(out int parsedCount)
+                    ? Math.Clamp(parsedCount, 1, 50)
+                    : (actionName == "stardew.community_mega_horde" ? 20 : 10);
+                this.EnqueueAction(new GameAction(actionId, actionGame, actionName, actionDifficulty, outcome, monsterCount));
                 return;
             }
 
