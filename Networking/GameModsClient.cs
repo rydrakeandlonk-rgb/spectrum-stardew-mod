@@ -27,6 +27,8 @@ internal sealed class GameModsClient : IDisposable
     private readonly IMonitor monitor;
     private readonly ConcurrentQueue<GameCommand> commands = new();
     private readonly ConcurrentQueue<GameAction> actions = new();
+    private readonly ConcurrentDictionary<string, byte> queuedActionIds = new(StringComparer.Ordinal);
+    private readonly ConcurrentQueue<string> actionIdOrder = new();
     private readonly ConcurrentDictionary<string, byte> queuedCommandIds = new(StringComparer.Ordinal);
     private volatile HostSettings settings = new();
     private volatile int settingsRevision = 1;
@@ -92,6 +94,17 @@ internal sealed class GameModsClient : IDisposable
     }
 
     public bool TryDequeueAction(out GameAction? action) => this.actions.TryDequeue(out action);
+
+    private void EnqueueAction(GameAction action)
+    {
+        if (!this.queuedActionIds.TryAdd(action.ActionId, 0))
+            return;
+
+        this.actions.Enqueue(action);
+        this.actionIdOrder.Enqueue(action.ActionId);
+        while (this.actionIdOrder.Count > 500 && this.actionIdOrder.TryDequeue(out string? expiredId))
+            this.queuedActionIds.TryRemove(expiredId, out _);
+    }
 
     public Task SetSpawnsEnabledAsync(bool enabled)
     {
@@ -451,7 +464,7 @@ internal sealed class GameModsClient : IDisposable
                     this.monitor.Log("Ignored a community action with an invalid outcome.", LogLevel.Warn);
                     return;
                 }
-                this.actions.Enqueue(new GameAction(actionId, actionGame, actionName, actionDifficulty, outcome));
+                this.EnqueueAction(new GameAction(actionId, actionGame, actionName, actionDifficulty, outcome));
                 return;
             }
 
