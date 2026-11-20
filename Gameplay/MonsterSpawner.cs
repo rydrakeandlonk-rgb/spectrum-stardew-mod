@@ -66,7 +66,7 @@ internal sealed class MonsterSpawner
     /// Executes a community roulette result near the specific participating
     /// farmer. Horde placement reuses the normal progression-aware horde path.
     /// </summary>
-    public bool TrySpawnCommunityEncounter(string outcome, string difficulty, Farmer targetFarmer, out int spawnedCount, out string detail)
+    public bool TrySpawnCommunityEncounter(string outcome, string difficulty, Farmer targetFarmer, out int spawnedCount, out string detail, string actionId = "")
     {
         spawnedCount = 0;
         detail = "Unsupported community encounter.";
@@ -89,7 +89,7 @@ internal sealed class MonsterSpawner
             return false;
 
         var command = new GameCommand(
-            "community-" + Guid.NewGuid().ToString("N"),
+            string.IsNullOrWhiteSpace(actionId) ? "community-" + Guid.NewGuid().ToString("N") : actionId,
             "stardew-valley",
             "stardew.spawn_monster",
             "Community",
