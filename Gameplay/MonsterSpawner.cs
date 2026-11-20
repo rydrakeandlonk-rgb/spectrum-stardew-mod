@@ -66,7 +66,7 @@ internal sealed class MonsterSpawner
     /// Executes a community roulette result near the specific participating
     /// farmer. Horde placement reuses the normal progression-aware horde path.
     /// </summary>
-    public bool TrySpawnCommunityEncounter(string outcome, string difficulty, Farmer targetFarmer, out int spawnedCount, out string detail, string actionId = "")
+    public bool TrySpawnCommunityEncounter(string outcome, string difficulty, Farmer targetFarmer, out int spawnedCount, out string detail, string actionId = "", int monsterCount = 10)
     {
         spawnedCount = 0;
         detail = "Unsupported community encounter.";
@@ -104,7 +104,7 @@ internal sealed class MonsterSpawner
             1
         );
 
-        int hordeCount = outcome == "mega" ? 25 : 10;
+        int hordeCount = Math.Clamp(monsterCount, 1, 50);
         bool hordeSucceeded = this.TryExecute(
             command,
             targetFarmer,
