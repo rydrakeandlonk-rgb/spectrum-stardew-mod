@@ -693,7 +693,10 @@ internal sealed class ModEntry : Mod
                     this.completedClearActionCounts.Remove(this.completedClearActionCounts.Keys.First());
 
                 if (actionWork.Name is "stardew.community_horde" or "stardew.community_mega_horde")
-                    this.AnnounceHorde("SPECTRUM");
+                {
+                    if (actionWork.Announce)
+                        this.AnnounceCommunityHorde(actionWork.DonorName, actionWork.CharityName, actionWork.Name == "stardew.community_mega_horde");
+                }
             }
 
             if (actionWork.IsLocal)
@@ -875,12 +878,18 @@ internal sealed class ModEntry : Mod
                 _ = this.gameModsClient?.AcknowledgeActionAsync(action.ActionId, false, 0, "The pending spawn limit for this player has been reached.");
                 return;
             }
-            this.pendingClearActions.Enqueue(new PendingClearWorkItem(action.ActionId, action.Name, action.Difficulty, action.Outcome, localPlayerId, action.MonsterCount, IsLocal: true, HasAttempted: true));
+            this.pendingClearActions.Enqueue(new PendingClearWorkItem(
+                action.ActionId, action.Name, action.Difficulty, action.Outcome, localPlayerId, action.MonsterCount,
+                IsLocal: true, HasAttempted: true, DonorName: action.DonorName, CharityName: action.CharityName, Announce: action.Announce
+            ));
             return;
         }
 
         if (succeeded && action.Name is "stardew.community_horde" or "stardew.community_mega_horde")
-            this.AnnounceHorde("SPECTRUM");
+        {
+            if (action.Announce)
+                this.AnnounceCommunityHorde(action.DonorName, action.CharityName, action.Name == "stardew.community_mega_horde");
+        }
 
         this.Monitor.Log($"[Spectrum] REMOTE ACTION | {action.Name} | {(succeeded ? detail : "failed: " + detail)}", succeeded ? LogLevel.Info : LogLevel.Warn);
         _ = this.gameModsClient?.AcknowledgeActionAsync(
@@ -918,7 +927,10 @@ internal sealed class ModEntry : Mod
                 continue;
 
             this.Helper.Multiplayer.SendMessage(
-                new ForwardedClearAction(pending.Action.ActionId, pending.Action.Name, pending.Action.Difficulty, pending.Action.Outcome, pending.Action.MonsterCount),
+                new ForwardedClearAction(
+                    pending.Action.ActionId, pending.Action.Name, pending.Action.Difficulty, pending.Action.Outcome,
+                    pending.Action.MonsterCount, pending.Action.DonorName, pending.Action.CharityName, pending.Action.Announce
+                ),
                 "spectrum.action.forward",
                 modIDs: new[] { this.ModManifest.UniqueID },
                 playerIDs: new[] { Game1.MasterPlayer.UniqueMultiplayerID }
@@ -1060,6 +1072,21 @@ internal sealed class ModEntry : Mod
         if (e.FromModID != this.ModManifest.UniqueID || !Context.IsWorldReady)
             return;
 
+        if (e.Type == "spectrum.charity.horde.announce" &&
+            !Context.IsMainPlayer &&
+            e.FromPlayerID == Game1.MasterPlayer.UniqueMultiplayerID)
+        {
+            string message;
+            try { message = e.ReadAs<string>(); }
+            catch (Exception ex)
+            {
+                this.Monitor.Log($"Ignored an invalid charity horde announcement: {ex.Message}", LogLevel.Warn);
+                return;
+            }
+            this.ShowHordePreludeAndQueueCustomBanner(message);
+            return;
+        }
+
         if (e.Type == "spectrum.horde.announce" &&
             !Context.IsMainPlayer &&
             e.FromPlayerID == Game1.MasterPlayer.UniqueMultiplayerID)
@@ -1129,7 +1156,10 @@ internal sealed class ModEntry : Mod
                 return;
             }
             if (this.queuedClearActionIds.Add(message.ActionId))
-                this.pendingClearActions.Enqueue(new PendingClearWorkItem(message.ActionId, message.Name, message.Difficulty, message.Outcome, e.FromPlayerID, message.MonsterCount));
+                this.pendingClearActions.Enqueue(new PendingClearWorkItem(
+                    message.ActionId, message.Name, message.Difficulty, message.Outcome, e.FromPlayerID, message.MonsterCount,
+                    DonorName: message.DonorName, CharityName: message.CharityName, Announce: message.Announce
+                ));
             return;
         }
 
@@ -1273,7 +1303,11 @@ internal sealed class ModEntry : Mod
     );
     private sealed record PendingChatMessage(DateTime ShowAtUtc, string Message);
     private sealed record PendingForwardedCommand(GameCommand Command, DateTime LastSentAtUtc);
-    private sealed record PendingClearWorkItem(string ActionId, string Name, string Difficulty, string Outcome, long SenderPlayerId, int MonsterCount = 10, bool IsLocal = false, bool HasAttempted = false);
+    private sealed record PendingClearWorkItem(
+        string ActionId, string Name, string Difficulty, string Outcome, long SenderPlayerId,
+        int MonsterCount = 10, bool IsLocal = false, bool HasAttempted = false,
+        string DonorName = "", string CharityName = "", bool Announce = true
+    );
     private sealed record PendingForwardedClearAction(GameAction Action, DateTime LastSentAtUtc);
 
     private static string DisplayValue(string value)
@@ -1565,13 +1599,46 @@ internal sealed class ModEntry : Mod
         }
     }
 
+    private void AnnounceCommunityHorde(string donorName, string charityName, bool mega)
+    {
+        if (string.IsNullOrWhiteSpace(donorName) || string.IsNullOrWhiteSpace(charityName))
+        {
+            this.AnnounceHorde("SPECTRUM");
+            return;
+        }
+
+        string message = $"{donorName.Trim()} donated to {charityName.Trim()} and summoned a {(mega ? "MEGA " : "")}horde!";
+        this.ShowHordePreludeAndQueueCustomBanner(message);
+
+        if (!Context.IsMainPlayer || Game1.player is null)
+            return;
+
+        long[] recipients = Game1.getOnlineFarmers()
+            .Where(farmer => farmer.UniqueMultiplayerID != Game1.player.UniqueMultiplayerID)
+            .Where(farmer => this.Helper.Multiplayer.GetConnectedPlayer(farmer.UniqueMultiplayerID)?.GetMod(this.ModManifest.UniqueID) is not null)
+            .Select(farmer => farmer.UniqueMultiplayerID)
+            .ToArray();
+
+        if (recipients.Length > 0)
+        {
+            this.Helper.Multiplayer.SendMessage(
+                message,
+                "spectrum.charity.horde.announce",
+                modIDs: new[] { this.ModManifest.UniqueID },
+                playerIDs: recipients
+            );
+        }
+    }
+
     private void ShowHordePreludeAndQueueBanner(string redeemer)
     {
+        this.ShowHordePreludeAndQueueCustomBanner($"{redeemer} HAS SPAWNED A HORDE!");
+    }
+
+    private void ShowHordePreludeAndQueueCustomBanner(string message)
+    {
         Game1.chatBox?.addInfoMessage("Oh no... something is happening.");
-        this.pendingChatMessages.Add(new PendingChatMessage(
-            DateTime.UtcNow.AddSeconds(3),
-            $"{redeemer} HAS SPAWNED A HORDE!"
-        ));
+        this.pendingChatMessages.Add(new PendingChatMessage(DateTime.UtcNow.AddSeconds(3), message));
     }
 
     private void ProcessPendingChatMessages()

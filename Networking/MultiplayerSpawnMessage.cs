@@ -91,16 +91,22 @@ public sealed class ForwardedClearAction
     public string Difficulty { get; set; } = "normal";
     public string Outcome { get; set; } = "";
     public int MonsterCount { get; set; } = 10;
+    public string DonorName { get; set; } = "";
+    public string CharityName { get; set; } = "";
+    public bool Announce { get; set; } = true;
 
     public ForwardedClearAction() { }
 
-    public ForwardedClearAction(string actionId, string name, string difficulty = "normal", string outcome = "", int monsterCount = 10)
+    public ForwardedClearAction(string actionId, string name, string difficulty = "normal", string outcome = "", int monsterCount = 10, string donorName = "", string charityName = "", bool announce = true)
     {
         this.ActionId = actionId;
         this.Name = name;
         this.Difficulty = difficulty;
         this.Outcome = outcome;
         this.MonsterCount = Math.Clamp(monsterCount, 1, 50);
+        this.DonorName = donorName;
+        this.CharityName = charityName;
+        this.Announce = announce;
     }
 }
 

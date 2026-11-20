@@ -148,3 +148,8 @@ All events use the existing authenticated WebSocket and broadcaster-scoped read-
 The custom widget source is bundled in stream-elements-widget/. It keeps the challenge name and death tally visible while showing temporary monster-spawn animations. Copy its HTML, CSS, JS and fields JSON into a StreamElements Custom Widget. See stream-elements-widget/README.md for setup.
 
 The widget does not use StreamElements persistent storage, polling, D1, KV or Durable Object storage. The StreamElements account still requires a one-time manual Custom Widget setup. The GitHub Actions build publishes a complete bundle ZIP containing the installable mod ZIP, widget source files and setup instructions, alongside the mod-only ZIP.
+
+
+## Shared charity hordes
+
+Twitch native Charity Tool donations contribute to one Spectrum-wide AUD meter. When a donation crosses one or more $5 thresholds, it produces one horde event for each broadcaster session captured as connected and spawning-enabled at that moment. The first threshold is part of the configured base horde; additional thresholds add bonus monsters. Crossing a $25 boundary selects the MEGA base, and the final count is capped at 50 per eligible player. Donor and charity names are announced in-game when the Control Center announcement setting is enabled. The gateway owns horde sizing and session eligibility; the mod only executes the typed spawn action and displays the supplied announcement.

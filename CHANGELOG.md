@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.2.0 — development build
+
+### Added
+- Shared Twitch Charity Tool donation hordes with one horde event per donation, regardless of how many $5 thresholds it crosses.
+- Normal/MEGA horde announcements identify the donor and charity when announcement delivery is enabled.
+- Multiplayer farmhands receive the same charity announcement from the host.
+- Charity horde action metadata is carried through the existing typed game-action relay without adding a new service or database.
+
+### Rules
+- The first crossed $5 threshold is included in the base horde; each additional threshold adds two monsters by default.
+- Crossing any $25 milestone makes the donation's single horde a MEGA horde.
+- The final requested count is capped at 50 monsters per player.
+- Donor/charity announcement text is optional and can be disabled in Control Center.
+
+### Validation still required
+- Complete the GitHub build and package verification.
+- Test normal and MEGA charity donations, donor/charity announcement text, and multiplayer announcement delivery in game.
+- Verify disabled announcements do not affect horde spawning.
+
+
 ## 2.1.0 — development build
 
 ### Added

@@ -162,3 +162,12 @@ The local SMAPI config is the source of truth for the challenge name and death c
 The paired client observes its local farmer's health on the normal SMAPI update loop and increments once when health reaches zero, guarded by a death latch until the farmer is revived. It writes the updated local config and publishes stardew.player_died. On connection, and when the gateway asks for overlay state after an overlay reconnect, the mod publishes stardew.challenge_state with the current challenge name and total. The gateway validates and fans out these messages to connected read-only overlay sockets without persisting them.
 
 The StreamElements widget displays the challenge counter persistently and spawn events temporarily. It reconnects with backoff and relies on the mod's state snapshot for recovery. No StreamElements store, polling, D1, KV or Durable Object event history is used.
+
+
+### Shared charity horde actions
+
+- Twitch native Charity Tool donation notifications are aggregated by the Event Hub's shared AUD charity manager. A donation crossing multiple $5 boundaries creates one typed event with the threshold count and a single normal/MEGA classification.
+- The gateway applies the configured normal or MEGA base, adds the configured bonus for each additional crossed threshold, and clamps the final request to 50 monsters.
+- Donor display name and charity name are transient action metadata used for the optional in-game announcement. They are not written into a donor-history table.
+- The event carries an immutable broadcaster/session snapshot from the donation moment. The per-host gateway rechecks the exact session ID and effective spawning permission before sending the action.
+- Farmhands relay the typed action and announcement metadata to the multiplayer host; the host remains the only client that changes the shared world and broadcasts the announcement to connected modded farmhands.
