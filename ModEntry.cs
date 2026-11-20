@@ -23,6 +23,7 @@ internal sealed class ModEntry : Mod
     private readonly HashSet<string> processedCommandIds = new(StringComparer.Ordinal);
     private readonly Queue<string> processedCommandOrder = new();
     private const string ProcessedCommandGlobalKey = "processed-spectrum-command-ids";
+    private const int MaxPendingSpawnRequestsPerPlayer = 20;
     private DateTime retryCommandsAtUtc = DateTime.MinValue;
     private GenericModConfigMenu.IGenericModConfigMenuApi? configMenuApi;
     private string? pendingChallengeName;
@@ -865,7 +866,13 @@ internal sealed class ModEntry : Mod
 
         if (!succeeded && (action.Name is "stardew.community_horde" or "stardew.community_mega_horde") && detail.StartsWith("PENDING:", StringComparison.Ordinal))
         {
-            this.pendingClearActions.Enqueue(new PendingClearWorkItem(action.ActionId, action.Name, action.Difficulty, action.Outcome, Game1.player?.UniqueMultiplayerID ?? -1, action.MonsterCount, IsLocal: true, HasAttempted: true));
+            long localPlayerId = Game1.player?.UniqueMultiplayerID ?? -1;
+            if (this.CountPendingSpawnRequests(localPlayerId) >= MaxPendingSpawnRequestsPerPlayer)
+            {
+                _ = this.gameModsClient?.AcknowledgeActionAsync(action.ActionId, false, 0, "The pending spawn limit for this player has been reached.");
+                return;
+            }
+            this.pendingClearActions.Enqueue(new PendingClearWorkItem(action.ActionId, action.Name, action.Difficulty, action.Outcome, localPlayerId, action.MonsterCount, IsLocal: true, HasAttempted: true));
             return;
         }
 
@@ -966,12 +973,28 @@ internal sealed class ModEntry : Mod
         }
     }
 
+    private int CountPendingSpawnRequests(long playerId)
+    {
+        int commandCount = this.pendingSpawnCommands.Count(item =>
+            (item.ReplyToPlayerId ?? Game1.player?.UniqueMultiplayerID ?? -1) == playerId);
+        int actionCount = this.pendingClearActions.Count(item => item.SenderPlayerId == playerId);
+        return commandCount + actionCount;
+    }
+
     private void QueueSpawnCommand(GameCommand command, long? replyToPlayerId)
     {
         if (string.IsNullOrWhiteSpace(command.CommandId) || this.processedCommandIds.Contains(command.CommandId))
         {
             if (!string.IsNullOrWhiteSpace(command.CommandId))
                 this.CompleteSpawnCommand(new SpawnWorkItem(command, replyToPlayerId), true, "Already processed.");
+            return;
+        }
+
+        long targetPlayerId = replyToPlayerId ?? Game1.player?.UniqueMultiplayerID ?? -1;
+        if (this.CountPendingSpawnRequests(targetPlayerId) >= MaxPendingSpawnRequestsPerPlayer)
+        {
+            this.Monitor.Log($"[Spectrum] PENDING LIMIT | rejected {command.CommandId} | player {targetPlayerId} already has {MaxPendingSpawnRequestsPerPlayer} pending spawn requests.", LogLevel.Warn);
+            this.CompleteSpawnCommand(new SpawnWorkItem(command, replyToPlayerId), false, "The pending spawn limit for this player has been reached.");
             return;
         }
 
@@ -1094,6 +1117,11 @@ internal sealed class ModEntry : Mod
                 return;
             }
 
+            if (this.CountPendingSpawnRequests(e.FromPlayerID) >= MaxPendingSpawnRequestsPerPlayer)
+            {
+                this.CompleteForwardedClearAction(e.FromPlayerID, message.ActionId, false, 0, "The pending spawn limit for this player has been reached.");
+                return;
+            }
             if (this.queuedClearActionIds.Add(message.ActionId))
                 this.pendingClearActions.Enqueue(new PendingClearWorkItem(message.ActionId, message.Name, message.Difficulty, message.Outcome, e.FromPlayerID, message.MonsterCount));
             return;
