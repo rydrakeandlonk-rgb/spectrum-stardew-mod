@@ -622,6 +622,17 @@ internal sealed class ModEntry : Mod
                 );
                 detail = succeeded ? "Random progression-eligible enemy spawned" : "No eligible enemy or safe spawn tile was available";
             }
+            else if (actionWork.Name is "stardew.community_single" or "stardew.community_horde")
+            {
+                Farmer? target = Game1.getOnlineFarmers().FirstOrDefault(farmer => farmer.UniqueMultiplayerID == actionWork.SenderPlayerId);
+                succeeded = target is not null && this.monsterSpawner.TrySpawnCommunityEncounter(
+                    actionWork.Outcome,
+                    actionWork.Difficulty,
+                    target,
+                    out removed,
+                    out detail
+                );
+            }
             else
             {
                 succeeded = false;
@@ -769,6 +780,16 @@ internal sealed class ModEntry : Mod
             succeeded = this.monsterSpawner?.TrySpawnRandomMonster(action.Difficulty) == true;
             detail = succeeded ? "Random progression-eligible enemy spawned" : "No eligible enemy or safe spawn tile was available";
         }
+        else if (action.Name is "stardew.community_single" or "stardew.community_horde")
+        {
+            succeeded = this.monsterSpawner?.TrySpawnCommunityEncounter(
+                action.Outcome,
+                action.Difficulty,
+                Game1.player,
+                out removed,
+                out detail
+            ) == true;
+        }
         else
         {
             _ = this.gameModsClient?.AcknowledgeActionAsync(action.ActionId, false, 0, "Unsupported game action.");
@@ -794,7 +815,7 @@ internal sealed class ModEntry : Mod
             this.gameModsClient.TryDequeueAction(out GameAction? action) &&
             action is not null)
         {
-            if (action.Name is not ("stardew.clear_loaded_monsters" or "stardew.spawn_random_test"))
+            if (action.Name is not ("stardew.clear_loaded_monsters" or "stardew.spawn_random_test" or "stardew.community_single" or "stardew.community_horde"))
             {
                 _ = this.gameModsClient.AcknowledgeActionAsync(action.ActionId, false, 0, "Unsupported game action.");
                 return;
@@ -811,7 +832,7 @@ internal sealed class ModEntry : Mod
                 continue;
 
             this.Helper.Multiplayer.SendMessage(
-                new ForwardedClearAction(pending.Action.ActionId, pending.Action.Name, pending.Action.Difficulty),
+                new ForwardedClearAction(pending.Action.ActionId, pending.Action.Name, pending.Action.Difficulty, pending.Action.Outcome),
                 "spectrum.action.forward",
                 modIDs: new[] { this.ModManifest.UniqueID },
                 playerIDs: new[] { Game1.MasterPlayer.UniqueMultiplayerID }
@@ -984,8 +1005,10 @@ internal sealed class ModEntry : Mod
             bool hasMod = peer?.GetMod(this.ModManifest.UniqueID) is not null;
             bool farmerOnline = Game1.getOnlineFarmers().Any(farmer => farmer.UniqueMultiplayerID == e.FromPlayerID);
             if (!hasMod || !farmerOnline || string.IsNullOrWhiteSpace(message.ActionId) ||
-                message.Name is not ("stardew.clear_loaded_monsters" or "stardew.spawn_random_test") ||
-                message.Difficulty is not ("easy" or "normal" or "hard"))
+                message.Name is not ("stardew.clear_loaded_monsters" or "stardew.spawn_random_test" or "stardew.community_single" or "stardew.community_horde") ||
+                message.Difficulty is not ("easy" or "normal" or "hard") ||
+                (message.Name == "stardew.community_single" && message.Outcome != "single") ||
+                (message.Name == "stardew.community_horde" && message.Outcome != "horde"))
             {
                 this.Monitor.Log($"Rejected forwarded Spectrum clear action from multiplayer peer {e.FromPlayerID}.", LogLevel.Warn);
                 return;
@@ -998,7 +1021,7 @@ internal sealed class ModEntry : Mod
             }
 
             if (this.queuedClearActionIds.Add(message.ActionId))
-                this.pendingClearActions.Enqueue(new PendingClearWorkItem(message.ActionId, message.Name, message.Difficulty, e.FromPlayerID));
+                this.pendingClearActions.Enqueue(new PendingClearWorkItem(message.ActionId, message.Name, message.Difficulty, message.Outcome, e.FromPlayerID));
             return;
         }
 
@@ -1141,7 +1164,7 @@ internal sealed class ModEntry : Mod
     );
     private sealed record PendingChatMessage(DateTime ShowAtUtc, string Message);
     private sealed record PendingForwardedCommand(GameCommand Command, DateTime LastSentAtUtc);
-    private sealed record PendingClearWorkItem(string ActionId, string Name, string Difficulty, long SenderPlayerId);
+    private sealed record PendingClearWorkItem(string ActionId, string Name, string Difficulty, string Outcome, long SenderPlayerId);
     private sealed record PendingForwardedClearAction(GameAction Action, DateTime LastSentAtUtc);
 
     private static string DisplayValue(string value)
