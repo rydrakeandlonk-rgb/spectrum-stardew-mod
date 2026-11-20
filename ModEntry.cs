@@ -782,13 +782,21 @@ internal sealed class ModEntry : Mod
         }
         else if (action.Name is "stardew.community_single" or "stardew.community_horde")
         {
-            succeeded = this.monsterSpawner?.TrySpawnCommunityEncounter(
-                action.Outcome,
-                action.Difficulty,
-                Game1.player,
-                out removed,
-                out detail
-            ) == true;
+            if (this.monsterSpawner is not null && Game1.player is not null)
+            {
+                succeeded = this.monsterSpawner.TrySpawnCommunityEncounter(
+                    action.Outcome,
+                    action.Difficulty,
+                    Game1.player,
+                    out removed,
+                    out detail
+                );
+            }
+            else
+            {
+                succeeded = false;
+                detail = "The host player or monster spawner is unavailable.";
+            }
         }
         else
         {
