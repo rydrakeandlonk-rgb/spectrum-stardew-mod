@@ -580,6 +580,18 @@ internal sealed class ModEntry : Mod
         if (!Context.IsWorldReady || this.monsterSpawner is null)
             return;
 
+        if (Context.IsMainPlayer && this.gameModsClient?.IsConnected == true && !this.gameModsClient.SpawnsEnabled &&
+            (this.pendingSpawnCommands.Count > 0 || this.pendingClearActions.Count > 0))
+        {
+            this.pendingSpawnCommands.Clear();
+            this.pendingClearActions.Clear();
+            this.pendingSpawnRetryPlayers.Clear();
+            this.queuedSpawnCommandIds.Clear();
+            this.queuedClearActionIds.Clear();
+            this.monsterSpawner.ClearPendingPlans();
+            this.Monitor.Log("[Spectrum] Cleared pending spawn requests because spawning is disabled.", LogLevel.Info);
+        }
+
         // Every player consumes only the commands delivered to their own Twitch connection.
         // Farmhands forward those typed commands to the host through SMAPI messaging.
         if (this.gameModsClient is not null)
