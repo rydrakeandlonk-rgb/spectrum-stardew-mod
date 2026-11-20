@@ -21,8 +21,8 @@ internal sealed class MonsterSpawner
 
     private sealed class PendingSpawnPlan
     {
-        public required List<string> RemainingTypes { get; init; }
-        public required int RequestedCount { get; init; }
+        public List<string> RemainingTypes { get; init; } = new();
+        public int RequestedCount { get; init; }
         public int SpawnedCount { get; set; }
         public List<string> SpawnedTypes { get; } = new();
         public string LocationName { get; set; } = "";
