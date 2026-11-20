@@ -17,6 +17,16 @@ internal sealed class MonsterSpawner
 
     private const int MaximumMonstersPerRedemption = 10;
     private readonly IMonitor monitor;
+    private readonly Dictionary<string, PendingSpawnPlan> pendingPlans = new(StringComparer.Ordinal);
+
+    private sealed class PendingSpawnPlan
+    {
+        public required List<string> RemainingTypes { get; init; }
+        public required int RequestedCount { get; init; }
+        public int SpawnedCount { get; set; }
+        public List<string> SpawnedTypes { get; } = new();
+        public string LocationName { get; set; } = "";
+    }
 
     public MonsterSpawner(IMonitor monitor) => this.monitor = monitor;
 
@@ -172,115 +182,164 @@ internal sealed class MonsterSpawner
         locationName = "";
         result = "FAILED: unsupported spawn behaviour";
 
-        int count;
-        string candidateId;
-        Func<string> chooseMonster;
-
-        switch (command.BehaviorKey)
-        {
-            case "difficulty_random":
-                count = 1;
-                chooseMonster = () => MonsterCatalog.GetRandomType(command.Difficulty, useTestProgression: false);
-                break;
-            case "chat_monster":
-                if (!MonsterCatalog.TryGetCanonicalType(command.UserInput, out candidateId, useTestProgression: false))
-                {
-                    result = "FAILED: unsupported or progression-locked chat monster";
-                    return false;
-                }
-                count = 1;
-                chooseMonster = () => candidateId;
-                break;
-            case "random_count_random_monsters":
-                count = GetRandomCount(command.MinCount, command.MaxCount);
-                chooseMonster = () => MonsterCatalog.GetRandomType(command.Difficulty, useTestProgression: false);
-                break;
-            case "fixed_count_random_monsters":
-                count = ClampCount(command.Count, 1);
-                chooseMonster = () => MonsterCatalog.GetRandomType(command.Difficulty, useTestProgression: false);
-                break;
-            case "random_count_specific_monster":
-                if (!MonsterCatalog.TryGetCanonicalType(command.MonsterType, out candidateId, useTestProgression: false))
-                {
-                    result = "FAILED: unsupported or progression-locked configured monster";
-                    return false;
-                }
-                count = GetRandomCount(command.MinCount, command.MaxCount);
-                chooseMonster = () => candidateId;
-                break;
-            case "fixed_count_specific_monster":
-                if (!MonsterCatalog.TryGetCanonicalType(command.MonsterType, out candidateId, useTestProgression: false))
-                {
-                    result = "FAILED: unsupported or progression-locked configured monster";
-                    return false;
-                }
-                count = ClampCount(command.Count, 1);
-                chooseMonster = () => candidateId;
-                break;
-            default:
-                return false;
-        }
-
-        List<string>? hordeTypes = null;
-        if (forceHorde)
-        {
-            bool randomPoolRequest = command.BehaviorKey is "difficulty_random" or "fixed_count_random_monsters" or "random_count_random_monsters";
-            if (!randomPoolRequest || count != 1)
-            {
-                result = "FAILED: horde events require a single-monster random-pool request";
-                return false;
-            }
-
-            hordeTypes = MonsterCatalog.GetRandomDistinctTypes(10, command.Difficulty, useTestProgression: false).ToList();
-            if (hordeTypes.Count != 10)
-            {
-                result = "FAILED: fewer than ten distinct eligible monster variants are available";
-                return false;
-            }
-
-            int hordeIndex = 0;
-            chooseMonster = () => hordeTypes[hordeIndex++];
-            count = 10;
-        }
-
-        if (!Context.IsWorldReady || !Context.IsMainPlayer)
+        if (!Context.IsWorldReady || !Context.IsMainPlayer || targetFarmer?.currentLocation is null)
         {
             result = "FAILED: host world not ready";
             return false;
         }
 
-        requestedCount = Math.Clamp(count, 1, MaximumMonstersPerRedemption);
-        var createdMonsters = new List<Monster>();
-        GameLocation? createdInLocation = null;
-        for (int i = 0; i < requestedCount; i++)
+        if (!this.pendingPlans.TryGetValue(command.CommandId, out PendingSpawnPlan? plan))
         {
-            string selectedId = chooseMonster();
-            if (!this.TrySpawnCandidate(selectedId, out string spawnedLocation, out Monster? createdMonster, useTestProgression: false, targetFarmer: targetFarmer) ||
-                createdMonster is null)
+            int count;
+            string candidateId;
+            Func<string> chooseMonster;
+
+            switch (command.BehaviorKey)
             {
-                // A redemption is atomic: if the full requested group cannot be
-                // placed, remove this attempt's earlier spawns before it is retried.
-                if (createdInLocation is not null)
-                {
-                    foreach (Monster previousMonster in createdMonsters)
-                        createdInLocation.characters.Remove(previousMonster);
-                }
-                createdMonsters.Clear();
-                spawnedTypes.Clear();
-                spawnedCount = 0;
-                locationName = "";
-                break;
+                case "difficulty_random":
+                    count = 1;
+                    chooseMonster = () => MonsterCatalog.GetRandomType(command.Difficulty, useTestProgression: false);
+                    break;
+                case "chat_monster":
+                    if (!MonsterCatalog.TryGetCanonicalType(command.UserInput, out candidateId, useTestProgression: false))
+                    {
+                        result = "FAILED: unsupported or progression-locked chat monster";
+                        return false;
+                    }
+                    count = 1;
+                    chooseMonster = () => candidateId;
+                    break;
+                case "random_count_random_monsters":
+                    count = GetRandomCount(command.MinCount, command.MaxCount);
+                    chooseMonster = () => MonsterCatalog.GetRandomType(command.Difficulty, useTestProgression: false);
+                    break;
+                case "fixed_count_random_monsters":
+                    count = ClampCount(command.Count, 1);
+                    chooseMonster = () => MonsterCatalog.GetRandomType(command.Difficulty, useTestProgression: false);
+                    break;
+                case "random_count_specific_monster":
+                    if (!MonsterCatalog.TryGetCanonicalType(command.MonsterType, out candidateId, useTestProgression: false))
+                    {
+                        result = "FAILED: unsupported or progression-locked configured monster";
+                        return false;
+                    }
+                    count = GetRandomCount(command.MinCount, command.MaxCount);
+                    chooseMonster = () => candidateId;
+                    break;
+                case "fixed_count_specific_monster":
+                    if (!MonsterCatalog.TryGetCanonicalType(command.MonsterType, out candidateId, useTestProgression: false))
+                    {
+                        result = "FAILED: unsupported or progression-locked configured monster";
+                        return false;
+                    }
+                    count = ClampCount(command.Count, 1);
+                    chooseMonster = () => candidateId;
+                    break;
+                default:
+                    return false;
             }
 
-            createdInLocation ??= targetFarmer.currentLocation;
-            createdMonsters.Add(createdMonster);
-            spawnedCount++;
-            spawnedTypes.Add(selectedId);
-            locationName = spawnedLocation;
+            List<string> selectedTypes;
+            if (forceHorde)
+            {
+                bool randomPoolRequest = command.BehaviorKey is "difficulty_random" or "fixed_count_random_monsters" or "random_count_random_monsters";
+                if (!randomPoolRequest || count != 1)
+                {
+                    result = "FAILED: horde events require a single-monster random-pool request";
+                    return false;
+                }
+
+                selectedTypes = MonsterCatalog.GetRandomDistinctTypes(10, command.Difficulty, useTestProgression: false).ToList();
+                if (selectedTypes.Count != 10)
+                {
+                    result = "FAILED: fewer than ten distinct eligible monster variants are available";
+                    return false;
+                }
+            }
+            else
+            {
+                selectedTypes = Enumerable.Range(0, Math.Clamp(count, 1, MaximumMonstersPerRedemption))
+                    .Select(_ => chooseMonster()).ToList();
+            }
+
+            plan = new PendingSpawnPlan { RemainingTypes = selectedTypes, RequestedCount = selectedTypes.Count };
+            this.pendingPlans[command.CommandId] = plan;
         }
 
-        result = spawnedCount == requestedCount ? "SUCCESS" : "FAILED";
-        return spawnedCount > 0;
+        requestedCount = plan.RequestedCount;
+        GameLocation location = targetFarmer.currentLocation;
+        var nearby = new List<Vector2>();
+        Vector2 playerTile = targetFarmer.Tile;
+        foreach (Point offset in NearbyTileOffsets)
+        {
+            Vector2 tile = new(playerTile.X + offset.X, playerTile.Y + offset.Y);
+            if (location.CanSpawnCharacterHere(tile))
+                nearby.Add(tile);
+        }
+
+        // Build one bounded candidate list for this attempt. Nearby tiles are
+        // preferred; the remainder of the current map is considered only once.
+        var mapWide = new List<Vector2>();
+        int width = location.map?.Layers?.Count > 0 ? location.map.Layers[0].LayerWidth : 0;
+        int height = location.map?.Layers?.Count > 0 ? location.map.Layers[0].LayerHeight : 0;
+        if (width > 0 && height > 0)
+        {
+            for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++)
+            {
+                var tile = new Vector2(x, y);
+                if (location.CanSpawnCharacterHere(tile) && !nearby.Contains(tile))
+                    mapWide.Add(tile);
+            }
+        }
+        // Randomise the fallback so large groups don't always occupy the same
+        // edge of the map. Revalidate each tile immediately before placement.
+        for (int i = mapWide.Count - 1; i > 0; i--)
+        {
+            int j = Random.Shared.Next(i + 1);
+            (mapWide[i], mapWide[j]) = (mapWide[j], mapWide[i]);
+        }
+
+        var candidates = new Queue<Vector2>(nearby.Concat(mapWide));
+        while (plan.RemainingTypes.Count > 0 && candidates.Count > 0)
+        {
+            Vector2 tile = candidates.Dequeue();
+            if (!location.CanSpawnCharacterHere(tile))
+                continue;
+
+            string selectedId = plan.RemainingTypes[0];
+            if (!MonsterCatalog.TryCreateMonster(selectedId, tile * 64f, out Monster? monster, out string error, ignoreProgression: false, useTestProgression: false) || monster is null)
+            {
+                this.monitor.Log($"[Spectrum] SPAWN FAILED | {MonsterCatalog.GetDisplayName(selectedId)} | {error}", LogLevel.Warn);
+                plan.RemainingTypes.RemoveAt(0);
+                continue;
+            }
+
+            int before = location.characters.Count;
+            location.characters.Add(monster);
+            if (location.characters.Count <= before)
+                continue;
+
+            plan.RemainingTypes.RemoveAt(0);
+            plan.SpawnedCount++;
+            plan.SpawnedTypes.Add(selectedId);
+            plan.LocationName = location.Name;
+        }
+
+        spawnedCount = plan.SpawnedCount;
+        spawnedTypes = plan.SpawnedTypes.ToList();
+        locationName = plan.LocationName;
+        if (plan.RemainingTypes.Count == 0)
+        {
+            this.pendingPlans.Remove(command.CommandId);
+            result = "SUCCESS";
+            return true;
+        }
+
+        result = spawnedCount > 0
+            ? $"PENDING: {plan.RemainingTypes.Count} monster(s) remain; waiting for another valid placement opportunity"
+            : "PENDING: no valid spawn tiles are currently available";
+        return false;
     }
 
     private static int GetRandomCount(int minimum, int maximum)
