@@ -1,0 +1,17 @@
+{
+  "titleText": {
+    "type": "text",
+    "label": "Meter title",
+    "value": "SPECTRUM CHARITY"
+  },
+  "accentColor": {
+    "type": "colorpicker",
+    "label": "Accent colour",
+    "value": "#e6a04b"
+  },
+  "showMilestoneAlert": {
+    "type": "checkbox",
+    "label": "Show milestone alerts",
+    "value": true
+  }
+}
