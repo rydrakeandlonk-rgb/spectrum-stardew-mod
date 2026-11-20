@@ -33,6 +33,7 @@ internal sealed class ModEntry : Mod
     private string gmcmStatusMessage = "";
     private readonly ConcurrentQueue<PairingResult> pairingResults = new();
     private readonly Queue<SpawnWorkItem> pendingSpawnCommands = new();
+    private readonly HashSet<long> pendingSpawnRetryPlayers = new();
     private readonly HashSet<string> queuedSpawnCommandIds = new(StringComparer.Ordinal);
     private readonly Dictionary<string, PendingForwardedCommand> forwardedCommands = new(StringComparer.Ordinal);
     private readonly Queue<PendingClearWorkItem> pendingClearActions = new();
@@ -67,6 +68,7 @@ internal sealed class ModEntry : Mod
         helper.Events.GameLoop.SaveLoaded += this.OnSaveLoaded;
         helper.Events.GameLoop.ReturnedToTitle += this.OnReturnedToTitle;
         helper.Events.GameLoop.UpdateTicked += this.OnUpdateTicked;
+        helper.Events.Player.Warped += this.OnPlayerWarped;
         helper.Events.Input.ButtonPressed += this.OnButtonPressed;
         helper.Events.Multiplayer.ModMessageReceived += this.OnModMessageReceived;
 
@@ -159,6 +161,8 @@ internal sealed class ModEntry : Mod
         this.pairingVerificationUri = "";
         this.retryCommandsAtUtc = DateTime.MinValue;
         this.pendingSpawnCommands.Clear();
+        this.pendingSpawnRetryPlayers.Clear();
+        this.monsterSpawner?.ClearPendingPlans();
         this.queuedSpawnCommandIds.Clear();
         this.forwardedCommands.Clear();
         this.pendingClearActions.Clear();
@@ -534,6 +538,12 @@ internal sealed class ModEntry : Mod
         }
     }
 
+    private void OnPlayerWarped(object? sender, WarpedEventArgs e)
+    {
+        if (Context.IsMainPlayer && this.pendingSpawnCommands.Count > 0)
+            this.pendingSpawnRetryPlayers.Add(e.Player.UniqueMultiplayerID);
+    }
+
     private void OnUpdateTicked(object? sender, UpdateTickedEventArgs e)
     {
         if (Context.IsWorldReady)
@@ -657,10 +667,26 @@ internal sealed class ModEntry : Mod
             );
         }
 
-        if (this.pendingSpawnCommands.Count == 0 || DateTime.UtcNow < this.retryCommandsAtUtc)
+        if (this.pendingSpawnCommands.Count == 0)
             return;
 
-        SpawnWorkItem work = this.pendingSpawnCommands.Dequeue();
+        SpawnWorkItem? readyWork = null;
+        int queuedCount = this.pendingSpawnCommands.Count;
+        for (int i = 0; i < queuedCount; i++)
+        {
+            SpawnWorkItem candidate = this.pendingSpawnCommands.Dequeue();
+            long targetId = candidate.ReplyToPlayerId ?? Game1.player?.UniqueMultiplayerID ?? -1;
+            if (!candidate.HasAttempted || this.pendingSpawnRetryPlayers.Remove(targetId))
+            {
+                readyWork = candidate;
+                break;
+            }
+            this.pendingSpawnCommands.Enqueue(candidate);
+        }
+        if (readyWork is null)
+            return;
+
+        SpawnWorkItem work = readyWork;
         GameCommand command = work.Command;
 
         // A replay after a successful spawn is acknowledged without another world mutation.
@@ -755,11 +781,10 @@ internal sealed class ModEntry : Mod
         }
         else
         {
-            // Keep the source command pending. The host retries placement without
-            // asking every farmhand to maintain a second gameplay queue.
-            this.pendingSpawnCommands.Enqueue(work);
-            this.retryCommandsAtUtc = DateTime.UtcNow.AddSeconds(10);
-            this.Monitor.Log($"[Spectrum] RETRY | {command.CommandId} | Spawn was not completed; retrying in 10 seconds.", LogLevel.Warn);
+            // Keep the selected monster plan in the host spawner. Retry only
+            // when this same farmer next changes location; never poll or reroll.
+            this.pendingSpawnCommands.Enqueue(work with { HasAttempted = true });
+            this.Monitor.Log($"[Spectrum] PENDING | {command.CommandId} | {Math.Max(0, requestedCount - spawnedCount)} monster(s) remain; waiting for the target farmer's next location change.", LogLevel.Warn);
         }
     }
 
@@ -1168,7 +1193,8 @@ internal sealed class ModEntry : Mod
         GameCommand Command,
         long? ReplyToPlayerId,
         bool HordeRollCompleted = false,
-        bool IsHorde = false
+        bool IsHorde = false,
+        bool HasAttempted = false
     );
     private sealed record PendingChatMessage(DateTime ShowAtUtc, string Message);
     private sealed record PendingForwardedCommand(GameCommand Command, DateTime LastSentAtUtc);
