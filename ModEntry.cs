@@ -632,7 +632,7 @@ internal sealed class ModEntry : Mod
                 );
                 detail = succeeded ? "Random progression-eligible enemy spawned" : "No eligible enemy or safe spawn tile was available";
             }
-            else if (actionWork.Name is "stardew.community_single" or "stardew.community_horde")
+            else if (actionWork.Name is "stardew.community_single" or "stardew.community_horde" or "stardew.community_mega_horde")
             {
                 Farmer? target = Game1.getOnlineFarmers().FirstOrDefault(farmer => farmer.UniqueMultiplayerID == actionWork.SenderPlayerId);
                 succeeded = target is not null && this.monsterSpawner.TrySpawnCommunityEncounter(
@@ -805,7 +805,7 @@ internal sealed class ModEntry : Mod
             succeeded = this.monsterSpawner?.TrySpawnRandomMonster(action.Difficulty) == true;
             detail = succeeded ? "Random progression-eligible enemy spawned" : "No eligible enemy or safe spawn tile was available";
         }
-        else if (action.Name is "stardew.community_single" or "stardew.community_horde")
+        else if (action.Name is "stardew.community_single" or "stardew.community_horde" or "stardew.community_mega_horde")
         {
             if (this.monsterSpawner is not null && Game1.player is not null)
             {
@@ -848,7 +848,7 @@ internal sealed class ModEntry : Mod
             this.gameModsClient.TryDequeueAction(out GameAction? action) &&
             action is not null)
         {
-            if (action.Name is not ("stardew.clear_loaded_monsters" or "stardew.spawn_random_test" or "stardew.community_single" or "stardew.community_horde"))
+            if (action.Name is not ("stardew.clear_loaded_monsters" or "stardew.spawn_random_test" or "stardew.community_single" or "stardew.community_horde" or "stardew.community_mega_horde"))
             {
                 _ = this.gameModsClient.AcknowledgeActionAsync(action.ActionId, false, 0, "Unsupported game action.");
                 return;
