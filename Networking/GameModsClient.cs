@@ -468,7 +468,14 @@ internal sealed class GameModsClient : IDisposable
                 int monsterCount = root.TryGetProperty("monster_count", out JsonElement countElement) && countElement.TryGetInt32(out int parsedCount)
                     ? Math.Clamp(parsedCount, 1, 50)
                     : (actionName == "stardew.community_mega_horde" ? 20 : 10);
-                this.EnqueueAction(new GameAction(actionId, actionGame, actionName, actionDifficulty, outcome, monsterCount));
+                string donorName = ReadString(root, "donor_name");
+                string charityName = ReadString(root, "charity_name");
+                bool announce = !root.TryGetProperty("announce", out JsonElement announceElement) ||
+                    announceElement.ValueKind != JsonValueKind.False;
+                this.EnqueueAction(new GameAction(
+                    actionId, actionGame, actionName, actionDifficulty, outcome, monsterCount,
+                    donorName, charityName, announce
+                ));
                 return;
             }
 
