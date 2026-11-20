@@ -667,7 +667,8 @@ internal sealed class ModEntry : Mod
                     target,
                     out removed,
                     out detail,
-                    actionWork.ActionId
+                    actionWork.ActionId,
+                    actionWork.MonsterCount
                 );
             }
             else
@@ -846,7 +847,8 @@ internal sealed class ModEntry : Mod
                     Game1.player,
                     out removed,
                     out detail,
-                    action.ActionId
+                    action.ActionId,
+                    action.MonsterCount
                 );
             }
             else
@@ -863,7 +865,7 @@ internal sealed class ModEntry : Mod
 
         if (!succeeded && (action.Name is "stardew.community_horde" or "stardew.community_mega_horde") && detail.StartsWith("PENDING:", StringComparison.Ordinal))
         {
-            this.pendingClearActions.Enqueue(new PendingClearWorkItem(action.ActionId, action.Name, action.Difficulty, action.Outcome, Game1.player?.UniqueMultiplayerID ?? -1, IsLocal: true, HasAttempted: true));
+            this.pendingClearActions.Enqueue(new PendingClearWorkItem(action.ActionId, action.Name, action.Difficulty, action.Outcome, Game1.player?.UniqueMultiplayerID ?? -1, action.MonsterCount, IsLocal: true, HasAttempted: true));
             return;
         }
 
@@ -903,7 +905,7 @@ internal sealed class ModEntry : Mod
                 continue;
 
             this.Helper.Multiplayer.SendMessage(
-                new ForwardedClearAction(pending.Action.ActionId, pending.Action.Name, pending.Action.Difficulty, pending.Action.Outcome),
+                new ForwardedClearAction(pending.Action.ActionId, pending.Action.Name, pending.Action.Difficulty, pending.Action.Outcome, pending.Action.MonsterCount),
                 "spectrum.action.forward",
                 modIDs: new[] { this.ModManifest.UniqueID },
                 playerIDs: new[] { Game1.MasterPlayer.UniqueMultiplayerID }
@@ -1076,10 +1078,11 @@ internal sealed class ModEntry : Mod
             bool hasMod = peer?.GetMod(this.ModManifest.UniqueID) is not null;
             bool farmerOnline = Game1.getOnlineFarmers().Any(farmer => farmer.UniqueMultiplayerID == e.FromPlayerID);
             if (!hasMod || !farmerOnline || string.IsNullOrWhiteSpace(message.ActionId) ||
-                message.Name is not ("stardew.clear_loaded_monsters" or "stardew.spawn_random_test" or "stardew.community_single" or "stardew.community_horde") ||
+                message.Name is not ("stardew.clear_loaded_monsters" or "stardew.spawn_random_test" or "stardew.community_single" or "stardew.community_horde" or "stardew.community_mega_horde") ||
                 message.Difficulty is not ("easy" or "normal" or "hard") ||
                 (message.Name == "stardew.community_single" && message.Outcome != "single") ||
-                (message.Name == "stardew.community_horde" && message.Outcome != "horde"))
+                (message.Name == "stardew.community_horde" && message.Outcome != "horde") ||
+                (message.Name == "stardew.community_mega_horde" && message.Outcome != "mega"))
             {
                 this.Monitor.Log($"Rejected forwarded Spectrum clear action from multiplayer peer {e.FromPlayerID}.", LogLevel.Warn);
                 return;
@@ -1092,7 +1095,7 @@ internal sealed class ModEntry : Mod
             }
 
             if (this.queuedClearActionIds.Add(message.ActionId))
-                this.pendingClearActions.Enqueue(new PendingClearWorkItem(message.ActionId, message.Name, message.Difficulty, message.Outcome, e.FromPlayerID));
+                this.pendingClearActions.Enqueue(new PendingClearWorkItem(message.ActionId, message.Name, message.Difficulty, message.Outcome, e.FromPlayerID, message.MonsterCount));
             return;
         }
 
@@ -1236,7 +1239,7 @@ internal sealed class ModEntry : Mod
     );
     private sealed record PendingChatMessage(DateTime ShowAtUtc, string Message);
     private sealed record PendingForwardedCommand(GameCommand Command, DateTime LastSentAtUtc);
-    private sealed record PendingClearWorkItem(string ActionId, string Name, string Difficulty, string Outcome, long SenderPlayerId, bool IsLocal = false, bool HasAttempted = false);
+    private sealed record PendingClearWorkItem(string ActionId, string Name, string Difficulty, string Outcome, long SenderPlayerId, int MonsterCount = 10, bool IsLocal = false, bool HasAttempted = false);
     private sealed record PendingForwardedClearAction(GameAction Action, DateTime LastSentAtUtc);
 
     private static string DisplayValue(string value)
