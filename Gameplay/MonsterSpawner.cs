@@ -30,6 +30,8 @@ internal sealed class MonsterSpawner
 
     public MonsterSpawner(IMonitor monitor) => this.monitor = monitor;
 
+    public void ClearPendingPlans() => this.pendingPlans.Clear();
+
     public bool ShouldTriggerHorde(GameCommand command)
     {
         bool isSingleRandomPoolRequest = command.BehaviorKey switch
@@ -83,7 +85,7 @@ internal sealed class MonsterSpawner
             return succeeded;
         }
 
-        if (outcome != "horde")
+        if (outcome is not ("horde" or "mega"))
             return false;
 
         var command = new GameCommand(
@@ -102,6 +104,7 @@ internal sealed class MonsterSpawner
             1
         );
 
+        int hordeCount = outcome == "mega" ? 25 : 10;
         bool hordeSucceeded = this.TryExecute(
             command,
             targetFarmer,
@@ -110,10 +113,11 @@ internal sealed class MonsterSpawner
             out _,
             out _,
             out detail,
-            forceHorde: true
+            forceHorde: true,
+            hordeCount: hordeCount
         );
 
-        return hordeSucceeded && spawnedCount == 10;
+        return hordeSucceeded && spawnedCount == hordeCount;
     }
 
     public bool TrySpawnMonster(string monsterType, bool ignoreProgression = false)
@@ -174,7 +178,8 @@ internal sealed class MonsterSpawner
         out List<string> spawnedTypes,
         out string locationName,
         out string result,
-        bool forceHorde = false)
+        bool forceHorde = false,
+        int hordeCount = 10)
     {
         spawnedCount = 0;
         requestedCount = 0;
@@ -249,10 +254,11 @@ internal sealed class MonsterSpawner
                     return false;
                 }
 
-                selectedTypes = MonsterCatalog.GetRandomDistinctTypes(10, command.Difficulty, useTestProgression: false).ToList();
-                if (selectedTypes.Count != 10)
+                int safeHordeCount = Math.Clamp(hordeCount, 1, 50);
+                selectedTypes = MonsterCatalog.GetRandomDistinctTypes(safeHordeCount, command.Difficulty, useTestProgression: false).ToList();
+                if (selectedTypes.Count != safeHordeCount)
                 {
-                    result = "FAILED: fewer than ten distinct eligible monster variants are available";
+                    result = $"FAILED: fewer than {safeHordeCount} distinct eligible monster variants are available";
                     return false;
                 }
             }
