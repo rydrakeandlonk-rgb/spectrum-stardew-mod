@@ -691,6 +691,9 @@ internal sealed class ModEntry : Mod
                 this.completedClearActionCounts[actionWork.ActionId] = removed;
                 while (this.completedClearActionCounts.Count > 500)
                     this.completedClearActionCounts.Remove(this.completedClearActionCounts.Keys.First());
+
+                if (actionWork.Name is "stardew.community_horde" or "stardew.community_mega_horde")
+                    this.AnnounceHorde("SPECTRUM");
             }
 
             if (actionWork.IsLocal)
@@ -875,6 +878,9 @@ internal sealed class ModEntry : Mod
             this.pendingClearActions.Enqueue(new PendingClearWorkItem(action.ActionId, action.Name, action.Difficulty, action.Outcome, localPlayerId, action.MonsterCount, IsLocal: true, HasAttempted: true));
             return;
         }
+
+        if (succeeded && action.Name is "stardew.community_horde" or "stardew.community_mega_horde")
+            this.AnnounceHorde("SPECTRUM");
 
         this.Monitor.Log($"[Spectrum] REMOTE ACTION | {action.Name} | {(succeeded ? detail : "failed: " + detail)}", succeeded ? LogLevel.Info : LogLevel.Warn);
         _ = this.gameModsClient?.AcknowledgeActionAsync(
