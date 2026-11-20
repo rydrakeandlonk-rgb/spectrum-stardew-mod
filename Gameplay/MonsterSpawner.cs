@@ -50,6 +50,62 @@ internal sealed class MonsterSpawner
         MonsterCatalog.TryGetCanonicalType("Green Slime", out string id) &&
         this.TrySpawnCandidate(id, out _, out _);
 
+    /// <summary>
+    /// Executes a community roulette result near the specific participating
+    /// farmer. Horde placement reuses the normal progression-aware horde path.
+    /// </summary>
+    public bool TrySpawnCommunityEncounter(string outcome, string difficulty, Farmer targetFarmer, out int spawnedCount, out string detail)
+    {
+        spawnedCount = 0;
+        detail = "Unsupported community encounter.";
+
+        if (targetFarmer is null || !Context.IsWorldReady || !Context.IsMainPlayer)
+        {
+            detail = "The host world or target player is unavailable.";
+            return false;
+        }
+
+        if (outcome == "single")
+        {
+            bool succeeded = this.TrySpawnRandomMonster(difficulty, targetFarmer);
+            spawnedCount = succeeded ? 1 : 0;
+            detail = succeeded ? "One progression-eligible enemy spawned near the player." : "No eligible enemy or safe spawn tile was available.";
+            return succeeded;
+        }
+
+        if (outcome != "horde")
+            return false;
+
+        var command = new GameCommand(
+            "community-" + Guid.NewGuid().ToString("N"),
+            "stardew-valley",
+            "stardew.spawn_monster",
+            "Community",
+            "Community Roulette",
+            "",
+            "difficulty_random",
+            "",
+            "",
+            difficulty,
+            1,
+            1,
+            1
+        );
+
+        bool hordeSucceeded = this.TryExecute(
+            command,
+            targetFarmer,
+            out spawnedCount,
+            out _,
+            out _,
+            out _,
+            out detail,
+            forceHorde: true
+        );
+
+        return hordeSucceeded && spawnedCount == 10;
+    }
+
     public bool TrySpawnMonster(string monsterType, bool ignoreProgression = false)
     {
         if (!MonsterCatalog.TryGetCanonicalType(monsterType, out string candidateId, ignoreProgression))
