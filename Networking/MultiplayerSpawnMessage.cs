@@ -90,15 +90,17 @@ public sealed class ForwardedClearAction
     public string Name { get; set; } = "";
     public string Difficulty { get; set; } = "normal";
     public string Outcome { get; set; } = "";
+    public int MonsterCount { get; set; } = 10;
 
     public ForwardedClearAction() { }
 
-    public ForwardedClearAction(string actionId, string name, string difficulty = "normal", string outcome = "")
+    public ForwardedClearAction(string actionId, string name, string difficulty = "normal", string outcome = "", int monsterCount = 10)
     {
         this.ActionId = actionId;
         this.Name = name;
         this.Difficulty = difficulty;
         this.Outcome = outcome;
+        this.MonsterCount = Math.Clamp(monsterCount, 1, 50);
     }
 }
 
