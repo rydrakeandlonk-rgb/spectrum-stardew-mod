@@ -436,7 +436,7 @@ internal sealed class GameModsClient : IDisposable
                 string actionGame = ReadString(root, "game");
                 string actionName = ReadString(root, "name");
                 if (string.IsNullOrWhiteSpace(actionId) || actionGame != "stardew-valley" ||
-                    actionName is not ("stardew.clear_loaded_monsters" or "stardew.spawn_random_test"))
+                    actionName is not ("stardew.clear_loaded_monsters" or "stardew.spawn_random_test" or "stardew.community_single" or "stardew.community_horde"))
                 {
                     this.monitor.Log("Ignored an unsupported Spectrum game action.", LogLevel.Warn);
                     return;
@@ -444,7 +444,14 @@ internal sealed class GameModsClient : IDisposable
                 string actionDifficulty = ReadString(root, "difficulty");
                 if (actionDifficulty is not ("easy" or "normal" or "hard"))
                     actionDifficulty = "normal";
-                this.actions.Enqueue(new GameAction(actionId, actionGame, actionName, actionDifficulty));
+                string outcome = ReadString(root, "outcome");
+                if ((actionName == "stardew.community_single" && outcome != "single") ||
+                    (actionName == "stardew.community_horde" && outcome != "horde"))
+                {
+                    this.monitor.Log("Ignored a community action with an invalid outcome.", LogLevel.Warn);
+                    return;
+                }
+                this.actions.Enqueue(new GameAction(actionId, actionGame, actionName, actionDifficulty, outcome));
                 return;
             }
 
