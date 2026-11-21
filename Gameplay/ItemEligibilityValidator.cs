@@ -35,7 +35,7 @@ internal static class ItemEligibilityValidator
     {
         new(
             "ALLOW_OBJECT_TYPE_ONLY",
-            item => item.TypeDefinitionId == ItemRegistry.type_object,
+            item => item.TypeDefinitionId == ItemRegistry.type_weapons,
             "Only registered standard object items can be attached to a starter letter."
         )
     };
