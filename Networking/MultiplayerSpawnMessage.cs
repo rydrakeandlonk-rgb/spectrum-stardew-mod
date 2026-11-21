@@ -97,10 +97,11 @@ public sealed class ForwardedClearAction
     public string CharityName { get; set; } = "";
     public bool Announce { get; set; } = true;
     public string HostSessionId { get; set; } = "";
+    public string SourceBroadcasterUserId { get; set; } = "";
 
     public ForwardedClearAction() { }
 
-    public ForwardedClearAction(string actionId, string name, string difficulty = "normal", string outcome = "", int monsterCount = 10, string donorName = "", string charityName = "", bool announce = true, string hostSessionId = "")
+    public ForwardedClearAction(string actionId, string name, string difficulty = "normal", string outcome = "", int monsterCount = 10, string donorName = "", string charityName = "", bool announce = true, string hostSessionId = "", string sourceBroadcasterUserId = "")
     {
         this.ActionId = actionId;
         this.Name = name;
@@ -111,6 +112,7 @@ public sealed class ForwardedClearAction
         this.CharityName = charityName;
         this.Announce = announce;
         this.HostSessionId = hostSessionId;
+        this.SourceBroadcasterUserId = sourceBroadcasterUserId;
     }
 }
 
