@@ -44,6 +44,7 @@ internal sealed class ModEntry : Mod
     private readonly List<PendingChatMessage> pendingChatMessages = new();
     private MonsterProgressionSnapshot? lastObservedProgression;
     private bool playerDeathLatched;
+    private string lastPoolDiagnosticsSessionId = "";
     private CancellationTokenSource? pairingCancellation;
     private volatile bool pairingInProgress;
     private volatile string pairingStatus = "";
@@ -136,6 +137,8 @@ internal sealed class ModEntry : Mod
             ? MonsterProgressionSnapshot.Read(Game1.player, useTestOverride: false)
             : null;
         this.playerDeathLatched = Game1.player is null || Game1.player.health <= 0;
+        this.lastPoolDiagnosticsSessionId = "";
+        this.monsterSpawner?.SetPoolOverrides(new Dictionary<MonsterPool, string>());
 
         if (this.config is null ||
             string.IsNullOrWhiteSpace(this.config.BroadcasterUserId) ||
@@ -173,6 +176,8 @@ internal sealed class ModEntry : Mod
         this.pendingChatMessages.Clear();
         this.lastObservedProgression = null;
         this.playerDeathLatched = false;
+        this.lastPoolDiagnosticsSessionId = "";
+        this.monsterSpawner?.SetPoolOverrides(new Dictionary<MonsterPool, string>());
     }
 
     private void OnGameLaunched(object? sender, GameLaunchedEventArgs e)
@@ -580,6 +585,36 @@ internal sealed class ModEntry : Mod
 
         if (!Context.IsWorldReady || this.monsterSpawner is null)
             return;
+
+        bool poolOverridesChanged = false;
+        if (this.gameModsClient is not null)
+        {
+            while (this.gameModsClient.TryDequeuePoolOverrideUpdate(out PoolOverrideUpdate? update) && update is not null)
+            {
+                if (Context.IsMainPlayer && update.SessionId == this.gameModsClient.ActiveSessionId)
+                {
+                    var parsedOverrides = new Dictionary<MonsterPool, string>();
+                    foreach ((string poolName, string mode) in update.Overrides)
+                    {
+                        if (Enum.TryParse(poolName, ignoreCase: true, out MonsterPool pool) &&
+                            Enum.IsDefined(typeof(MonsterPool), pool) &&
+                            mode is "automatic" or "force_enabled" or "force_disabled")
+                            parsedOverrides[pool] = mode;
+                    }
+
+                    this.monsterSpawner.SetPoolOverrides(parsedOverrides);
+                    poolOverridesChanged = true;
+                    this.Monitor.Log($"[Spectrum] SPAWN POOL OVERRIDES | revision {update.Revision} | {parsedOverrides.Count} explicit override(s).", LogLevel.Info);
+                }
+            }
+        }
+
+        if (Context.IsMainPlayer && this.gameModsClient?.IsConnected == true &&
+            !string.IsNullOrWhiteSpace(this.gameModsClient.ActiveSessionId) &&
+            (poolOverridesChanged || this.lastPoolDiagnosticsSessionId != this.gameModsClient.ActiveSessionId))
+        {
+            this.SendPoolDiagnostics();
+        }
 
         if (Context.IsMainPlayer && this.gameModsClient?.IsConnected == true && !this.gameModsClient.SpawnsEnabled &&
             (this.pendingSpawnCommands.Count > 0 || this.pendingClearActions.Count > 0))
@@ -1531,6 +1566,9 @@ internal sealed class ModEntry : Mod
         MonsterProgressionSnapshot? previous = this.lastObservedProgression;
         this.lastObservedProgression = current;
 
+        if (previous is not null && previous != current)
+            this.SendPoolDiagnostics();
+
         // The first snapshot for a save is a baseline, so loading an already-progressed
         // farm never replays old unlock announcements.
         if (previous is null)
@@ -1550,6 +1588,42 @@ internal sealed class ModEntry : Mod
             this.NotifyPoolUnlocked("The Mutant Bug Lair Has Awakened");
         if (!previous.VolcanoDungeonUnlocked && current.VolcanoDungeonUnlocked)
             this.NotifyPoolUnlocked("The Volcano Dungeon Has Awakened");
+    }
+
+    private void SendPoolDiagnostics()
+    {
+        if (!Context.IsMainPlayer || !Context.IsWorldReady || Game1.player is null ||
+            this.monsterSpawner is null || this.gameModsClient?.IsConnected != true ||
+            string.IsNullOrWhiteSpace(this.gameModsClient.ActiveSessionId))
+            return;
+
+        MonsterProgressionSnapshot progression = MonsterProgressionSnapshot.Read(Game1.player, useTestOverride: false);
+        IReadOnlyList<PoolDiagnostic> pools = this.monsterSpawner.GetPoolDiagnostics(progression);
+        var diagnostics = new
+        {
+            host_name = Game1.MasterPlayer?.Name ?? Game1.player.Name,
+            progression = new
+            {
+                stage = progression.ProgressionStageName,
+                mines_floor_120_reached = progression.MinesCompleted,
+                skull_cavern_floor_100_reached = progression.SkullCavern100Reached,
+                skull_key_obtained = progression.SkullCavernUnlocked,
+                dangerous_mines_unlocked = progression.DangerousMinesUnlocked,
+                quarry_mine_unlocked = progression.QuarryMineUnlocked,
+                dangerous_skull_cavern_unlocked = progression.DangerousSkullCavernUnlocked,
+                bug_lair_unlocked = progression.BugLairUnlocked,
+                volcano_dungeon_unlocked = progression.VolcanoDungeonUnlocked,
+                combat_level = progression.CombatLevel,
+                current_area = progression.CurrentAreaName,
+                current_area_difficulty = progression.CurrentAreaDifficulty,
+                test_override_active = MonsterProgressionSnapshot.IsTestOverrideActive
+            },
+            pools,
+            reported_at = DateTimeOffset.UtcNow.ToString("O")
+        };
+
+        _ = this.gameModsClient.SendPoolDiagnosticsAsync(diagnostics);
+        this.lastPoolDiagnosticsSessionId = this.gameModsClient.ActiveSessionId;
     }
 
     private void NotifyPoolUnlocked(string message)
@@ -1685,8 +1759,8 @@ internal sealed class ModEntry : Mod
         }
 
         MonsterProgressionSnapshot progression = MonsterProgressionSnapshot.Read(Game1.player);
-        IReadOnlyList<MonsterPool> unlockedPools = MonsterLocationPools.GetUnlockedPools(progression);
-        IReadOnlyList<string> eligibleTypes = MonsterCatalog.GetEligibleTypes();
+        IReadOnlyList<MonsterPool> unlockedPools = MonsterLocationPools.GetUnlockedPools(progression, this.monsterSpawner?.PoolOverrides);
+        IReadOnlyList<string> eligibleTypes = MonsterCatalog.GetEligibleTypes(this.monsterSpawner?.PoolOverrides);
         IReadOnlyList<string> catalogIssues = MonsterCatalog.GetCatalogValidationIssues();
         IReadOnlyList<string> threatDataFallbacks = MonsterCatalog.GetThreatDataFallbacks();
 
