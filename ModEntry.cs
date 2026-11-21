@@ -689,7 +689,7 @@ internal sealed class ModEntry : Mod
             !string.IsNullOrWhiteSpace(this.hostBroadcasterUserId) &&
             this.lastReportedHostSessionContext != this.gameSessionId)
         {
-            _ = this.gameModsClient.SendSessionContextAsync(this.hostBroadcasterUserId, this.gameSessionId);
+            _ = this.gameModsClient.SendSessionContextAsync(this.hostBroadcasterUserId, this.gameSessionId, Game1.Date.TotalDays);
             this.lastReportedHostSessionContext = this.gameSessionId;
         }
 
