@@ -22,8 +22,9 @@ public sealed class ForwardedSpawnCommand
     public int MinCount { get; set; } = 1;
     public int MaxCount { get; set; } = 3;
     public string SourceBroadcasterUserId { get; set; } = "";
+    public string HostSessionId { get; set; } = "";
 
-    internal static ForwardedSpawnCommand FromCommand(GameCommand command, string broadcasterUserId) => new()
+    internal static ForwardedSpawnCommand FromCommand(GameCommand command, string broadcasterUserId, string hostSessionId) => new()
     {
         CommandId = command.CommandId,
         Game = command.Game,
@@ -38,7 +39,8 @@ public sealed class ForwardedSpawnCommand
         Count = command.Count,
         MinCount = command.MinCount,
         MaxCount = command.MaxCount,
-        SourceBroadcasterUserId = broadcasterUserId
+        SourceBroadcasterUserId = broadcasterUserId,
+        HostSessionId = hostSessionId
     };
 
     internal GameCommand ToGameCommand() => new(
@@ -94,10 +96,11 @@ public sealed class ForwardedClearAction
     public string DonorName { get; set; } = "";
     public string CharityName { get; set; } = "";
     public bool Announce { get; set; } = true;
+    public string HostSessionId { get; set; } = "";
 
     public ForwardedClearAction() { }
 
-    public ForwardedClearAction(string actionId, string name, string difficulty = "normal", string outcome = "", int monsterCount = 10, string donorName = "", string charityName = "", bool announce = true)
+    public ForwardedClearAction(string actionId, string name, string difficulty = "normal", string outcome = "", int monsterCount = 10, string donorName = "", string charityName = "", bool announce = true, string hostSessionId = "")
     {
         this.ActionId = actionId;
         this.Name = name;
@@ -107,6 +110,7 @@ public sealed class ForwardedClearAction
         this.DonorName = donorName;
         this.CharityName = charityName;
         this.Announce = announce;
+        this.HostSessionId = hostSessionId;
     }
 }
 
