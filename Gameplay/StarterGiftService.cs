@@ -92,7 +92,18 @@ internal sealed class StarterGiftService
         this.TrimLetterHistory();
         this.helper.Data.WriteSaveData(SaveDataKey, this.saveData);
         this.helper.GameContent.InvalidateCache("Data/mail");
-        Game1.addMailForTomorrow(mailId);
+        if (!test && Game1.Date.TotalDays == 1)
+        {
+            // The permanent gift for a brand-new save must be waiting on the
+            // first playable day, not moved into tomorrow's mail queue.
+            if (!Game1.player.mailbox.Contains(mailId))
+                Game1.player.mailbox.Add(mailId);
+        }
+        else
+        {
+            // Repeatable test letters retain their existing next-morning behaviour.
+            Game1.addMailForTomorrow(mailId);
+        }
 
         detail = test
             ? $"Test letter queued with {eligibleObject.DisplayName}."
