@@ -680,7 +680,7 @@ internal sealed class ModEntry : Mod
             }
         }
 
-        if (!Context.IsMainPlayer && this.gameModsClient?.IsConnected == true &&
+        if (this.gameModsClient?.IsConnected == true &&
             !string.IsNullOrWhiteSpace(this.gameSessionId) &&
             !string.IsNullOrWhiteSpace(this.hostBroadcasterUserId) &&
             this.lastReportedHostSessionContext != this.gameSessionId)
