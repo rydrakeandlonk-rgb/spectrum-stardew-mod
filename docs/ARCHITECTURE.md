@@ -213,14 +213,3 @@ Override precedence:
 - Automatic follows the host save's progression checks.
 
 Overrides are session-scoped. Changing one host's pool configuration must not affect another host's session. The mod is authoritative for reporting its evaluated/effective state; Control Center must not infer progression from streamer identity or guess the active pools. Diagnostics should be event-driven and avoid unnecessary high-frequency polling or storage writes.
-
-## Local per-farmer starter weapon (2.3.0 requirement)
-
-The starter weapon is independent of the remote session-control architecture:
-- On first load into a save, grant the local farmer one vanilla Wooden Blade if their save-specific GivenStartWeapon flag is absent/false.
-- Persist the flag with that farmer's save data, so each farmer receives the grant once per farmer per save. Do not store this flag in Control Center, Event Hub, the gateway, or shared remote configuration.
-- Ensure the granted Wooden Blade is excluded from Stardew's normal weapon-loss-on-death handling. The protection must be reliable through the game's actual death/inventory-loss path, not merely rely on re-granting the item after death.
-- Provide a custom in-game description/tooltip: “This blade won't leave your side.”
-- Keep the feature local to SMAPI and independent of progression, network availability, and session pool configuration.
-- Validate first-load, reload, death, save switching, and multiplayer host/farmhand cases; avoid duplicate grants.
-
