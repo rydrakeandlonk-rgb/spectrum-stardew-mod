@@ -228,11 +228,11 @@ internal sealed class MonsterSpawner
                     break;
                 case "random_count_random_monsters":
                     count = GetRandomCount(command.MinCount, command.MaxCount);
-                    chooseMonster = () => MonsterCatalog.GetRandomType(command.Difficulty, useTestProgression: false);
+                    chooseMonster = () => MonsterCatalog.GetRandomType(command.Difficulty, useTestProgression: false, poolOverrides: this.poolOverrides);
                     break;
                 case "fixed_count_random_monsters":
                     count = ClampCount(command.Count, 1);
-                    chooseMonster = () => MonsterCatalog.GetRandomType(command.Difficulty, useTestProgression: false);
+                    chooseMonster = () => MonsterCatalog.GetRandomType(command.Difficulty, useTestProgression: false, poolOverrides: this.poolOverrides);
                     break;
                 case "random_count_specific_monster":
                     if (!MonsterCatalog.TryGetCanonicalType(command.MonsterType, out candidateId, useTestProgression: false, poolOverrides: this.poolOverrides))
@@ -244,7 +244,7 @@ internal sealed class MonsterSpawner
                     chooseMonster = () => candidateId;
                     break;
                 case "fixed_count_specific_monster":
-                    if (!MonsterCatalog.TryGetCanonicalType(command.MonsterType, out candidateId, useTestProgression: false))
+                    if (!MonsterCatalog.TryGetCanonicalType(command.MonsterType, out candidateId, useTestProgression: false, poolOverrides: this.poolOverrides))
                     {
                         result = "FAILED: unsupported or progression-locked configured monster";
                         return false;
@@ -267,7 +267,7 @@ internal sealed class MonsterSpawner
                 }
 
                 int safeHordeCount = Math.Clamp(hordeCount, 1, 50);
-                selectedTypes = MonsterCatalog.GetRandomDistinctTypes(safeHordeCount, command.Difficulty, useTestProgression: false).ToList();
+                selectedTypes = MonsterCatalog.GetRandomDistinctTypes(safeHordeCount, command.Difficulty, useTestProgression: false, poolOverrides: this.poolOverrides).ToList();
                 if (selectedTypes.Count != safeHordeCount)
                 {
                     result = $"FAILED: fewer than {safeHordeCount} distinct eligible monster variants are available";
@@ -384,7 +384,7 @@ internal sealed class MonsterSpawner
         if (!location.CanSpawnCharacterHere(tile))
             return false;
 
-        if (!MonsterCatalog.TryCreateMonster(candidateId, tile * 64f, out Monster? monster, out error, ignoreProgression, useTestProgression) || monster is null)
+        if (!MonsterCatalog.TryCreateMonster(candidateId, tile * 64f, out Monster? monster, out error, ignoreProgression, useTestProgression, this.poolOverrides) || monster is null)
         {
             this.monitor.Log($"[Spectrum] SPAWN FAILED | {MonsterCatalog.GetDisplayName(candidateId)} | {error}", LogLevel.Warn);
             return false;
