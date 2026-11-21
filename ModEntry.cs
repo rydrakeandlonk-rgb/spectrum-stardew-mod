@@ -949,15 +949,15 @@ internal sealed class ModEntry : Mod
         if (action.Name is "stardew.starter_gift" or "stardew.starter_gift_test")
         {
             bool test = action.Name == "stardew.starter_gift_test";
-            string detail = "";
-            bool succeeded = this.starterGiftService?.QueueLetter(
-                action.ItemIdentifier, action.LetterTitle, action.LetterMessage, test, out detail
+            string giftDetail = "";
+            bool giftSucceeded = this.starterGiftService?.QueueLetter(
+                action.ItemIdentifier, action.LetterTitle, action.LetterMessage, test, out giftDetail
             ) == true;
             if (this.starterGiftService is null)
-                detail = "The starter gift service is unavailable.";
-            this.Monitor.Log($"[Spectrum] {(test ? "TEST LETTER" : "STARTER GIFT")} | {(succeeded ? detail : "failed: " + detail)}",
-                succeeded ? LogLevel.Info : LogLevel.Warn);
-            _ = this.gameModsClient?.AcknowledgeActionAsync(action.ActionId, succeeded, 0, succeeded ? null : detail, detail);
+                giftDetail = "The starter gift service is unavailable.";
+            this.Monitor.Log($"[Spectrum] {(test ? "TEST LETTER" : "STARTER GIFT")} | {(giftSucceeded ? giftDetail : "failed: " + giftDetail)}",
+                giftSucceeded ? LogLevel.Info : LogLevel.Warn);
+            _ = this.gameModsClient?.AcknowledgeActionAsync(action.ActionId, giftSucceeded, 0, giftSucceeded ? null : giftDetail, giftDetail);
             return;
         }
         int removed = 0;
