@@ -13,7 +13,7 @@ internal static class ItemEligibilityValidator
     /// Increment when the policy rules change, so diagnostics can identify which
     /// rule set made an eligibility decision.
     /// </summary>
-    internal const int RulesVersion = 1;
+    internal const int RulesVersion = 2;
 
     internal sealed record ValidationResult(
         bool IsEligible,
@@ -28,15 +28,20 @@ internal static class ItemEligibilityValidator
         string RejectionReason
     );
 
-    // Fail closed: only standard object-type items are eligible. This supports
-    // vanilla and content-pack object items without accepting other item types.
-    // Add future exclusions and narrowly scoped eligibility rules in this list.
+    // Starter gifts are deliberately restricted to edible standard objects.
+    // This excludes tools, equipment, placeables, and non-food objects. Keep this
+    // as a metadata check on the resolved registry item, never on the raw ID.
     private static readonly ValidationRule[] Rules =
     {
         new(
             "ALLOW_OBJECT_TYPE_ONLY",
             item => item.TypeDefinitionId == ItemRegistry.type_object,
             "Only standard object-type items are eligible."
+        ),
+        new(
+            "ALLOW_EDIBLE_OBJECT_ONLY",
+            item => item is StardewValley.Object obj && obj.Edibility > 0,
+            "Only edible objects with positive edibility are eligible."
         )
     };
 
@@ -48,15 +53,11 @@ internal static class ItemEligibilityValidator
     {
         string identifier = (itemIdentifier ?? string.Empty).Trim();
         if (identifier.Length == 0)
-        {
             return Reject("REJECT_EMPTY_IDENTIFIER", "No item identifier was provided.");
-        }
 
         Item? item;
         try
         {
-            // The project targets Stardew Valley 1.6.15 reference assemblies.
-            // allowNull avoids treating an unresolved identifier as a valid item.
             item = ItemRegistry.Create(identifier, allowNull: true);
         }
         catch (Exception)
@@ -65,9 +66,7 @@ internal static class ItemEligibilityValidator
         }
 
         if (item is null)
-        {
             return Reject("REJECT_UNRESOLVED_ITEM", "The item identifier does not resolve to a registered item.");
-        }
 
         foreach (ValidationRule rule in Rules)
         {
@@ -82,9 +81,7 @@ internal static class ItemEligibilityValidator
             }
 
             if (!allowed)
-            {
                 return new ValidationResult(false, rule.Id, rule.RejectionReason, null);
-            }
         }
 
         return new ValidationResult(
