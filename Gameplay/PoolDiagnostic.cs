@@ -8,3 +8,11 @@ internal sealed record PoolDiagnostic(
     string Reason,
     int DefinitionCount
 );
+ 
+internal sealed record PoolSpawnDecision(
+    string Monster,
+    string Pool,
+    string Outcome,
+    string Reason,
+    string RecordedAt
+);
