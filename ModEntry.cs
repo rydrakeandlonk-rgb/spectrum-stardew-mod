@@ -49,6 +49,7 @@ internal sealed class ModEntry : Mod
     private string gameSessionId = "";
     private string hostBroadcasterUserId = "";
     private string lastReportedHostSessionContext = "";
+    private bool wasGatewayConnected;
     private CancellationTokenSource? pairingCancellation;
     private volatile bool pairingInProgress;
     private volatile string pairingStatus = "";
@@ -146,6 +147,7 @@ internal sealed class ModEntry : Mod
         this.hostBroadcasterUserId = Context.IsMainPlayer ? this.config?.BroadcasterUserId ?? "" : "";
         this.lastReportedHostSessionContext = "";
         this.lastPoolDiagnosticsSessionId = "";
+        this.wasGatewayConnected = false;
         this.monsterSpawner?.SetPoolOverrides(new Dictionary<MonsterPool, string>());
         this.gameModsClient?.Dispose();
         this.gameModsClient = null;
@@ -187,6 +189,7 @@ internal sealed class ModEntry : Mod
         this.hostBroadcasterUserId = "";
         this.lastReportedHostSessionContext = "";
         this.lastPoolDiagnosticsSessionId = "";
+        this.wasGatewayConnected = false;
         this.retryCommandsAtUtc = DateTime.MinValue;
         this.pendingSpawnCommands.Clear();
         this.pendingSpawnRetryPlayers.Clear();
@@ -594,6 +597,7 @@ internal sealed class ModEntry : Mod
                 this.config.ConfigVersion = ModConfig.CurrentConfigVersion;
                 this.Helper.WriteConfig(this.config);
                 this.gameModsClient?.Dispose();
+                this.wasGatewayConnected = false;
                 if (string.IsNullOrWhiteSpace(this.localConnectionSessionId))
                     this.localConnectionSessionId = Guid.NewGuid().ToString("N");
                 if (Context.IsMainPlayer)
@@ -616,6 +620,14 @@ internal sealed class ModEntry : Mod
 
         if (!Context.IsWorldReady || this.monsterSpawner is null)
             return;
+
+        bool gatewayConnectedNow = this.gameModsClient?.IsConnected == true;
+        if (gatewayConnectedNow && !this.wasGatewayConnected)
+        {
+            this.lastPoolDiagnosticsSessionId = "";
+            this.lastReportedHostSessionContext = "";
+        }
+        this.wasGatewayConnected = gatewayConnectedNow;
 
         bool poolOverridesChanged = false;
         if (this.gameModsClient is not null)
