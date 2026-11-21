@@ -1,6 +1,6 @@
 # Spectrum Stardew Monster Spawner — Version 2.3.0 implementation specification
 
-**Status:** Planned next development version  
+**Status:** Implementation in progress  
 **Current baseline:** 2.2.0 development build  
 **Scope:** Session ownership/isolation and session-aware spawn-pool diagnostics and overrides.
 
@@ -72,7 +72,6 @@ The following existing behaviour must continue working:
 - Different host sessions remain independent even when active simultaneously.
 - Existing normal spawn, horde, mega-horde, charity-horde, pause/resume, queue, deduplication, and acknowledgement behaviour remains intact.
 - Existing charity threshold and horde sizing rules are unchanged.
-- The starter weapon works offline and does not add remote-service dependencies.
 
 ## 5. Acceptance and regression checklist
 
@@ -107,6 +106,6 @@ The following existing behaviour must continue working:
 
 ## 6. Implementation notes
 
-Before changing code, audit the current session identifiers, per-broadcaster gateway routing, SMAPI multiplayer message contracts, progression snapshot ownership, pool construction, and charity action routing. Confirm where the current implementation conflates broadcaster and session identity, if anywhere. For the Wooden Blade, inspect the pinned Stardew/SMAPI APIs and the actual death item-loss path before choosing the persistence/protection mechanism.
+Before changing code, audit the current session identifiers, per-broadcaster gateway routing, SMAPI multiplayer message contracts, progression snapshot ownership, pool construction, and charity action routing. Confirm where the current implementation conflates broadcaster and session identity, if anywhere. 
 
 No implementation detail should weaken host authority, broadcaster attribution, existing safety gates, or the lightweight service architecture.
