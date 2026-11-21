@@ -1,5 +1,40 @@
 # Changelog
 
+## 2.3.0 — planned next development version
+
+This is the next implementation scope following the 2.2.0 development build. The detailed acceptance criteria are documented in [docs/NEXT_VERSION_2.3.0.md](docs/NEXT_VERSION_2.3.0.md).
+
+### Added — session-aware architecture and diagnostics
+- Treat every running Stardew game as an independent, host-owned session; multiple solo and multiplayer sessions may run concurrently.
+- Use the host's active save as the sole source of progression and spawn-pool eligibility for that session. Clients inherit the host session's progression context.
+- Keep redemption identity, session host, and in-game spawn target as separate identities. A farmhand's own Twitch redemption must continue to target that farmhand's character while using the host session's progression and pool rules.
+- Scope all session-specific feature state and actions to a unique session identity, including normal spawns, hordes, charity horde delivery, pool overrides, queued work, and diagnostics.
+- Add Control Center Spawn Pool Diagnostics & Management: expected eligibility, actual effective state, override mode, progression evidence/reasons, session/host context, configuration sync state, and recent spawn decisions.
+- Support per-session pool modes: Automatic, Force enabled, and Force disabled. Automatic follows host-save progression; Force enabled bypasses progression eligibility for that pool; Force disabled always excludes it.
+
+### Added — local starter weapon
+- On a farmer's first load into a save, grant one vanilla Wooden Blade if that farmer's save-specific GivenStartWeapon flag is not set.
+- Persist the flag with that farmer's save data so the grant is once per farmer per save, not a global or cloud setting.
+- Protect the granted Wooden Blade from Stardew's normal weapon-loss-on-death behaviour.
+- Give the blade a clear custom description/tooltip: “This blade won't leave your side.”
+- Keep this feature entirely local to the SMAPI mod; it does not depend on Control Center, Event Hub, progression checks, or remote configuration.
+
+### Compatibility and preservation requirements
+- Preserve existing broadcaster-scoped Twitch connections and chat redemption delivery.
+- Preserve the current behaviour where each streamer's chat can target that streamer's own in-game farmer, including when they are a farmhand.
+- Keep host-authoritative world mutation and existing command-ID deduplication/acknowledgement.
+- Keep session-specific state isolated when multiple hosts are playing at the same time; never use a single global active-save/session context.
+- Do not change the existing charity threshold, horde sizing, redemption queue, or spawn behaviour except to ensure each action is routed to the correct independent host session and target farmer.
+
+### Validation required
+- Run concurrent-session tests with at least one multiplayer host/farmhand session and one independent solo session.
+- Verify host progression controls pool eligibility for every player in that host's session, while another host's progression and overrides remain independent.
+- Verify farmhand redemptions still spawn near the redeeming farmhand using the host's pool rules.
+- Verify normal, horde, mega-horde, and charity actions preserve redemption attribution, target selection, session routing, deduplication, and acknowledgements.
+- Verify Automatic/Force enabled/Force disabled overrides, live diagnostics, session switching, save switching, reconnects, and stale-state rejection.
+- Verify the Wooden Blade is granted exactly once per farmer per save, survives death, displays its custom tooltip, and does not duplicate after reloads or multiplayer reconnects.
+- Run the existing 2.2.0 charity, multiplayer, gateway, overlay, and gameplay regression checks.
+
 ## 2.2.0 — development build
 
 ### Added
