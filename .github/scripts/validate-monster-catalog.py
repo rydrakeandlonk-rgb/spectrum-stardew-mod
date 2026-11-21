@@ -171,6 +171,10 @@ if "session_id" not in client_source or "spawn.pools.state" not in client_source
     errors.append("Gateway session identity and pool override sync are missing.")
 if "SendPoolDiagnosticsAsync" not in entry_source:
     errors.append("Host progression/pool diagnostics are not reported to Control Center.")
+if "GetRecentPoolDecisions" not in spawner_source or "recent_decisions" not in entry_source:
+    errors.append("Event-driven recent spawn-pool decisions are not included in host diagnostics.")
+if "RecordPoolDecision" not in spawner_source or "recentPoolDecisions.Count > 20" not in spawner_source:
+    errors.append("Recent spawn-pool decision history must be event-driven and bounded to 20 entries.")
 
 # Custom variants must use an existing vanilla threat-data key, not their display name.
 for expected in (
