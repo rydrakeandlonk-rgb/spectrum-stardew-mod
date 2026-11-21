@@ -45,6 +45,9 @@ internal sealed class ModEntry : Mod
     private MonsterProgressionSnapshot? lastObservedProgression;
     private bool playerDeathLatched;
     private string lastPoolDiagnosticsSessionId = "";
+    private string localConnectionSessionId = "";
+    private string gameSessionId = "";
+    private string hostBroadcasterUserId = "";
     private CancellationTokenSource? pairingCancellation;
     private volatile bool pairingInProgress;
     private volatile string pairingStatus = "";
@@ -137,8 +140,21 @@ internal sealed class ModEntry : Mod
             ? MonsterProgressionSnapshot.Read(Game1.player, useTestOverride: false)
             : null;
         this.playerDeathLatched = Game1.player is null || Game1.player.health <= 0;
+        this.localConnectionSessionId = Guid.NewGuid().ToString("N");
+        this.gameSessionId = Context.IsMainPlayer ? this.localConnectionSessionId : "";
+        this.hostBroadcasterUserId = Context.IsMainPlayer ? this.config?.BroadcasterUserId ?? "" : "";
         this.lastPoolDiagnosticsSessionId = "";
         this.monsterSpawner?.SetPoolOverrides(new Dictionary<MonsterPool, string>());
+
+        if (!Context.IsMainPlayer && Game1.MasterPlayer is not null)
+        {
+            this.Helper.Multiplayer.SendMessage(
+                new SessionContextRequest(),
+                "spectrum.session.request",
+                modIDs: new[] { this.ModManifest.UniqueID },
+                playerIDs: new[] { Game1.MasterPlayer.UniqueMultiplayerID }
+            );
+        }
 
         if (this.config is null ||
             string.IsNullOrWhiteSpace(this.config.BroadcasterUserId) ||
@@ -148,7 +164,7 @@ internal sealed class ModEntry : Mod
         }
 
         this.gameModsClient?.Dispose();
-        this.gameModsClient = new GameModsClient(this.config, this.Monitor);
+        this.gameModsClient = new GameModsClient(this.config, this.Monitor, this.localConnectionSessionId);
         this.Monitor.Log("Starting this player’s Spectrum connection for the loaded Stardew save.", LogLevel.Info);
     }
 
@@ -163,6 +179,10 @@ internal sealed class ModEntry : Mod
         this.pairingInProgress = false;
         this.pairingStatus = "";
         this.pairingVerificationUri = "";
+        this.localConnectionSessionId = "";
+        this.gameSessionId = "";
+        this.hostBroadcasterUserId = "";
+        this.lastPoolDiagnosticsSessionId = "";
         this.retryCommandsAtUtc = DateTime.MinValue;
         this.pendingSpawnCommands.Clear();
         this.pendingSpawnRetryPlayers.Clear();
@@ -570,7 +590,14 @@ internal sealed class ModEntry : Mod
                 this.config.ConfigVersion = ModConfig.CurrentConfigVersion;
                 this.Helper.WriteConfig(this.config);
                 this.gameModsClient?.Dispose();
-                this.gameModsClient = new GameModsClient(this.config, this.Monitor);
+                if (string.IsNullOrWhiteSpace(this.localConnectionSessionId))
+                    this.localConnectionSessionId = Guid.NewGuid().ToString("N");
+                if (Context.IsMainPlayer)
+                {
+                    this.gameSessionId = this.localConnectionSessionId;
+                    this.hostBroadcasterUserId = this.config.BroadcasterUserId;
+                }
+                this.gameModsClient = new GameModsClient(this.config, this.Monitor, this.localConnectionSessionId);
                 this.pairingStatus = "Twitch account authorised · connecting…";
                 Game1.chatBox?.addInfoMessage("Your Spectrum Twitch connection is authorised. Spawning remains paused until Control Center opens its safety gate.");
             }
@@ -964,7 +991,8 @@ internal sealed class ModEntry : Mod
             this.Helper.Multiplayer.SendMessage(
                 new ForwardedClearAction(
                     pending.Action.ActionId, pending.Action.Name, pending.Action.Difficulty, pending.Action.Outcome,
-                    pending.Action.MonsterCount, pending.Action.DonorName, pending.Action.CharityName, pending.Action.Announce
+                    pending.Action.MonsterCount, pending.Action.DonorName, pending.Action.CharityName, pending.Action.Announce,
+                    this.gameSessionId
                 ),
                 "spectrum.action.forward",
                 modIDs: new[] { this.ModManifest.UniqueID },
@@ -1012,9 +1040,13 @@ internal sealed class ModEntry : Mod
                 DateTime.UtcNow - pending.LastSentAtUtc < TimeSpan.FromSeconds(10))
                 continue;
 
+            if (string.IsNullOrWhiteSpace(this.gameSessionId))
+                continue;
+
             ForwardedSpawnCommand message = ForwardedSpawnCommand.FromCommand(
                 pending.Command,
-                this.config?.BroadcasterUserId ?? ""
+                this.config?.BroadcasterUserId ?? "",
+                this.gameSessionId
             );
             this.Helper.Multiplayer.SendMessage(
                 message,
@@ -1102,10 +1134,61 @@ internal sealed class ModEntry : Mod
         }
     }
 
+    private void SendSessionContext(long playerId)
+    {
+        if (!Context.IsMainPlayer ||
+            !System.Text.RegularExpressions.Regex.IsMatch(this.gameSessionId ?? "", @"^[a-fA-F0-9]{32}$") ||
+            !System.Text.RegularExpressions.Regex.IsMatch(this.hostBroadcasterUserId ?? "", @"^\d{1,30}$"))
+            return;
+
+        this.Helper.Multiplayer.SendMessage(
+            new SessionContextMessage
+            {
+                HostSessionId = this.gameSessionId,
+                HostBroadcasterUserId = this.hostBroadcasterUserId
+            },
+            "spectrum.session.context",
+            modIDs: new[] { this.ModManifest.UniqueID },
+            playerIDs: new[] { playerId }
+        );
+    }
+
     private void OnModMessageReceived(object? sender, ModMessageReceivedEventArgs e)
     {
         if (e.FromModID != this.ModManifest.UniqueID || !Context.IsWorldReady)
             return;
+
+        if (e.Type == "spectrum.session.request" && Context.IsMainPlayer)
+        {
+            IMultiplayerPeer? peer = this.Helper.Multiplayer.GetConnectedPlayer(e.FromPlayerID);
+            if (peer?.GetMod(this.ModManifest.UniqueID) is not null)
+                this.SendSessionContext(e.FromPlayerID);
+            return;
+        }
+
+        if (e.Type == "spectrum.session.context" &&
+            !Context.IsMainPlayer &&
+            Game1.MasterPlayer is not null &&
+            e.FromPlayerID == Game1.MasterPlayer.UniqueMultiplayerID)
+        {
+            SessionContextMessage context;
+            try { context = e.ReadAs<SessionContextMessage>(); }
+            catch (Exception ex)
+            {
+                this.Monitor.Log($"Ignored an invalid host session context: {ex.Message}", LogLevel.Warn);
+                return;
+            }
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(context.HostSessionId ?? "", @"^[a-fA-F0-9]{32}$") ||
+                !System.Text.RegularExpressions.Regex.IsMatch(context.HostBroadcasterUserId ?? "", @"^\d{1,30}$"))
+                return;
+
+            this.gameSessionId = context.HostSessionId.ToLowerInvariant();
+            this.hostBroadcasterUserId = context.HostBroadcasterUserId;
+            _ = this.gameModsClient?.SendSessionContextAsync(this.hostBroadcasterUserId, this.gameSessionId);
+            this.Monitor.Log($"[Spectrum] SESSION CONTEXT | client of broadcaster {this.hostBroadcasterUserId} | host session {this.gameSessionId}.", LogLevel.Info);
+            return;
+        }
 
         if (e.Type == "spectrum.charity.horde.announce" &&
             !Context.IsMainPlayer &&
@@ -1169,6 +1252,7 @@ internal sealed class ModEntry : Mod
             bool hasMod = peer?.GetMod(this.ModManifest.UniqueID) is not null;
             bool farmerOnline = Game1.getOnlineFarmers().Any(farmer => farmer.UniqueMultiplayerID == e.FromPlayerID);
             if (!hasMod || !farmerOnline || string.IsNullOrWhiteSpace(message.ActionId) ||
+                message.HostSessionId != this.gameSessionId ||
                 message.Name is not ("stardew.clear_loaded_monsters" or "stardew.spawn_random_test" or "stardew.community_single" or "stardew.community_horde" or "stardew.community_mega_horde") ||
                 message.Difficulty is not ("easy" or "normal" or "hard") ||
                 (message.Name == "stardew.community_single" && message.Outcome != "single") ||
@@ -1240,6 +1324,7 @@ internal sealed class ModEntry : Mod
             bool farmerOnline = Game1.getOnlineFarmers().Any(farmer => farmer.UniqueMultiplayerID == e.FromPlayerID);
             if (!hasMod || !farmerOnline ||
                 string.IsNullOrWhiteSpace(message.CommandId) ||
+                message.HostSessionId != this.gameSessionId ||
                 message.Game != "stardew-valley" ||
                 message.Name != "stardew.spawn_monster" ||
                 !SupportedForwardedBehaviors.Contains(message.BehaviorKey) ||
