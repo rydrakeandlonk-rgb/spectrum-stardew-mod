@@ -119,6 +119,20 @@ internal sealed class GameModsClient : IDisposable
         });
     }
 
+    public Task SendSessionContextAsync(string hostBroadcasterUserId, string hostSessionId)
+    {
+        if (!System.Text.RegularExpressions.Regex.IsMatch(hostBroadcasterUserId ?? "", @"^\d{1,30}$") ||
+            !System.Text.RegularExpressions.Regex.IsMatch(hostSessionId ?? "", @"^[a-fA-F0-9]{32}$"))
+            return Task.CompletedTask;
+
+        return this.SendMessageAsync(new
+        {
+            type = "session.context",
+            host_broadcaster_id = hostBroadcasterUserId,
+            host_session_id = hostSessionId.ToLowerInvariant()
+        });
+    }
+
     private void EnqueueAction(GameAction action)
     {
         if (!this.queuedActionIds.TryAdd(action.ActionId, 0))
