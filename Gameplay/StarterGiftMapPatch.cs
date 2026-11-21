@@ -9,7 +9,7 @@ namespace SpectrumStardewMod.Gameplay;
 /// </summary>
 internal sealed class StarterGiftMapPatch
 {
-    // Stardew reads this map property when creating a new save.\n    private const string GiftProperty = "FarmHouseStarterGift";
+    private const string GiftProperty = "FarmHouseStarterGift";
     private const string GiftPropertyValue = "(O)223 1";
 
     internal StarterGiftMapPatch(IModHelper helper)
