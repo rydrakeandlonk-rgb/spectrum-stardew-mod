@@ -59,6 +59,13 @@ internal sealed class MonsterSpawner
         this.pendingPlans.Clear();
     }
 
+    public void ResetSessionState()
+    {
+        this.poolOverrides = new Dictionary<MonsterPool, string>();
+        this.pendingPlans.Clear();
+        this.recentPoolDecisions.Clear();
+    }
+
     public IReadOnlyList<PoolDiagnostic> GetPoolDiagnostics(MonsterProgressionSnapshot progression) =>
         MonsterLocationPools.GetDiagnostics(progression, this.poolOverrides);
 
