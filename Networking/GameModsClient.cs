@@ -525,7 +525,7 @@ internal sealed class GameModsClient : IDisposable
                 string actionGame = ReadString(root, "game");
                 string actionName = ReadString(root, "name");
                 if (string.IsNullOrWhiteSpace(actionId) || actionGame != "stardew-valley" ||
-                    actionName is not ("stardew.clear_loaded_monsters" or "stardew.spawn_random_test" or "stardew.community_single" or "stardew.community_horde" or "stardew.community_mega_horde" or "stardew.starter_gift" or "stardew.starter_gift_test"))
+                    actionName is not ("stardew.clear_loaded_monsters" or "stardew.spawn_random_test" or "stardew.community_single" or "stardew.community_horde" or "stardew.community_mega_horde"))
                 {
                     this.monitor.Log("Ignored an unsupported Spectrum game action.", LogLevel.Warn);
                     return;
@@ -550,10 +550,7 @@ internal sealed class GameModsClient : IDisposable
                     announceElement.ValueKind != JsonValueKind.False;
                 this.EnqueueAction(new GameAction(
                     actionId, actionGame, actionName, actionDifficulty, outcome, monsterCount,
-                    donorName, charityName, announce,
-                    ReadString(root, "item_identifier"),
-                    ReadString(root, "letter_title"),
-                    ReadString(root, "letter_message")
+                    donorName, charityName, announce
                 ));
                 return;
             }

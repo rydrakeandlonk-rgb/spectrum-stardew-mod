@@ -20,7 +20,6 @@ namespace SpectrumStardewMod;
 internal sealed class ModEntry : Mod
 {
     private MonsterSpawner? monsterSpawner;
-    private StarterGiftService? starterGiftService;
     private GameModsClient? gameModsClient;
     private ModConfig? config;
     private readonly HashSet<string> processedCommandIds = new(StringComparer.Ordinal);
@@ -63,7 +62,7 @@ internal sealed class ModEntry : Mod
     public override void Entry(IModHelper helper)
     {
         this.monsterSpawner = new MonsterSpawner(this.Monitor);
-        this.starterGiftService = new StarterGiftService(helper, this.Monitor);
+        _ = new StarterGiftMapPatch(helper);
 
         this.LoadProcessedCommands(helper);
 
@@ -128,12 +127,6 @@ internal sealed class ModEntry : Mod
         );
 
         helper.ConsoleCommands.Add(
-            "spectrum_item_validator_test",
-            "Run safe item eligibility validator checks without delivering or adding any items. Usage: spectrum_item_validator_test",
-            this.OnItemValidatorTestCommand
-        );
-
-        helper.ConsoleCommands.Add(
             "spectrum_connection_status",
             "Show the Spectrum Game Mods connection status. Usage: spectrum_connection_status",
             this.OnConnectionStatusCommand
@@ -156,7 +149,6 @@ internal sealed class ModEntry : Mod
         this.playerDeathLatched = Game1.player is null || Game1.player.health <= 0;
         this.localConnectionSessionId = CreateSaveSessionId();
         this.gameSessionId = Context.IsMainPlayer ? this.localConnectionSessionId : "";
-        this.starterGiftService?.LoadSaveData();
         this.hostBroadcasterUserId = Context.IsMainPlayer ? this.config?.BroadcasterUserId ?? "" : "";
         this.lastReportedHostSessionContext = "";
         this.lastPoolDiagnosticsSessionId = "";
@@ -200,7 +192,6 @@ internal sealed class ModEntry : Mod
 
     private void OnReturnedToTitle(object? sender, ReturnedToTitleEventArgs e)
     {
-        this.starterGiftService?.ClearSaveData();
         this.gameModsClient?.Dispose();
         this.gameModsClient = null;
         this.pairingCancellation?.Cancel();
@@ -950,20 +941,6 @@ internal sealed class ModEntry : Mod
 
     private void ExecuteLocalClearAction(GameAction action)
     {
-        if (action.Name is "stardew.starter_gift" or "stardew.starter_gift_test")
-        {
-            bool test = action.Name == "stardew.starter_gift_test";
-            string giftDetail = "";
-            bool giftSucceeded = this.starterGiftService?.QueueLetter(
-                action.ItemIdentifier, action.LetterTitle, action.LetterMessage, test, out giftDetail
-            ) == true;
-            if (this.starterGiftService is null)
-                giftDetail = "The starter gift service is unavailable.";
-            this.Monitor.Log($"[Spectrum] {(test ? "TEST LETTER" : "STARTER GIFT")} | {(giftSucceeded ? giftDetail : "failed: " + giftDetail)}",
-                giftSucceeded ? LogLevel.Info : LogLevel.Warn);
-            _ = this.gameModsClient?.AcknowledgeActionAsync(action.ActionId, giftSucceeded, 0, giftSucceeded ? null : giftDetail, giftDetail);
-            return;
-        }
         int removed = 0;
         string detail;
         bool succeeded;
@@ -1659,17 +1636,6 @@ internal sealed class ModEntry : Mod
         }
 
         this.OnMonsterPoolStatusCommand(command, Array.Empty<string>());
-    }
-
-    private void OnItemValidatorTestCommand(string command, string[] args)
-    {
-        if (!Context.IsWorldReady || Game1.player is null || !Context.IsMainPlayer)
-        {
-            this.Monitor.Log("Load a save as the host before running item eligibility tests.", LogLevel.Warn);
-            return;
-        }
-
-        ItemEligibilityValidatorTests.Run(this.Monitor);
     }
 
     private void OnMonsterCatalogTestCommand(string command, string[] args)

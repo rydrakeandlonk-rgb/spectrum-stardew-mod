@@ -10,8 +10,5 @@ internal sealed record GameAction(
     int MonsterCount = 10,
     string DonorName = "",
     string CharityName = "",
-    bool Announce = true,
-    string ItemIdentifier = "",
-    string LetterTitle = "",
-    string LetterMessage = ""
+    bool Announce = true
 );
