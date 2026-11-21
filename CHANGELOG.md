@@ -12,13 +12,6 @@ This is the next implementation scope following the 2.2.0 development build. The
 - Add Control Center Spawn Pool Diagnostics & Management: expected eligibility, actual effective state, override mode, progression evidence/reasons, session/host context, configuration sync state, and recent spawn decisions.
 - Support per-session pool modes: Automatic, Force enabled, and Force disabled. Automatic follows host-save progression; Force enabled bypasses progression eligibility for that pool; Force disabled always excludes it.
 
-### Added — local starter weapon
-- On a farmer's first load into a save, grant one vanilla Wooden Blade if that farmer's save-specific GivenStartWeapon flag is not set.
-- Persist the flag with that farmer's save data so the grant is once per farmer per save, not a global or cloud setting.
-- Protect the granted Wooden Blade from Stardew's normal weapon-loss-on-death behaviour.
-- Give the blade a clear custom description/tooltip: “This blade won't leave your side.”
-- Keep this feature entirely local to the SMAPI mod; it does not depend on Control Center, Event Hub, progression checks, or remote configuration.
-
 ### Compatibility and preservation requirements
 - Preserve existing broadcaster-scoped Twitch connections and chat redemption delivery.
 - Preserve the current behaviour where each streamer's chat can target that streamer's own in-game farmer, including when they are a farmhand.
