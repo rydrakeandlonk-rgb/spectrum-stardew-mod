@@ -27,6 +27,7 @@ internal sealed class GameModsClient : IDisposable
     private readonly IMonitor monitor;
     private readonly ConcurrentQueue<GameCommand> commands = new();
     private readonly ConcurrentQueue<GameAction> actions = new();
+    private readonly ConcurrentQueue<PoolOverrideUpdate> poolOverrideUpdates = new();
     private readonly ConcurrentDictionary<string, byte> queuedActionIds = new(StringComparer.Ordinal);
     private readonly ConcurrentQueue<string> actionIdOrder = new();
     private readonly ConcurrentDictionary<string, byte> queuedCommandIds = new(StringComparer.Ordinal);
@@ -42,6 +43,7 @@ internal sealed class GameModsClient : IDisposable
     private volatile bool spawnsEnabled;
     private volatile bool accessRevoked;
     private volatile string connectionStatusMessage = "Waiting to connect to Spectrum Game Mods.";
+    private volatile string activeSessionId = "";
 
     public GameModsClient(ModConfig config, IMonitor monitor)
     {
@@ -51,6 +53,7 @@ internal sealed class GameModsClient : IDisposable
     }
 
     public bool IsConnected => this.connected;
+    public string ActiveSessionId => this.activeSessionId;
     public bool SpawnsEnabled => this.spawnsEnabled;
     public string ConnectionStatusMessage => this.connectionStatusMessage;
     public string SpawnStateReason
@@ -94,6 +97,23 @@ internal sealed class GameModsClient : IDisposable
     }
 
     public bool TryDequeueAction(out GameAction? action) => this.actions.TryDequeue(out action);
+
+    public bool TryDequeuePoolOverrideUpdate(out PoolOverrideUpdate? update) =>
+        this.poolOverrideUpdates.TryDequeue(out update);
+
+    public Task SendPoolDiagnosticsAsync(object diagnostics)
+    {
+        string sessionId = this.activeSessionId;
+        if (string.IsNullOrWhiteSpace(sessionId))
+            return Task.CompletedTask;
+
+        return this.SendMessageAsync(new
+        {
+            type = "pool.diagnostics",
+            session_id = sessionId,
+            diagnostics
+        });
+    }
 
     private void EnqueueAction(GameAction action)
     {
@@ -405,7 +425,36 @@ internal sealed class GameModsClient : IDisposable
 
             if (type == "session.ready")
             {
+                this.activeSessionId = ReadString(root, "session_id");
                 this.monitor.Log("Spectrum host session is ready.", LogLevel.Trace);
+                return;
+            }
+
+            if (type == "spawn.pools.state")
+            {
+                string sessionId = ReadString(root, "session_id");
+                if (string.IsNullOrWhiteSpace(sessionId) || sessionId != this.activeSessionId)
+                    return;
+
+                if (!root.TryGetProperty("overrides", out JsonElement overridesElement) ||
+                    overridesElement.ValueKind != JsonValueKind.Object)
+                    return;
+
+                var overrides = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (JsonProperty property in overridesElement.EnumerateObject())
+                {
+                    string mode = property.Value.ValueKind == JsonValueKind.String
+                        ? property.Value.GetString() ?? ""
+                        : "";
+                    if (mode is "automatic" or "force_enabled" or "force_disabled")
+                        overrides[property.Name] = mode;
+                }
+
+                this.poolOverrideUpdates.Enqueue(new PoolOverrideUpdate(
+                    sessionId,
+                    ReadInt(root, "revision", 1),
+                    overrides
+                ));
                 return;
             }
 
