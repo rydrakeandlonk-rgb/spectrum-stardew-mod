@@ -35,6 +35,12 @@ The Spectrum Stardew Monster Spawner is a private Spectrum integration. Control 
 - [x] End-to-end Twitch redemption spawn verified in the live Spectrum environment.
 - [x] Multiplayer host/farmhand spawning verified in the Spectrum test farm.
 - [x] Control Center Test Spawn verified with the current mod build.
+- [x] Host-owned save/session context and host-authoritative progression diagnostics.
+- [x] Automatic pool eligibility with Automatic, Force enabled, and Force disabled modes.
+- [x] Save-session keyed pool overrides, revisioned live updates, and stale-session update rejection.
+- [x] Per-session pool diagnostics, recent spawn decisions, and dashboard host/client grouping.
+- [x] Save changes reset in-memory pool decisions without leaking settings across sessions.
+- [ ] In-game validation of independent simultaneous sessions and all pool override modes.
 - [ ] Final Kill All end-to-end smoke test and access-revocation/re-pair regression check.
 
 ## Version 2.0.0 development and test gate
