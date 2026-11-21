@@ -9,12 +9,14 @@ ROOT = Path(__file__).resolve().parents[2]
 CATALOG_PATH = ROOT / "Gameplay" / "MonsterCatalog.cs"
 POOLS_PATH = ROOT / "Gameplay" / "MonsterLocationPools.cs"
 PROGRESSION_PATH = ROOT / "Gameplay" / "MonsterProgression.cs"
+DIAGNOSTIC_PATH = ROOT / "Gameplay" / "PoolDiagnostic.cs"
 ENTRY_PATH = ROOT / "ModEntry.cs"
 SPAWNER_PATH = ROOT / "Gameplay" / "MonsterSpawner.cs"
 
 catalog = CATALOG_PATH.read_text(encoding="utf-8")
 pools_source = POOLS_PATH.read_text(encoding="utf-8")
 progression_source = PROGRESSION_PATH.read_text(encoding="utf-8")
+diagnostic_source = DIAGNOSTIC_PATH.read_text(encoding="utf-8")
 entry_source = ENTRY_PATH.read_text(encoding="utf-8")
 spawner_source = SPAWNER_PATH.read_text(encoding="utf-8")
 
@@ -142,15 +144,12 @@ for live_default in (
         errors.append(f"Live redemption path accidentally uses test progression defaults: {live_default}")
 
 # Live pool overrides must flow through every random, configured and horde selection path.
-for required in (
-    '"force_enabled"',
-    '"force_disabled"',
-    "GetDiagnostics(",
-    "ExpectedEnabled",
-    "EffectiveEnabled"
-):
+for required in ('"force_enabled"', '"force_disabled"', "GetDiagnostics("):
     if required not in pools_source:
-        errors.append(f"Spawn pool override/diagnostic support is missing: {required}")
+        errors.append(f"Spawn pool override support is missing: {required}")
+for required in ("ExpectedEnabled", "EffectiveEnabled"):
+    if required not in diagnostic_source:
+        errors.append(f"Spawn pool diagnostic fields are missing: {required}")
 for line in spawner_source.splitlines():
     if "MonsterCatalog.GetRandomType(command.Difficulty" in line and "poolOverrides: this.poolOverrides" not in line:
         errors.append("A live random-monster selection bypasses the session pool overrides.")
