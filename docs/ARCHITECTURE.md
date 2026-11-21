@@ -171,3 +171,56 @@ The StreamElements widget displays the challenge counter persistently and spawn 
 - Donor display name and charity name are transient action metadata used for the optional in-game announcement. They are not written into a donor-history table.
 - The event carries an immutable broadcaster/session snapshot from the donation moment. The per-host gateway rechecks the exact session ID and effective spawning permission before sending the action.
 - Farmhands relay the typed action and announcement metadata to the multiplayer host; the host remains the only client that changes the shared world and broadcasts the announcement to connected modded farmhands.
+
+
+## Host-owned concurrent game sessions (2.3.0 requirement)
+
+A Stardew game session is an independent, host-owned unit of state. Spectrum may have multiple game sessions running at the same time, including separate solo games and separate multiplayer farms. Simultaneous streaming or mod connectivity does not imply that players share a Stardew session.
+
+- The multiplayer host's active save is the sole authority for that session's progression and spawn-pool eligibility.
+- Every connected farmhand is associated with the host's session and inherits its progression context. A farmhand's own save/progression must never influence the host farm's eligibility.
+- A solo player is the host of their own independent session.
+- Session-specific state must be keyed by a unique game-session identity, not only by Twitch broadcaster ID and never by a process-wide/global active-save variable.
+- Session-specific state includes progression snapshots, pool eligibility, manual pool overrides, queued/pending spawn work, horde and charity actions, diagnostics, and configuration revisions.
+- Session start, host/save transition, join/leave, reconnect, and session end must initialise, refresh, detach, or clear the relevant context without leaking stale state into another session.
+- Control Center must present sessions grouped by host and show the associated clients.
+
+### Redemption identity, host authority, and spawn target
+
+Keep three identities distinct for every redemption/action:
+
+1. **Redemption owner:** the Twitch broadcaster whose chat or channel-point redemption triggered the action.
+2. **Session host:** the Stardew multiplayer host whose save and session rules govern eligibility.
+3. **Spawn target:** the in-game farmer who receives the monster near their current location.
+
+A farmhand's broadcaster-scoped connection continues to receive and own that farmhand's redemptions. The farmhand forwards the typed request to the host; the host validates the peer, applies the host session's progression/pool rules, and creates the monster near the redeeming farmhand. The result is acknowledged back through the originating farmhand connection. Do not replace the redemption owner or spawn target with the host identity.
+
+Apply the same separation to normal redemptions, ordinary hordes, mega hordes, and charity-triggered actions. Preserve existing delivery, deduplication, queueing, and acknowledgement behaviour.
+
+### Session-scoped spawn-pool diagnostics and overrides
+
+Control Center's Stardew page will provide per-session Spawn Pool Diagnostics & Management. For each pool, report:
+- Expected eligibility according to the host save and the pool's progression requirements.
+- Actual effective state reported by the running mod.
+- Override mode: Automatic, Force enabled, or Force disabled.
+- The progression facts/requirements used to reach the expected result.
+- A clear reason for any mismatch between expected and actual state.
+- Configuration revision/synchronisation status and recent spawn decisions.
+
+Override precedence:
+- Force disabled always excludes the pool.
+- Force enabled includes the pool regardless of progression eligibility.
+- Automatic follows the host save's progression checks.
+
+Overrides are session-scoped. Changing one host's pool configuration must not affect another host's session. The mod is authoritative for reporting its evaluated/effective state; Control Center must not infer progression from streamer identity or guess the active pools. Diagnostics should be event-driven and avoid unnecessary high-frequency polling or storage writes.
+
+## Local per-farmer starter weapon (2.3.0 requirement)
+
+The starter weapon is independent of the remote session-control architecture:
+- On first load into a save, grant the local farmer one vanilla Wooden Blade if their save-specific GivenStartWeapon flag is absent/false.
+- Persist the flag with that farmer's save data, so each farmer receives the grant once per farmer per save. Do not store this flag in Control Center, Event Hub, the gateway, or shared remote configuration.
+- Ensure the granted Wooden Blade is excluded from Stardew's normal weapon-loss-on-death handling. The protection must be reliable through the game's actual death/inventory-loss path, not merely rely on re-granting the item after death.
+- Provide a custom in-game description/tooltip: “This blade won't leave your side.”
+- Keep the feature local to SMAPI and independent of progression, network availability, and session pool configuration.
+- Validate first-load, reload, death, save switching, and multiplayer host/farmhand cases; avoid duplicate grants.
+
