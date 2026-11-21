@@ -48,6 +48,7 @@ internal sealed class ModEntry : Mod
     private string localConnectionSessionId = "";
     private string gameSessionId = "";
     private string hostBroadcasterUserId = "";
+    private string lastReportedHostSessionContext = "";
     private CancellationTokenSource? pairingCancellation;
     private volatile bool pairingInProgress;
     private volatile string pairingStatus = "";
@@ -143,6 +144,7 @@ internal sealed class ModEntry : Mod
         this.localConnectionSessionId = Guid.NewGuid().ToString("N");
         this.gameSessionId = Context.IsMainPlayer ? this.localConnectionSessionId : "";
         this.hostBroadcasterUserId = Context.IsMainPlayer ? this.config?.BroadcasterUserId ?? "" : "";
+        this.lastReportedHostSessionContext = "";
         this.lastPoolDiagnosticsSessionId = "";
         this.monsterSpawner?.SetPoolOverrides(new Dictionary<MonsterPool, string>());
 
@@ -182,6 +184,7 @@ internal sealed class ModEntry : Mod
         this.localConnectionSessionId = "";
         this.gameSessionId = "";
         this.hostBroadcasterUserId = "";
+        this.lastReportedHostSessionContext = "";
         this.lastPoolDiagnosticsSessionId = "";
         this.retryCommandsAtUtc = DateTime.MinValue;
         this.pendingSpawnCommands.Clear();
@@ -634,6 +637,15 @@ internal sealed class ModEntry : Mod
                     this.Monitor.Log($"[Spectrum] SPAWN POOL OVERRIDES | revision {update.Revision} | {parsedOverrides.Count} explicit override(s).", LogLevel.Info);
                 }
             }
+        }
+
+        if (!Context.IsMainPlayer && this.gameModsClient?.IsConnected == true &&
+            !string.IsNullOrWhiteSpace(this.gameSessionId) &&
+            !string.IsNullOrWhiteSpace(this.hostBroadcasterUserId) &&
+            this.lastReportedHostSessionContext != this.gameSessionId)
+        {
+            _ = this.gameModsClient.SendSessionContextAsync(this.hostBroadcasterUserId, this.gameSessionId);
+            this.lastReportedHostSessionContext = this.gameSessionId;
         }
 
         if (Context.IsMainPlayer && this.gameModsClient?.IsConnected == true &&
