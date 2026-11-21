@@ -1,10 +1,10 @@
 # Spectrum Stardew Monster Spawner — Version 2.3.0 implementation specification
 
-**Status:** Implementation in progress  
+**Status:** Source implementation complete; cloud deployment and CI validation passed; in-game acceptance testing pending.  
 **Current baseline:** 2.2.0 development build  
 **Scope:** Session ownership/isolation and session-aware spawn-pool diagnostics and overrides.
 
-This document is the implementation contract for the next version. It records the agreed behaviour; it does not claim that the features have been implemented or tested.
+This document remains the implementation contract and in-game acceptance checklist. The source now includes host-owned session context, save-keyed pool overrides, per-session diagnostics, revisioned live updates, and the grouped Control Center view. Cloud validation/deployment and the SMAPI build have passed; the unchecked acceptance items below still require in-game testing.
 
 ## 1. Core architecture: independent host-owned sessions
 
@@ -104,8 +104,17 @@ The following existing behaviour must continue working:
 - [ ] Re-run gateway reconnect, access/safety-gate, Control Center actions, and overlay checks.
 - [ ] Build and package cleanly; do not treat CI success as a substitute for in-game validation.
 
-## 6. Implementation notes
+## 6. Implementation notes and current source state
 
-Before changing code, audit the current session identifiers, per-broadcaster gateway routing, SMAPI multiplayer message contracts, progression snapshot ownership, pool construction, and charity action routing. Confirm where the current implementation conflates broadcaster and session identity, if anywhere. 
+Implemented in source:
+- The host save's stable session ID is propagated to connected farmhands; host progression remains authoritative.
+- Pool overrides and their revisions are stored under the exact save-session ID in the existing Game Mods Durable Object.
+- A stale dashboard update carrying a previous save's session ID is rejected, and farmhand sessions cannot change host-owned pool overrides.
+- Diagnostics and their last-received timestamps are stored per save session rather than in one broadcaster-wide slot.
+- The mod reports its applied pool-override revision and mod version; the dashboard shows the sync state, progression evidence, expected/effective pool state, recent decisions, and players grouped under their host.
+- Save changes reset the mod's in-memory pool overrides, pending plans, and recent decisions without deleting another save's stored configuration.
+- Automatic eligibility follows the host save's progression; Force enabled and Force disabled retain their specified precedence.
+
+Cloud validation, Game Mods Worker tests/deployment, dashboard publication, and SMAPI compilation/package validation passed for the current implementation. They do not replace the in-game acceptance checklist above.
 
 No implementation detail should weaken host authority, broadcaster attribution, existing safety gates, or the lightweight service architecture.
