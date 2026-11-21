@@ -37,7 +37,7 @@ internal sealed class MonsterSpawner
 
     public void SetPoolOverrides(IReadOnlyDictionary<MonsterPool, string> overrides)
     {
-        this.poolOverrides = new Dictionary<MonsterPool, string>(overrides);
+        this.poolOverrides = overrides.ToDictionary(pair => pair.Key, pair => pair.Value);
         this.pendingPlans.Clear();
     }
 
