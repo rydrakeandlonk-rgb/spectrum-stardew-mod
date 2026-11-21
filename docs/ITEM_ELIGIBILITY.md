@@ -1,26 +1,29 @@
 # Item eligibility policy
 
 **Owner:** SMAPI mod (`Gameplay/ItemEligibilityValidator.cs`)
-**Current policy version:** 1
+**Current policy version:** 2
 **Status:** Validator foundation; no delivery flow is implemented by this component.
 
 ## Purpose
 
-All item identifiers submitted to a future gift feature must pass through one game-side policy gate. The game registry resolves identifiers; the validator inspects the resolved item rather than trusting the text supplied by a UI or remote service.
+All item identifiers submitted to a future starter-letter feature must pass through one game-side policy gate. The game registry resolves identifiers; the validator inspects the resolved item rather than trusting the text supplied by a UI or remote service.
 
 The validator does not deliver items, change inventory, edit mail, or mutate save data.
 
 ## Current eligibility policy
 
-- Only standard Stardew object-type items are eligible.
+Starter-letter attachments are restricted to **standard edible objects with positive edibility**.
+
+- The resolved item must use Stardew's standard object type.
+- The resolved item must be a Stardew object whose `Edibility` is greater than zero.
+- Tools, equipment, placeables, non-edible objects, and other item types are rejected.
 - Unresolved identifiers are rejected.
 - Empty identifiers are rejected.
 - Registry exceptions and metadata/classification errors fail closed.
-- Any resolved item outside the allowed object type is rejected.
 - The validator returns a stable rule ID and reason for diagnostics.
 - The rules version is incremented whenever eligibility policy changes.
 
-The current allowlist is intentionally narrow. A new Stardew or modded item type is not eligible merely because it exists in the registry.
+This is an intentionally narrow food-only policy. The raw identifier is never trusted as a classification signal; qualified IDs, numeric aliases, and mod-provided IDs are resolved first, then the actual item metadata is checked.
 
 ## In-game verification
 
@@ -32,9 +35,9 @@ spectrum_item_validator_test
 
 The command exercises the live Stardew item registry and validator. It does not add anything to the inventory, mailbox, or world.
 
-The suite checks a known vanilla object, empty and unresolved identifiers, and an optional registered non-object fixture. If that fixture ID is unavailable in a future game version, the test reports a skip instead of a false failure.
+The suite checks a known edible vanilla object, a known non-edible vanilla object, empty and unresolved identifiers, and an optional registered non-object fixture. If that fixture ID is unavailable in a future game version, the test reports a skip instead of a false failure.
 
-This is an in-game integration smoke test, not a substitute for testing a future delivery flow.
+This is an in-game integration smoke test, not a substitute for testing a future letter-delivery flow.
 
 ## Adding or changing rules
 
@@ -48,24 +51,21 @@ For each new rule:
 5. Increment RulesVersion.
 6. Update this document with the reason and compatibility notes.
 
-Avoid broad text matching as the primary classifier. Qualified IDs, numeric aliases, and mod-provided IDs can refer to the same resolved item.
+Do not broaden this to arbitrary item types or arbitrary command execution. A future Control Center input must still pass this validator on the host before any letter is created.
 
 ## Stardew 1.7 maintenance checklist
 
 When the 1.7 API or content data is available:
 
-1. Review official SMAPI and Stardew API changes affecting ItemRegistry, Item, and TypeDefinitionId.
+1. Review official SMAPI and Stardew API changes affecting ItemRegistry, Item, Object, and Edibility.
 2. Confirm the registry creation signature and unresolved-item behaviour against the new reference assemblies.
-3. Review all item type identifiers and any newly introduced item categories.
-4. Confirm the current object-type allowlist still identifies only the intended category.
-5. Review modded/content-pack compatibility and ensure unknown types remain rejected.
-6. Update the optional test fixture if its qualified ID changes.
-7. Run spectrum_item_validator_test on a clean 1.7 test save with and without representative content packs.
-8. Build/package the mod and inspect SMAPI logs for unexpected resolution or classification errors.
-9. Increment the policy version and record the compatibility review in the changelog.
-
-Do not enable a newly introduced type until its classification and intended behaviour have been reviewed.
+3. Confirm the standard object type and positive-edibility metadata still identify the intended food-only category.
+4. Review modded/content-pack compatibility and ensure unknown types remain rejected.
+5. Update the optional test fixture if its qualified ID changes.
+6. Run spectrum_item_validator_test on a clean 1.7 test save with and without representative content packs.
+7. Build/package the mod and inspect SMAPI logs for unexpected resolution or classification errors.
+8. Increment the policy version and record the compatibility review in the changelog.
 
 ## Scope boundary
 
-This file is only the eligibility policy and its diagnostics. Configuration, delivery timing, save flags, test delivery actions, and multiplayer delivery are separate work and must not be inferred to exist from a successful validator build.
+This file is only the eligibility policy and its diagnostics. Control Center configuration, delivery timing, save flags, test delivery actions, and multiplayer delivery are separate work and must not be inferred to exist from a successful validator build.
