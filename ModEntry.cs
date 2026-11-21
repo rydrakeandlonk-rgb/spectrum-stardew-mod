@@ -866,6 +866,8 @@ internal sealed class ModEntry : Mod
             forceHorde: work.IsHorde
         );
 
+        this.SendPoolDiagnostics();
+
         string monsterSummary = string.Join(", ", spawnedTypes
             .GroupBy(type => type)
             .Select(group =>
@@ -1760,6 +1762,7 @@ internal sealed class ModEntry : Mod
                 test_override_active = MonsterProgressionSnapshot.IsTestOverrideActive
             },
             pools,
+            recent_decisions = this.monsterSpawner.GetRecentPoolDecisions(),
             reported_at = DateTimeOffset.UtcNow.ToString("O")
         };
 
