@@ -948,8 +948,9 @@ internal sealed class ModEntry : Mod
         if (action.Name is "stardew.starter_gift" or "stardew.starter_gift_test")
         {
             bool test = action.Name == "stardew.starter_gift_test";
+            string detail = "";
             bool succeeded = this.starterGiftService?.QueueLetter(
-                action.ItemIdentifier, action.LetterTitle, action.LetterMessage, test, out string detail
+                action.ItemIdentifier, action.LetterTitle, action.LetterMessage, test, out detail
             ) == true;
             if (this.starterGiftService is null)
                 detail = "The starter gift service is unavailable.";

@@ -56,16 +56,18 @@ internal sealed class StarterGiftService
         }
 
         ItemEligibilityValidator.ValidationResult validation = ItemEligibilityValidator.Validate(itemIdentifier);
-        if (!validation.IsEligible || validation.ResolvedItem is not StardewValley.Object eligibleObject)
+        StardewValley.Object? eligibleObject = validation.ResolvedItem as StardewValley.Object;
+        if (!validation.IsEligible || eligibleObject is null)
         {
-            validation = ItemEligibilityValidator.Validate(FallbackItemId);
-            if (!validation.IsEligible || validation.ResolvedItem is not StardewValley.Object)
+            string rejectedRule = validation.RuleId;
+            ItemEligibilityValidator.ValidationResult fallback = ItemEligibilityValidator.Validate(FallbackItemId);
+            eligibleObject = fallback.ResolvedItem as StardewValley.Object;
+            if (!fallback.IsEligible || eligibleObject is null)
             {
                 detail = "The configured item was ineligible and the fallback cookie could not be validated.";
                 return false;
             }
-            eligibleObject = (StardewValley.Object)validation.ResolvedItem;
-            this.monitor.Log($"Starter gift item rejected ({validation.RuleId}); using the fallback cookie.", LogLevel.Warn);
+            this.monitor.Log($"Starter gift item rejected ({rejectedRule}); using the fallback cookie.", LogLevel.Warn);
         }
 
         string mailId = test ? $"Spectrum_StarterGift_Test_{Guid.NewGuid():N}" : PermanentMailId;
