@@ -123,6 +123,12 @@ internal sealed class ModEntry : Mod
         );
 
         helper.ConsoleCommands.Add(
+            "spectrum_item_validator_test",
+            "Run safe item eligibility validator checks without delivering or adding any items. Usage: spectrum_item_validator_test",
+            this.OnItemValidatorTestCommand
+        );
+
+        helper.ConsoleCommands.Add(
             "spectrum_connection_status",
             "Show the Spectrum Game Mods connection status. Usage: spectrum_connection_status",
             this.OnConnectionStatusCommand
@@ -1619,6 +1625,17 @@ internal sealed class ModEntry : Mod
         }
 
         this.OnMonsterPoolStatusCommand(command, Array.Empty<string>());
+    }
+
+    private void OnItemValidatorTestCommand(string command, string[] args)
+    {
+        if (!Context.IsWorldReady || Game1.player is null || !Context.IsMainPlayer)
+        {
+            this.Monitor.Log("Load a save as the host before running item eligibility tests.", LogLevel.Warn);
+            return;
+        }
+
+        ItemEligibilityValidatorTests.Run(this.Monitor);
     }
 
     private void OnMonsterCatalogTestCommand(string command, string[] args)
