@@ -63,7 +63,11 @@ internal static class MonsterCatalog
 
     private static readonly (string Id, MonsterPool Pool)[] ForbiddenPoolAssignments =
     {
-        ("dangerous-squid-kid", MonsterPool.DangerousSkullCavern)
+        ("dangerous-squid-kid", MonsterPool.DangerousSkullCavern),
+        // These Skull Cavern-exclusive variants must not bypass the Skull Key gate via Farm.
+        ("iridium-bat", MonsterPool.Farm),
+        ("purple-slime", MonsterPool.Farm),
+        ("serpent", MonsterPool.Farm)
     };
 
     private static readonly Candidate[] Candidates =
