@@ -141,6 +141,38 @@ for live_default in (
     if live_default in spawner_source:
         errors.append(f"Live redemption path accidentally uses test progression defaults: {live_default}")
 
+# Live pool overrides must flow through every random, configured and horde selection path.
+for required in (
+    '"force_enabled"',
+    '"force_disabled"',
+    "GetDiagnostics(",
+    "ExpectedEnabled",
+    "EffectiveEnabled"
+):
+    if required not in pools_source:
+        errors.append(f"Spawn pool override/diagnostic support is missing: {required}")
+for line in spawner_source.splitlines():
+    if "MonsterCatalog.GetRandomType(command.Difficulty" in line and "poolOverrides: this.poolOverrides" not in line:
+        errors.append("A live random-monster selection bypasses the session pool overrides.")
+    if "MonsterCatalog.TryGetCanonicalType(command." in line and "poolOverrides: this.poolOverrides" not in line:
+        errors.append("A live configured-monster selection bypasses the session pool overrides.")
+if "GetRandomDistinctTypes(safeHordeCount" in spawner_source and "poolOverrides: this.poolOverrides" not in spawner_source:
+    errors.append("Horde selection bypasses the session pool overrides.")
+if "TryCreateMonster(selectedId" in spawner_source and "poolOverrides: this.poolOverrides" not in spawner_source:
+    errors.append("Monster construction does not revalidate the session pool overrides.")
+
+# Multiplayer relay identity must keep the host session separate from the Twitch broadcaster.
+if "HostSessionId" not in entry_source or "message.HostSessionId != this.gameSessionId" not in entry_source:
+    errors.append("Forwarded multiplayer actions are not validated against the active host session.")
+if "SendSessionContextAsync" not in entry_source:
+    errors.append("Farmhand host-session association is missing.")
+client_path = ROOT / "Networking" / "GameModsClient.cs"
+client_source = client_path.read_text(encoding="utf-8")
+if "session_id" not in client_source or "spawn.pools.state" not in client_source:
+    errors.append("Gateway session identity and pool override sync are missing.")
+if "SendPoolDiagnosticsAsync" not in entry_source:
+    errors.append("Host progression/pool diagnostics are not reported to Control Center.")
+
 # Custom variants must use an existing vanilla threat-data key, not their display name.
 for expected in (
     'return "Green Slime";',
