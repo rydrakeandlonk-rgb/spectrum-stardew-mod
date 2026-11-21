@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.3.0 — planned next development version
+## 2.3.0 — implementation in progress
 
 This is the next implementation scope following the 2.2.0 development build. The detailed acceptance criteria are documented in [docs/NEXT_VERSION_2.3.0.md](docs/NEXT_VERSION_2.3.0.md).
 
@@ -25,7 +25,6 @@ This is the next implementation scope following the 2.2.0 development build. The
 - Verify farmhand redemptions still spawn near the redeeming farmhand using the host's pool rules.
 - Verify normal, horde, mega-horde, and charity actions preserve redemption attribution, target selection, session routing, deduplication, and acknowledgements.
 - Verify Automatic/Force enabled/Force disabled overrides, live diagnostics, session switching, save switching, reconnects, and stale-state rejection.
-- Verify the Wooden Blade is granted exactly once per farmer per save, survives death, displays its custom tooltip, and does not duplicate after reloads or multiplayer reconnects.
 - Run the existing 2.2.0 charity, multiplayer, gateway, overlay, and gameplay regression checks.
 
 ## 2.2.0 — development build
