@@ -198,6 +198,7 @@ internal sealed class ModEntry : Mod
 
     private void OnReturnedToTitle(object? sender, ReturnedToTitleEventArgs e)
     {
+        this.starterGiftService?.ClearSaveData();
         this.gameModsClient?.Dispose();
         this.gameModsClient = null;
         this.pairingCancellation?.Cancel();

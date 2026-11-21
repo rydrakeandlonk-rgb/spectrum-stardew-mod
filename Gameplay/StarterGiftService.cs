@@ -32,6 +32,13 @@ internal sealed class StarterGiftService
     {
         this.saveData = this.helper.Data.ReadSaveData<StarterGiftSaveData>(SaveDataKey) ?? new StarterGiftSaveData();
         this.PruneDeliveredTestLetters();
+        this.helper.GameContent.InvalidateCache("Data/mail");
+    }
+
+    internal void ClearSaveData()
+    {
+        this.saveData = new StarterGiftSaveData();
+        this.helper.GameContent.InvalidateCache("Data/mail");
     }
 
     internal bool QueueLetter(string itemIdentifier, string title, string message, bool test, out string detail)
@@ -108,11 +115,14 @@ internal sealed class StarterGiftService
 
     private void PruneDeliveredTestLetters()
     {
-        if (!Context.IsWorldReady || Game1.player is null)
+        // Keep queued/unread test letters available in Data/mail across reloads.
+        // Only remove old test entries which are already in the save's received flags.
+        if (!Context.IsWorldReady || Game1.player is null || this.saveData.Letters.Count <= 20)
             return;
         foreach (string id in this.saveData.Letters.Keys
             .Where(id => id.StartsWith("Spectrum_StarterGift_Test_", StringComparison.Ordinal))
-            .Where(Game1.player.hasOrWillReceiveMail)
+            .Where(id => Game1.player.mailReceived.Contains(id))
+            .Take(Math.Max(0, this.saveData.Letters.Count - 20))
             .ToArray())
         {
             this.saveData.Letters.Remove(id);
