@@ -39,6 +39,7 @@ internal sealed class ModEntry : Mod
     private readonly Dictionary<string, PendingForwardedCommand> forwardedCommands = new(StringComparer.Ordinal);
     private readonly Queue<PendingClearWorkItem> pendingClearActions = new();
     private readonly HashSet<string> queuedClearActionIds = new(StringComparer.Ordinal);
+    private readonly HashSet<long> sessionContextRecipients = new();
     private readonly Dictionary<string, int> completedClearActionCounts = new(StringComparer.Ordinal);
     private readonly Dictionary<string, PendingForwardedClearAction> forwardedClearActions = new(StringComparer.Ordinal);
     private readonly List<PendingChatMessage> pendingChatMessages = new();
@@ -149,6 +150,7 @@ internal sealed class ModEntry : Mod
         this.lastPoolDiagnosticsSessionId = "";
         this.wasGatewayConnected = false;
         this.monsterSpawner?.SetPoolOverrides(new Dictionary<MonsterPool, string>());
+        this.sessionContextRecipients.Clear();
         this.gameModsClient?.Dispose();
         this.gameModsClient = null;
 
@@ -190,6 +192,7 @@ internal sealed class ModEntry : Mod
         this.lastReportedHostSessionContext = "";
         this.lastPoolDiagnosticsSessionId = "";
         this.wasGatewayConnected = false;
+        this.sessionContextRecipients.Clear();
         this.retryCommandsAtUtc = DateTime.MinValue;
         this.pendingSpawnCommands.Clear();
         this.pendingSpawnRetryPlayers.Clear();
@@ -584,7 +587,10 @@ internal sealed class ModEntry : Mod
             this.CheckLocalPlayerDeath();
 
             if (Context.IsMainPlayer && Game1.player is not null && e.IsMultipleOf(60))
+            {
                 this.CheckProgressionUnlocks();
+                this.SendSessionContextToOnlineFarmhands();
+            }
 
             this.ProcessPendingChatMessages();
 
@@ -1161,6 +1167,23 @@ internal sealed class ModEntry : Mod
         }
     }
 
+    private void SendSessionContextToOnlineFarmhands()
+    {
+        if (!Context.IsMainPlayer || Game1.MasterPlayer is null)
+            return;
+
+        foreach (Farmer farmer in Game1.getOnlineFarmers())
+        {
+            long playerId = farmer.UniqueMultiplayerID;
+            if (playerId == Game1.MasterPlayer.UniqueMultiplayerID || this.sessionContextRecipients.Contains(playerId))
+                continue;
+
+            IMultiplayerPeer? peer = this.Helper.Multiplayer.GetConnectedPlayer(playerId);
+            if (peer?.GetMod(this.ModManifest.UniqueID) is not null)
+                this.SendSessionContext(playerId);
+        }
+    }
+
     private void SendSessionContext(long playerId)
     {
         if (!Context.IsMainPlayer ||
@@ -1178,6 +1201,7 @@ internal sealed class ModEntry : Mod
             modIDs: new[] { this.ModManifest.UniqueID },
             playerIDs: new[] { playerId }
         );
+        this.sessionContextRecipients.Add(playerId);
     }
 
     private void OnModMessageReceived(object? sender, ModMessageReceivedEventArgs e)
