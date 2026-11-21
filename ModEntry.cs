@@ -3,6 +3,8 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI;
@@ -18,6 +20,7 @@ namespace SpectrumStardewMod;
 internal sealed class ModEntry : Mod
 {
     private MonsterSpawner? monsterSpawner;
+    private StarterGiftService? starterGiftService;
     private GameModsClient? gameModsClient;
     private ModConfig? config;
     private readonly HashSet<string> processedCommandIds = new(StringComparer.Ordinal);
@@ -59,6 +62,7 @@ internal sealed class ModEntry : Mod
     public override void Entry(IModHelper helper)
     {
         this.monsterSpawner = new MonsterSpawner(this.Monitor);
+        this.starterGiftService = new StarterGiftService(helper, this.Monitor);
 
         this.LoadProcessedCommands(helper);
 
@@ -149,8 +153,9 @@ internal sealed class ModEntry : Mod
             ? MonsterProgressionSnapshot.Read(Game1.player, useTestOverride: false)
             : null;
         this.playerDeathLatched = Game1.player is null || Game1.player.health <= 0;
-        this.localConnectionSessionId = Guid.NewGuid().ToString("N");
+        this.localConnectionSessionId = CreateSaveSessionId();
         this.gameSessionId = Context.IsMainPlayer ? this.localConnectionSessionId : "";
+        this.starterGiftService?.LoadSaveData();
         this.hostBroadcasterUserId = Context.IsMainPlayer ? this.config?.BroadcasterUserId ?? "" : "";
         this.lastReportedHostSessionContext = "";
         this.lastPoolDiagnosticsSessionId = "";
@@ -179,6 +184,16 @@ internal sealed class ModEntry : Mod
 
         this.gameModsClient = new GameModsClient(this.config, this.Monitor, this.localConnectionSessionId);
         this.Monitor.Log("Starting this player’s Spectrum connection for the loaded Stardew save.", LogLevel.Info);
+    }
+
+    private static string CreateSaveSessionId()
+    {
+        // Stable for this exact host-owned save, but unrelated saves (even on the
+        // same Twitch account) receive independent session identities.
+        long hostPlayerId = Game1.MasterPlayer?.UniqueMultiplayerID ?? Game1.player.UniqueMultiplayerID;
+        string identity = $"{Game1.uniqueIDForThisGame}:{hostPlayerId}";
+        byte[] digest = SHA256.HashData(Encoding.UTF8.GetBytes(identity));
+        return Convert.ToHexString(digest.AsSpan(0, 16)).ToLowerInvariant();
     }
 
     private void OnReturnedToTitle(object? sender, ReturnedToTitleEventArgs e)
@@ -611,7 +626,7 @@ internal sealed class ModEntry : Mod
                 this.gameModsClient?.Dispose();
                 this.wasGatewayConnected = false;
                 if (string.IsNullOrWhiteSpace(this.localConnectionSessionId))
-                    this.localConnectionSessionId = Guid.NewGuid().ToString("N");
+                    this.localConnectionSessionId = CreateSaveSessionId();
                 if (Context.IsMainPlayer)
                 {
                     this.gameSessionId = this.localConnectionSessionId;
@@ -930,6 +945,19 @@ internal sealed class ModEntry : Mod
 
     private void ExecuteLocalClearAction(GameAction action)
     {
+        if (action.Name is "stardew.starter_gift" or "stardew.starter_gift_test")
+        {
+            bool test = action.Name == "stardew.starter_gift_test";
+            bool succeeded = this.starterGiftService?.QueueLetter(
+                action.ItemIdentifier, action.LetterTitle, action.LetterMessage, test, out string detail
+            ) == true;
+            if (this.starterGiftService is null)
+                detail = "The starter gift service is unavailable.";
+            this.Monitor.Log($"[Spectrum] {(test ? "TEST LETTER" : "STARTER GIFT")} | {(succeeded ? detail : "failed: " + detail)}",
+                succeeded ? LogLevel.Info : LogLevel.Warn);
+            _ = this.gameModsClient?.AcknowledgeActionAsync(action.ActionId, succeeded, 0, succeeded ? null : detail, detail);
+            return;
+        }
         int removed = 0;
         string detail;
         bool succeeded;
