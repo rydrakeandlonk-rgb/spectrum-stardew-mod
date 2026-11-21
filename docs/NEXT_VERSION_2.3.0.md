@@ -2,7 +2,7 @@
 
 **Status:** Planned next development version  
 **Current baseline:** 2.2.0 development build  
-**Scope:** Session ownership/isolation, session-aware spawn-pool diagnostics and overrides, and a local starter Wooden Blade.
+**Scope:** Session ownership/isolation and session-aware spawn-pool diagnostics and overrides.
 
 This document is the implementation contract for the next version. It records the agreed behaviour; it does not claim that the features have been implemented or tested.
 
@@ -62,21 +62,7 @@ Overrides are session-scoped. An override made for Lonk's session must not chang
 
 Keep diagnostics lightweight and event-driven. Do not introduce high-frequency polling or unnecessary D1/KV/DO writes. Apply acknowledged changes without requiring a game/mod restart.
 
-## 4. Local gameplay feature: starter Wooden Blade
-
-This is a separate, local-only SMAPI feature. It does not require Control Center, Event Hub, gateway configuration, progression checks, or remote calls.
-
-Behaviour:
-- When a farmer first loads into a save, check a save-persisted GivenStartWeapon flag.
-- If absent/false, grant that farmer one vanilla **Wooden Blade** and set the flag to true.
-- Store the flag with the individual farmer's save data, so the grant is once per farmer per save. Do not use a global mod config flag or remote storage.
-- The Wooden Blade must not be lost through Stardew's normal weapon-loss-on-death behaviour. Implement protection in the actual death/inventory-loss path; do not rely solely on granting a replacement after death.
-- Give the item a custom in-game description/tooltip: **“This blade won't leave your side.”**
-- Avoid duplicate grants on reload, reconnect, or repeated save-load events.
-
-This feature applies to each local farmer's own character, whether they are hosting or joining a multiplayer session. It does not change the session's progression or pool eligibility.
-
-## 5. Non-regression requirements
+## 4. Non-regression requirements
 
 The following existing behaviour must continue working:
 - Each streamer maintains their own broadcaster-scoped Twitch connection.
@@ -88,7 +74,7 @@ The following existing behaviour must continue working:
 - Existing charity threshold and horde sizing rules are unchanged.
 - The starter weapon works offline and does not add remote-service dependencies.
 
-## 6. Acceptance and regression checklist
+## 5. Acceptance and regression checklist
 
 ### Session and progression
 - [ ] Run a multiplayer session hosted by Lonk with Rydrake as a farmhand.
@@ -113,21 +99,13 @@ The following existing behaviour must continue working:
 - [ ] Repeat for ordinary hordes, mega hordes, and charity actions.
 - [ ] Verify originating broadcaster attribution, deduplication, retry, and acknowledgement.
 
-### Wooden Blade
-- [ ] First load grants one Wooden Blade and persists GivenStartWeapon.
-- [ ] Reloading the same save does not grant a duplicate.
-- [ ] Each farmer receives their own one-time grant in their save data.
-- [ ] Death does not remove the granted Wooden Blade.
-- [ ] Tooltip/description displays “This blade won't leave your side.”
-- [ ] Verify host and farmhand cases and save switching.
-
 ### Existing regression
 - [ ] Re-run the 2.2.0 charity horde rules and announcements.
 - [ ] Re-run normal redemption, horde, mega-horde, pause/resume, and multiplayer tests.
 - [ ] Re-run gateway reconnect, access/safety-gate, Control Center actions, and overlay checks.
 - [ ] Build and package cleanly; do not treat CI success as a substitute for in-game validation.
 
-## 7. Implementation notes
+## 6. Implementation notes
 
 Before changing code, audit the current session identifiers, per-broadcaster gateway routing, SMAPI multiplayer message contracts, progression snapshot ownership, pool construction, and charity action routing. Confirm where the current implementation conflates broadcaster and session identity, if anywhere. For the Wooden Blade, inspect the pinned Stardew/SMAPI APIs and the actual death item-loss path before choosing the persistence/protection mechanism.
 
