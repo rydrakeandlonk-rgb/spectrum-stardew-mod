@@ -15,7 +15,8 @@ internal static class ItemEligibilityValidatorTests
         int failed = 0;
         int skipped = 0;
 
-        Check("known vanilla object is accepted", ItemEligibilityValidator.Validate("(O)388"), true, "ACCEPT_ELIGIBLE_ITEM");
+        Check("known edible vanilla object is accepted", ItemEligibilityValidator.Validate("(O)24"), true, "ACCEPT_ELIGIBLE_ITEM");
+        Check("known non-edible vanilla object is rejected", ItemEligibilityValidator.Validate("(O)388"), false, "ALLOW_EDIBLE_OBJECT_ONLY");
         Check("empty identifier is rejected", ItemEligibilityValidator.Validate(""), false, "REJECT_EMPTY_IDENTIFIER");
         Check("unresolved identifier is rejected", ItemEligibilityValidator.Validate("(O)SpectrumStardewMod_Test_Missing_6F34A2"), false, "REJECT_UNRESOLVED_ITEM");
 
