@@ -147,6 +147,8 @@ internal sealed class ModEntry : Mod
         this.lastReportedHostSessionContext = "";
         this.lastPoolDiagnosticsSessionId = "";
         this.monsterSpawner?.SetPoolOverrides(new Dictionary<MonsterPool, string>());
+        this.gameModsClient?.Dispose();
+        this.gameModsClient = null;
 
         if (!Context.IsMainPlayer && Game1.MasterPlayer is not null)
         {
@@ -165,7 +167,6 @@ internal sealed class ModEntry : Mod
             return;
         }
 
-        this.gameModsClient?.Dispose();
         this.gameModsClient = new GameModsClient(this.config, this.Monitor, this.localConnectionSessionId);
         this.Monitor.Log("Starting this player’s Spectrum connection for the loaded Stardew save.", LogLevel.Info);
     }
@@ -977,7 +978,8 @@ internal sealed class ModEntry : Mod
 
     private void ForwardFarmhandClearActions()
     {
-        if (this.gameModsClient is null || Game1.MasterPlayer is null)
+        if (this.gameModsClient is null || Game1.MasterPlayer is null ||
+            string.IsNullOrWhiteSpace(this.gameSessionId))
             return;
 
         if (this.forwardedClearActions.Count == 0 &&
@@ -1027,7 +1029,8 @@ internal sealed class ModEntry : Mod
     private void ForwardFarmhandCommands()
     {
         if (this.gameModsClient is null || !this.gameModsClient.SpawnsEnabled ||
-            Game1.MasterPlayer is null || DateTime.UtcNow < this.retryCommandsAtUtc)
+            Game1.MasterPlayer is null || string.IsNullOrWhiteSpace(this.gameSessionId) ||
+            DateTime.UtcNow < this.retryCommandsAtUtc)
             return;
 
         // Keep one in-flight relay per farmhand. The host replies only after the
@@ -1197,7 +1200,11 @@ internal sealed class ModEntry : Mod
 
             this.gameSessionId = context.HostSessionId.ToLowerInvariant();
             this.hostBroadcasterUserId = context.HostBroadcasterUserId;
-            _ = this.gameModsClient?.SendSessionContextAsync(this.hostBroadcasterUserId, this.gameSessionId);
+            if (this.gameModsClient?.IsConnected == true)
+            {
+                _ = this.gameModsClient.SendSessionContextAsync(this.hostBroadcasterUserId, this.gameSessionId);
+                this.lastReportedHostSessionContext = this.gameSessionId;
+            }
             this.Monitor.Log($"[Spectrum] SESSION CONTEXT | client of broadcaster {this.hostBroadcasterUserId} | host session {this.gameSessionId}.", LogLevel.Info);
             return;
         }
