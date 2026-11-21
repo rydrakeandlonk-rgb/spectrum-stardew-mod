@@ -13,7 +13,7 @@ internal static class ItemEligibilityValidator
     /// Increment when the policy rules change, so diagnostics can identify which
     /// rule set made an eligibility decision.
     /// </summary>
-    internal const int RulesVersion = 2;
+    internal const int RulesVersion = 3;
 
     internal sealed record ValidationResult(
         bool IsEligible,
@@ -28,20 +28,15 @@ internal static class ItemEligibilityValidator
         string RejectionReason
     );
 
-    // Starter gifts are deliberately restricted to edible standard objects.
-    // This excludes tools, equipment, placeables, and non-food objects. Keep this
-    // as a metadata check on the resolved registry item, never on the raw ID.
+    // Native Stardew mail attachments use the standard object item type.
+    // Accept every registered object, including non-food and mod-provided objects;
+    // classify the resolved registry item rather than trusting the submitted ID.
     private static readonly ValidationRule[] Rules =
     {
         new(
             "ALLOW_OBJECT_TYPE_ONLY",
-            item => item.TypeDefinitionId == ItemRegistry.type_object,
-            "Only standard object-type items are eligible."
-        ),
-        new(
-            "ALLOW_EDIBLE_OBJECT_ONLY",
-            item => item is StardewValley.Object obj && obj.Edibility > 0,
-            "Only edible objects with positive edibility are eligible."
+            item => item.TypeDefinitionId == ItemRegistry.type_object && item is StardewValley.Object,
+            "Only registered standard object items can be attached to a starter letter."
         )
     };
 
