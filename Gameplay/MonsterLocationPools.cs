@@ -94,5 +94,12 @@ internal static class MonsterLocationPools
             _ => "The host save does not meet this pool's progression requirement."
         };
 
+    public static IReadOnlyList<string> GetPoolNamesForDefinition(string monsterId) =>
+        DefinitionsByPool
+            .Where(pair => pair.Value.Contains(monsterId, StringComparer.Ordinal))
+            .Select(pair => pair.Key.ToString())
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+
     public static IReadOnlyDictionary<MonsterPool, string[]> GetDefinitionsByPool() => DefinitionsByPool;
 }
