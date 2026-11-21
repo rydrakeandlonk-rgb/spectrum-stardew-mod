@@ -25,6 +25,7 @@ internal sealed class GameModsClient : IDisposable
     };
     private readonly ModConfig config;
     private readonly IMonitor monitor;
+    private readonly string requestedSessionId;
     private readonly ConcurrentQueue<GameCommand> commands = new();
     private readonly ConcurrentQueue<GameAction> actions = new();
     private readonly ConcurrentQueue<PoolOverrideUpdate> poolOverrideUpdates = new();
@@ -45,10 +46,13 @@ internal sealed class GameModsClient : IDisposable
     private volatile string connectionStatusMessage = "Waiting to connect to Spectrum Game Mods.";
     private volatile string activeSessionId = "";
 
-    public GameModsClient(ModConfig config, IMonitor monitor)
+    public GameModsClient(ModConfig config, IMonitor monitor, string sessionId)
     {
         this.config = config;
         this.monitor = monitor;
+        this.requestedSessionId = System.Text.RegularExpressions.Regex.IsMatch(sessionId ?? "", @"^[a-fA-F0-9]{32}$")
+            ? sessionId.ToLowerInvariant()
+            : Guid.NewGuid().ToString("N");
         this.connectionTask = Task.Run(() => this.RunConnectionLoopAsync(this.cancellation.Token));
     }
 
@@ -376,7 +380,8 @@ internal sealed class GameModsClient : IDisposable
 
         string websocketUrl = "wss://" + baseUri.Authority +
             baseUri.AbsolutePath.TrimEnd('/') +
-            "/connect/stardew/" + Uri.EscapeDataString(this.config.BroadcasterUserId);
+            "/connect/stardew/" + Uri.EscapeDataString(this.config.BroadcasterUserId) +
+            "?session_id=" + Uri.EscapeDataString(this.requestedSessionId);
 
         return new Uri(websocketUrl);
     }
