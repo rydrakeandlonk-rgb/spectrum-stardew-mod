@@ -18,6 +18,7 @@ internal sealed class MonsterSpawner
     private const int MaximumMonstersPerRedemption = 10;
     private readonly IMonitor monitor;
     private readonly Dictionary<string, PendingSpawnPlan> pendingPlans = new(StringComparer.Ordinal);
+    private readonly Queue<PoolSpawnDecision> recentPoolDecisions = new();
     private IReadOnlyDictionary<MonsterPool, string> poolOverrides = new Dictionary<MonsterPool, string>();
 
     private sealed class PendingSpawnPlan
@@ -34,6 +35,23 @@ internal sealed class MonsterSpawner
     public void ClearPendingPlans() => this.pendingPlans.Clear();
 
     public IReadOnlyDictionary<MonsterPool, string> PoolOverrides => this.poolOverrides;
+
+    public IReadOnlyList<PoolSpawnDecision> GetRecentPoolDecisions() => this.recentPoolDecisions.ToArray();
+
+    private void RecordPoolDecision(string monsterId, string outcome, string reason)
+    {
+        IReadOnlyList<string> pools = MonsterLocationPools.GetPoolNamesForDefinition(monsterId);
+        this.recentPoolDecisions.Enqueue(new PoolSpawnDecision(
+            monsterId,
+            pools.Count == 0 ? "Unknown" : string.Join(", ", pools),
+            outcome,
+            reason,
+            DateTimeOffset.UtcNow.ToString("O")
+        ));
+
+        while (this.recentPoolDecisions.Count > 20)
+            this.recentPoolDecisions.Dequeue();
+    }
 
     public void SetPoolOverrides(IReadOnlyDictionary<MonsterPool, string> overrides)
     {
@@ -220,6 +238,7 @@ internal sealed class MonsterSpawner
                 case "chat_monster":
                     if (!MonsterCatalog.TryGetCanonicalType(command.UserInput, out candidateId, useTestProgression: false, poolOverrides: this.poolOverrides))
                     {
+                        this.RecordPoolDecision(command.UserInput, "rejected", "Chat-selected monster is unsupported or not eligible under the host session's pool rules.");
                         result = "FAILED: unsupported or progression-locked chat monster";
                         return false;
                     }
@@ -237,6 +256,7 @@ internal sealed class MonsterSpawner
                 case "random_count_specific_monster":
                     if (!MonsterCatalog.TryGetCanonicalType(command.MonsterType, out candidateId, useTestProgression: false, poolOverrides: this.poolOverrides))
                     {
+                        this.RecordPoolDecision(command.MonsterType, "rejected", "Configured monster is unsupported or not eligible under the host session's pool rules.");
                         result = "FAILED: unsupported or progression-locked configured monster";
                         return false;
                     }
@@ -270,6 +290,8 @@ internal sealed class MonsterSpawner
                 selectedTypes = MonsterCatalog.GetRandomDistinctTypes(safeHordeCount, command.Difficulty, useTestProgression: false, poolOverrides: this.poolOverrides).ToList();
                 if (selectedTypes.Count != safeHordeCount)
                 {
+                    foreach (string selectedId in selectedTypes)
+                        this.RecordPoolDecision(selectedId, "rejected", $"Horde selection was rejected: only {selectedTypes.Count} of {safeHordeCount} distinct eligible variants were available.");
                     result = $"FAILED: fewer than {safeHordeCount} distinct eligible monster variants are available";
                     return false;
                 }
@@ -279,6 +301,9 @@ internal sealed class MonsterSpawner
                 selectedTypes = Enumerable.Range(0, Math.Clamp(count, 1, MaximumMonstersPerRedemption))
                     .Select(_ => chooseMonster()).ToList();
             }
+
+            foreach (string selectedId in selectedTypes)
+                this.RecordPoolDecision(selectedId, "selected", "Eligible under the host save's progression and current session pool overrides.");
 
             plan = new PendingSpawnPlan { RemainingTypes = selectedTypes, RequestedCount = selectedTypes.Count };
             this.pendingPlans[command.CommandId] = plan;
@@ -329,6 +354,7 @@ internal sealed class MonsterSpawner
             if (!MonsterCatalog.TryCreateMonster(selectedId, tile * 64f, out Monster? monster, out string error, ignoreProgression: false, useTestProgression: false, poolOverrides: this.poolOverrides) || monster is null)
             {
                 this.monitor.Log($"[Spectrum] SPAWN FAILED | {MonsterCatalog.GetDisplayName(selectedId)} | {error}", LogLevel.Warn);
+                this.RecordPoolDecision(selectedId, "rejected", string.IsNullOrWhiteSpace(error) ? "Monster construction was rejected." : error);
                 plan.RemainingTypes.RemoveAt(0);
                 continue;
             }
@@ -342,6 +368,7 @@ internal sealed class MonsterSpawner
             plan.SpawnedCount++;
             plan.SpawnedTypes.Add(selectedId);
             plan.LocationName = location.Name;
+            this.RecordPoolDecision(selectedId, "spawned", $"Spawned in {location.Name}.");
         }
 
         spawnedCount = plan.SpawnedCount;
