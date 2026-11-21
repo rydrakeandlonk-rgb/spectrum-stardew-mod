@@ -121,7 +121,9 @@ internal sealed class StarterGiftService
             return;
         foreach (string id in this.saveData.Letters.Keys
             .Where(id => id.StartsWith("Spectrum_StarterGift_Test_", StringComparison.Ordinal))
-            .Where(id => Game1.player.mailReceived.Contains(id))
+            .Where(id => Game1.player.mailReceived.Contains(id) &&
+                !Game1.player.mailForTomorrow.Contains(id) &&
+                !Game1.player.mailbox.Contains(id))
             .Take(Math.Max(0, this.saveData.Letters.Count - 20))
             .ToArray())
         {
