@@ -157,7 +157,8 @@ internal static class MonsterCatalog
     private static bool ThreatProfilesLoaded;
 
     public static IReadOnlyList<string> AllTypes => Candidates.Select(candidate => candidate.DisplayName).ToArray();
-    public static IReadOnlyList<string> GetEligibleTypes() => GetEligibleCandidates().Select(candidate => candidate.DisplayName).ToArray();
+    public static IReadOnlyList<string> GetEligibleTypes(IReadOnlyDictionary<MonsterPool, string>? overrides = null) =>
+        GetEligibleCandidates(poolOverrides: overrides).Select(candidate => candidate.DisplayName).ToArray();
     public static IReadOnlyList<string> GetAllTestableTypes() => Candidates.Select(candidate => candidate.DisplayName).ToArray();
 
     public static IReadOnlyList<string> GetThreatDataFallbacks()
@@ -215,9 +216,12 @@ internal static class MonsterCatalog
     public static string GetDisplayName(string typeName) =>
         FindCandidate(typeName)?.DisplayName ?? Regex.Replace(typeName, "([a-z0-9])([A-Z])", "$1 $2");
 
-    public static string GetRandomType(string difficulty = "normal", bool useTestProgression = true)
+    public static string GetRandomType(
+        string difficulty = "normal",
+        bool useTestProgression = true,
+        IReadOnlyDictionary<MonsterPool, string>? poolOverrides = null)
     {
-        Candidate[] eligible = GetEligibleCandidates(useTestProgression).ToArray();
+        Candidate[] eligible = GetEligibleCandidates(useTestProgression, poolOverrides).ToArray();
         if (eligible.Length == 0)
             throw new InvalidOperationException("No progression-eligible monster definitions are available.");
 
@@ -229,9 +233,13 @@ internal static class MonsterCatalog
     /// Selects distinct eligible monster definitions using the same threat weighting
     /// as normal spawns, removing each selected variant before the next draw.
     /// </summary>
-    public static IReadOnlyList<string> GetRandomDistinctTypes(int count, string difficulty = "normal", bool useTestProgression = true)
+    public static IReadOnlyList<string> GetRandomDistinctTypes(
+        int count,
+        string difficulty = "normal",
+        bool useTestProgression = true,
+        IReadOnlyDictionary<MonsterPool, string>? poolOverrides = null)
     {
-        Candidate[] remaining = GetEligibleCandidates(useTestProgression).ToArray();
+        Candidate[] remaining = GetEligibleCandidates(useTestProgression, poolOverrides).ToArray();
         if (remaining.Length < count)
             return Array.Empty<string>();
 
@@ -290,16 +298,28 @@ internal static class MonsterCatalog
         return candidates[^1];
     }
 
-    public static bool TryGetCanonicalType(string? value, out string monsterType, bool ignoreProgression = false, bool useTestProgression = true)
+    public static bool TryGetCanonicalType(
+        string? value,
+        out string monsterType,
+        bool ignoreProgression = false,
+        bool useTestProgression = true,
+        IReadOnlyDictionary<MonsterPool, string>? poolOverrides = null)
     {
         Candidate? candidate = FindCandidate(value);
-        Candidate[] allowed = ignoreProgression ? GetTestableCandidates() : GetEligibleCandidates(useTestProgression);
+        Candidate[] allowed = ignoreProgression ? GetTestableCandidates() : GetEligibleCandidates(useTestProgression, poolOverrides);
         bool eligible = candidate is not null && allowed.Any(item => item.Id == candidate.Id);
         monsterType = eligible ? candidate!.Id : "";
         return eligible;
     }
 
-    public static bool TryCreateMonster(string candidateId, Vector2 position, out Monster? monster, out string error, bool ignoreProgression = false, bool useTestProgression = true)
+    public static bool TryCreateMonster(
+        string candidateId,
+        Vector2 position,
+        out Monster? monster,
+        out string error,
+        bool ignoreProgression = false,
+        bool useTestProgression = true,
+        IReadOnlyDictionary<MonsterPool, string>? poolOverrides = null)
     {
         monster = null;
         error = "";
@@ -308,7 +328,7 @@ internal static class MonsterCatalog
             error = "Unknown spawn definition.";
             return false;
         }
-        Candidate[] allowed = ignoreProgression ? GetTestableCandidates() : GetEligibleCandidates(useTestProgression);
+        Candidate[] allowed = ignoreProgression ? GetTestableCandidates() : GetEligibleCandidates(useTestProgression, poolOverrides);
         if (!allowed.Any(item => item.Id == candidate.Id))
         {
             error = ignoreProgression
@@ -349,19 +369,26 @@ internal static class MonsterCatalog
         }
     }
 
-    private static Candidate[] GetEligibleCandidates(bool useTestProgression = true) =>
-        GetUnlockedCandidates(useTestProgression).Where(HasSupportedDefinition).ToArray();
+    private static Candidate[] GetEligibleCandidates(
+        bool useTestProgression = true,
+        IReadOnlyDictionary<MonsterPool, string>? poolOverrides = null) =>
+        GetUnlockedCandidates(useTestProgression, poolOverrides).Where(HasSupportedDefinition).ToArray();
 
     // Developer-only test path: bypasses progression gates, but never the
     // approved roster exclusions or constructor/setup validation.
     private static Candidate[] GetTestableCandidates() =>
         Candidates.Where(candidate => !IsExcludedCandidate(candidate) && HasSupportedDefinition(candidate)).ToArray();
 
-    private static Candidate[] GetUnlockedCandidates(bool useTestProgression = true)
+    private static Candidate[] GetUnlockedCandidates(
+        bool useTestProgression = true,
+        IReadOnlyDictionary<MonsterPool, string>? poolOverrides = null)
     {
         if (Game1.player is null)
             return Array.Empty<Candidate>();
-        HashSet<string> ids = MonsterLocationPools.GetEligibleDefinitionIds(MonsterProgressionSnapshot.Read(Game1.player, useTestProgression));
+        HashSet<string> ids = MonsterLocationPools.GetEligibleDefinitionIds(
+            MonsterProgressionSnapshot.Read(Game1.player, useTestProgression),
+            poolOverrides
+        );
         return Candidates.Where(candidate =>
             ids.Contains(candidate.Id) &&
             !IsExcludedCandidate(candidate))
