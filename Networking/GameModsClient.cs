@@ -119,11 +119,11 @@ internal sealed class GameModsClient : IDisposable
         });
     }
 
-    public Task SendSessionContextAsync(string hostBroadcasterUserId, string hostSessionId, int totalDays)
+    public Task SendSessionContextAsync(string hostBroadcasterUserId, string hostSessionId, int totalDays = 0)
     {
         if (!System.Text.RegularExpressions.Regex.IsMatch(hostBroadcasterUserId ?? "", @"^\d{1,30}$") ||
             !System.Text.RegularExpressions.Regex.IsMatch(hostSessionId ?? "", @"^[a-fA-F0-9]{32}$") ||
-            totalDays < 1)
+            totalDays < 0)
             return Task.CompletedTask;
 
         return this.SendMessageAsync(new
