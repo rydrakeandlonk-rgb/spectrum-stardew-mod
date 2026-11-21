@@ -12,18 +12,18 @@ The validator does not deliver items, change inventory, edit mail, or mutate sav
 
 ## Current eligibility policy
 
-Starter-letter attachments are restricted to **standard edible objects with positive edibility**.
+Starter-letter attachments accept **any registered standard object item**, not just food.
 
-- The resolved item must use Stardew's standard object type.
-- The resolved item must be a Stardew object whose `Edibility` is greater than zero.
-- Tools, equipment, placeables, non-edible objects, and other item types are rejected.
+- The resolved item must use Stardew's standard object type and resolve to a `StardewValley.Object`.
+- Edibility is not a requirement, so ordinary resources and other non-food objects can be selected too.
+- Other item types which the native object-attachment token cannot represent are rejected.
 - Unresolved identifiers are rejected.
 - Empty identifiers are rejected.
 - Registry exceptions and metadata/classification errors fail closed.
 - The validator returns a stable rule ID and reason for diagnostics.
 - The rules version is incremented whenever eligibility policy changes.
 
-This is an intentionally narrow food-only policy. The raw identifier is never trusted as a classification signal; qualified IDs, numeric aliases, and mod-provided IDs are resolved first, then the actual item metadata is checked.
+The raw identifier is never trusted as a classification signal; qualified IDs, numeric aliases, and mod-provided IDs are resolved first, then the actual item metadata is checked.
 
 ## In-game verification
 
