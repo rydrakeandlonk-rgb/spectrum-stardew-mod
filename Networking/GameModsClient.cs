@@ -513,6 +513,12 @@ internal sealed class GameModsClient : IDisposable
 
             if (type == "game.action")
             {
+                if (ReadString(root, "session_id") != this.activeSessionId)
+                {
+                    this.monitor.Log("Ignored a game action for a different or stale Stardew session.", LogLevel.Warn);
+                    return;
+                }
+
                 string actionId = ReadString(root, "action_id");
                 string actionGame = ReadString(root, "game");
                 string actionName = ReadString(root, "name");
@@ -549,6 +555,12 @@ internal sealed class GameModsClient : IDisposable
 
             if (type != "game.command")
                 return;
+
+            if (ReadString(root, "session_id") != this.activeSessionId)
+            {
+                this.monitor.Log("Ignored a game command for a different or stale Stardew session.", LogLevel.Warn);
+                return;
+            }
 
             string commandId = ReadString(root, "command_id");
             string game = ReadString(root, "game");
