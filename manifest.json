@@ -11,5 +11,8 @@
       "UniqueID": "spacechase0.GenericModConfigMenu",
       "IsRequired": true
     }
+  ],
+  "UpdateKeys": [
+    "Nexus:55743"
   ]
 }
