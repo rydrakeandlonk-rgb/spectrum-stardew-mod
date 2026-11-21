@@ -18,6 +18,7 @@ internal sealed class MonsterSpawner
     private const int MaximumMonstersPerRedemption = 10;
     private readonly IMonitor monitor;
     private readonly Dictionary<string, PendingSpawnPlan> pendingPlans = new(StringComparer.Ordinal);
+    private IReadOnlyDictionary<MonsterPool, string> poolOverrides = new Dictionary<MonsterPool, string>();
 
     private sealed class PendingSpawnPlan
     {
@@ -31,6 +32,17 @@ internal sealed class MonsterSpawner
     public MonsterSpawner(IMonitor monitor) => this.monitor = monitor;
 
     public void ClearPendingPlans() => this.pendingPlans.Clear();
+
+    public IReadOnlyDictionary<MonsterPool, string> PoolOverrides => this.poolOverrides;
+
+    public void SetPoolOverrides(IReadOnlyDictionary<MonsterPool, string> overrides)
+    {
+        this.poolOverrides = new Dictionary<MonsterPool, string>(overrides);
+        this.pendingPlans.Clear();
+    }
+
+    public IReadOnlyList<PoolDiagnostic> GetPoolDiagnostics(MonsterProgressionSnapshot progression) =>
+        MonsterLocationPools.GetDiagnostics(progression, this.poolOverrides);
 
     public bool ShouldTriggerHorde(GameCommand command)
     {
@@ -55,11 +67,11 @@ internal sealed class MonsterSpawner
             return false;
         }
 
-        return this.TrySpawnCandidate(MonsterCatalog.GetRandomType(difficulty), out _, out _, targetFarmer: targetFarmer);
+        return this.TrySpawnCandidate(MonsterCatalog.GetRandomType(difficulty, poolOverrides: this.poolOverrides), out _, out _, targetFarmer: targetFarmer);
     }
 
     public bool TrySpawnGreenSlime() =>
-        MonsterCatalog.TryGetCanonicalType("Green Slime", out string id) &&
+        MonsterCatalog.TryGetCanonicalType("Green Slime", out string id, poolOverrides: this.poolOverrides) &&
         this.TrySpawnCandidate(id, out _, out _);
 
     /// <summary>
@@ -122,7 +134,7 @@ internal sealed class MonsterSpawner
 
     public bool TrySpawnMonster(string monsterType, bool ignoreProgression = false)
     {
-        if (!MonsterCatalog.TryGetCanonicalType(monsterType, out string candidateId, ignoreProgression))
+        if (!MonsterCatalog.TryGetCanonicalType(monsterType, out string candidateId, ignoreProgression, poolOverrides: this.poolOverrides))
         {
             this.monitor.Log($"[Spectrum] TEST SPAWN FAILED | unknown, excluded, unsupported, or progression-locked monster: {monsterType}", LogLevel.Warn);
             return false;
@@ -203,10 +215,10 @@ internal sealed class MonsterSpawner
             {
                 case "difficulty_random":
                     count = 1;
-                    chooseMonster = () => MonsterCatalog.GetRandomType(command.Difficulty, useTestProgression: false);
+                    chooseMonster = () => MonsterCatalog.GetRandomType(command.Difficulty, useTestProgression: false, poolOverrides: this.poolOverrides);
                     break;
                 case "chat_monster":
-                    if (!MonsterCatalog.TryGetCanonicalType(command.UserInput, out candidateId, useTestProgression: false))
+                    if (!MonsterCatalog.TryGetCanonicalType(command.UserInput, out candidateId, useTestProgression: false, poolOverrides: this.poolOverrides))
                     {
                         result = "FAILED: unsupported or progression-locked chat monster";
                         return false;
@@ -223,7 +235,7 @@ internal sealed class MonsterSpawner
                     chooseMonster = () => MonsterCatalog.GetRandomType(command.Difficulty, useTestProgression: false);
                     break;
                 case "random_count_specific_monster":
-                    if (!MonsterCatalog.TryGetCanonicalType(command.MonsterType, out candidateId, useTestProgression: false))
+                    if (!MonsterCatalog.TryGetCanonicalType(command.MonsterType, out candidateId, useTestProgression: false, poolOverrides: this.poolOverrides))
                     {
                         result = "FAILED: unsupported or progression-locked configured monster";
                         return false;
@@ -314,7 +326,7 @@ internal sealed class MonsterSpawner
                 continue;
 
             string selectedId = plan.RemainingTypes[0];
-            if (!MonsterCatalog.TryCreateMonster(selectedId, tile * 64f, out Monster? monster, out string error, ignoreProgression: false, useTestProgression: false) || monster is null)
+            if (!MonsterCatalog.TryCreateMonster(selectedId, tile * 64f, out Monster? monster, out string error, ignoreProgression: false, useTestProgression: false, poolOverrides: this.poolOverrides) || monster is null)
             {
                 this.monitor.Log($"[Spectrum] SPAWN FAILED | {MonsterCatalog.GetDisplayName(selectedId)} | {error}", LogLevel.Warn);
                 plan.RemainingTypes.RemoveAt(0);
