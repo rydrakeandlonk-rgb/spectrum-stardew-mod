@@ -1,8 +1,8 @@
 # Item eligibility policy
 
 **Owner:** SMAPI mod (`Gameplay/ItemEligibilityValidator.cs`)
-**Current policy version:** 2
-**Status:** Validator foundation; no delivery flow is implemented by this component.
+**Current policy version:** 3
+**Status:** Implemented and enforced by the Starter Gift Letter delivery flow.
 
 ## Purpose
 
