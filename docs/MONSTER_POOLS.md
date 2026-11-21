@@ -26,7 +26,7 @@ Progression eligibility and difficulty weighting are separate:
 | Skull Cavern | Skull Key obtained |
 | Dangerous Skull Cavern | First successful completion of Skull Cavern Invasion |
 | Bug Lair | Krobus opens the passage during the Dark Talisman quest (`krobusUnseal`) |
-| Farm | Always |
+| Farm | Always; only the explicitly assigned farm/wilderness roster is eligible. Skull Cavern-exclusive Iridium Bat, Purple Slime and Serpent are not part of this pool. |
 | Volcano Dungeon | Ginger Island unlocked |
 
 ## Vanilla save checks
