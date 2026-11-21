@@ -49,6 +49,7 @@ internal sealed class ModEntry : Mod
     private MonsterProgressionSnapshot? lastObservedProgression;
     private bool playerDeathLatched;
     private string lastPoolDiagnosticsSessionId = "";
+    private int lastPoolOverrideRevision;
     private string localConnectionSessionId = "";
     private string gameSessionId = "";
     private string hostBroadcasterUserId = "";
@@ -160,7 +161,8 @@ internal sealed class ModEntry : Mod
         this.lastReportedHostSessionContext = "";
         this.lastPoolDiagnosticsSessionId = "";
         this.wasGatewayConnected = false;
-        this.monsterSpawner?.SetPoolOverrides(new Dictionary<MonsterPool, string>());
+        this.monsterSpawner?.ResetSessionState();
+        this.lastPoolOverrideRevision = 0;
         this.sessionContextRecipients.Clear();
         this.gameModsClient?.Dispose();
         this.gameModsClient = null;
@@ -229,7 +231,8 @@ internal sealed class ModEntry : Mod
         this.lastObservedProgression = null;
         this.playerDeathLatched = false;
         this.lastPoolDiagnosticsSessionId = "";
-        this.monsterSpawner?.SetPoolOverrides(new Dictionary<MonsterPool, string>());
+        this.monsterSpawner?.ResetSessionState();
+        this.lastPoolOverrideRevision = 0;
     }
 
     private void OnGameLaunched(object? sender, GameLaunchedEventArgs e)
@@ -674,6 +677,7 @@ internal sealed class ModEntry : Mod
                     }
 
                     this.monsterSpawner.SetPoolOverrides(parsedOverrides);
+                    this.lastPoolOverrideRevision = Math.Max(1, update.Revision);
                     poolOverridesChanged = true;
                     this.Monitor.Log($"[Spectrum] SPAWN POOL OVERRIDES | revision {update.Revision} | {parsedOverrides.Count} explicit override(s).", LogLevel.Info);
                 }
@@ -1791,6 +1795,9 @@ internal sealed class ModEntry : Mod
         IReadOnlyList<PoolDiagnostic> pools = this.monsterSpawner.GetPoolDiagnostics(progression);
         var diagnostics = new
         {
+            session_id = this.gameModsClient.ActiveSessionId,
+            override_revision = this.lastPoolOverrideRevision,
+            mod_version = this.ModManifest.Version.ToString(),
             host_name = Game1.MasterPlayer?.Name ?? Game1.player.Name,
             progression = new
             {
