@@ -1024,7 +1024,7 @@ internal sealed class ModEntry : Mod
                 new ForwardedClearAction(
                     pending.Action.ActionId, pending.Action.Name, pending.Action.Difficulty, pending.Action.Outcome,
                     pending.Action.MonsterCount, pending.Action.DonorName, pending.Action.CharityName, pending.Action.Announce,
-                    this.gameSessionId
+                    this.gameSessionId, this.config?.BroadcasterUserId ?? ""
                 ),
                 "spectrum.action.forward",
                 modIDs: new[] { this.ModManifest.UniqueID },
@@ -1308,6 +1308,7 @@ internal sealed class ModEntry : Mod
             bool farmerOnline = Game1.getOnlineFarmers().Any(farmer => farmer.UniqueMultiplayerID == e.FromPlayerID);
             if (!hasMod || !farmerOnline || string.IsNullOrWhiteSpace(message.ActionId) ||
                 message.HostSessionId != this.gameSessionId ||
+                !System.Text.RegularExpressions.Regex.IsMatch(message.SourceBroadcasterUserId ?? "", @"^\d{1,30}$") ||
                 message.Name is not ("stardew.clear_loaded_monsters" or "stardew.spawn_random_test" or "stardew.community_single" or "stardew.community_horde" or "stardew.community_mega_horde") ||
                 message.Difficulty is not ("easy" or "normal" or "hard") ||
                 (message.Name == "stardew.community_single" && message.Outcome != "single") ||
