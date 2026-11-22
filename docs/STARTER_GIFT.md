@@ -12,6 +12,6 @@ The property is used when Stardew creates the farmhouse/cabin gift box during sa
 
 - Create a brand-new single-player save and confirm the farmhouse gift contains one Cookie.
 - Create a brand-new multiplayer save and confirm the host and each farmhand receive their own vanilla gift box containing one Cookie.
-- Confirm the old Starter Gift Letter controls and letter actions are absent from Control Center.
+- Confirm the mod and Control Center expose no starter-letter, mail-delivery, or manual-send controls; the farmhouse gift box is the only starting-gift mechanism.
 
 The SMAPI mod is built and packaged through GitHub Actions. A successful build does not replace in-game and multiplayer validation.
