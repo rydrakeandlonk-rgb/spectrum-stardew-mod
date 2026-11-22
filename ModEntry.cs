@@ -62,7 +62,7 @@ internal sealed class ModEntry : Mod
     public override void Entry(IModHelper helper)
     {
         this.monsterSpawner = new MonsterSpawner(this.Monitor);
-        _ = new StarterGiftMapPatch(helper);
+        _ = new StarterGiftMapPatch(helper, this.Monitor);
 
         this.LoadProcessedCommands(helper);
 
