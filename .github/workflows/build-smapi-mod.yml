@@ -19,7 +19,15 @@ on:
       - ".github/workflows/build-smapi-mod.yml"
       - ".github/scripts/validate-monster-catalog.py"
       - "stream-elements-widget/**"
+  release:
+    types: [published]
   workflow_dispatch:
+    inputs:
+      publish_to_nexus:
+        description: "Upload this verified build to the existing Nexus Mods file"
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -71,11 +79,12 @@ jobs:
           -p:ModZipPath=${{ github.workspace }}/dist
 
       - name: Verify build outputs and package contents
+        id: verify
         shell: bash
         run: |
           set -euo pipefail
           dll="$(find bin/Release -type f -name 'SpectrumStardewMod.dll' -print -quit)"
-          zip="$(find dist -type f -name '*.zip' -print -quit)"
+          zip="$(find dist -maxdepth 1 -type f -name '*.zip' ! -name 'spectrum-stardew-complete-bundle.zip' -print -quit)"
           test -n "$dll" || { echo "::error::Compiled mod DLL was not produced."; exit 1; }
           test -n "$zip" || { echo "::error::Release ZIP was not produced."; exit 1; }
           package_listing="$(mktemp)"
@@ -86,16 +95,19 @@ jobs:
             echo "::error::Release ZIP must not contain a local config.json or host token."
             exit 1
           fi
+          version="$(python3 -c 'import json; print(json.load(open("manifest.json", encoding="utf-8"))["Version"])')"
+          echo "mod_zip=$zip" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "Compiled assembly: $dll"
           echo "Release package: $zip"
           echo "Verified package contains manifest.json and SpectrumStardewMod.dll, with no local config.json."
+          echo "Mod version: $version"
 
       - name: Bundle mod and StreamElements widget sources
         shell: bash
         run: |
           set -euo pipefail
-          mod_zip="$(find dist -maxdepth 1 -type f -name '*.zip' ! -name 'spectrum-stardew-complete-bundle.zip' -print -quit)"
-          test -n "$mod_zip" || { echo "::error::Mod install ZIP was not produced."; exit 1; }
+          mod_zip="${{ steps.verify.outputs.mod_zip }}"
           bundle_dir="$(mktemp -d)"
           cp "$mod_zip" "$bundle_dir/Spectrum-Stardew-Mod-Install.zip"
           cp -R stream-elements-widget "$bundle_dir/StreamElements-Widget"
@@ -111,3 +123,16 @@ jobs:
           path: dist/*.zip
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish verified mod ZIP to Nexus Mods
+        if: >-
+          github.event_name == 'release' ||
+          (github.event_name == 'workflow_dispatch' && inputs.publish_to_nexus)
+        uses: Nexus-Mods/upload-action@98532f7670c27cbecc78fae03fa3e278147827e2
+        with:
+          api_key: ${{ secrets.NEXUSMODS_API_KEY }}
+          file_id: "8416959"
+          filename: ${{ steps.verify.outputs.mod_zip }}
+          version: ${{ steps.verify.outputs.version }}
+          display_name: Spectrum Stardew Monster Spawner
+          update_mod_version: true
