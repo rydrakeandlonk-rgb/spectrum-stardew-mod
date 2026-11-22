@@ -11,7 +11,7 @@ namespace SpectrumStardewMod.Gameplay;
 internal sealed class StarterGiftMapPatch
 {
     private const string GiftProperty = "FarmHouseStarterGift";
-    private const string GiftPropertyValue = "(O)223 1";
+    private const string GiftPropertyValue = "(W)12 1";
     private readonly IMonitor monitor;
 
     internal StarterGiftMapPatch(IModHelper helper, IMonitor monitor)
