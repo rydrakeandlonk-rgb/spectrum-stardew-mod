@@ -12,10 +12,16 @@ internal sealed class StarterGiftMapPatch
 {
     private const string GiftProperty = "FarmHouseStarterGift";
     private const string GiftPropertyValue = "(O)223 1";
+    private readonly IMonitor monitor;
 
-    internal StarterGiftMapPatch(IModHelper helper)
+    internal StarterGiftMapPatch(IModHelper helper, IMonitor monitor)
     {
+        this.monitor = monitor;
         helper.Events.Content.AssetRequested += this.OnAssetRequested;
+        this.monitor.Log(
+            $"[Starter Gift] Patch registered. Target property: {GiftProperty}; replacement: {GiftPropertyValue}.",
+            LogLevel.Info
+        );
     }
 
     private void OnAssetRequested(object? sender, AssetRequestedEventArgs e)
@@ -25,14 +31,28 @@ internal sealed class StarterGiftMapPatch
             e.NameWithoutLocale.IsEquivalentTo("Maps/Farm") ||
             assetName.StartsWith("Maps/Farm_", StringComparison.OrdinalIgnoreCase);
 
-        // Stardew reads FarmHouseStarterGift from the farm map, not the
-        // farmhouse interior map. Farm_* also covers vanilla farm variants.
         if (!isFarmMap)
             return;
 
         e.Edit(asset =>
         {
-            asset.AsMap().Data.Properties[GiftProperty] = GiftPropertyValue;
+            var properties = asset.AsMap().Data.Properties;
+            bool propertyExisted = properties.ContainsKey(GiftProperty);
+            string originalValue = propertyExisted
+                ? properties[GiftProperty]?.ToString() ?? "<null>"
+                : "<missing>";
+
+            properties[GiftProperty] = GiftPropertyValue;
+
+            this.monitor.Log(
+                $"[Starter Gift] Replaced {GiftProperty} on '{assetName}'. " +
+                $"Original: '{originalValue}' (present: {propertyExisted}); " +
+                $"new: '{GiftPropertyValue}'. " +
+                (originalValue == GiftPropertyValue
+                    ? "The map already contained the configured Cookie gift."
+                    : "Farm map gift property successfully overridden."),
+                LogLevel.Info
+            );
         });
     }
 }
