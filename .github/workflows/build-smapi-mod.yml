@@ -126,6 +126,7 @@ jobs:
 
       - name: Publish verified mod ZIP to Nexus Mods
         if: >-
+          github.event_name == 'push' ||
           github.event_name == 'release' ||
           (github.event_name == 'workflow_dispatch' && inputs.publish_to_nexus)
         uses: Nexus-Mods/upload-action@98532f7670c27cbecc78fae03fa3e278147827e2
