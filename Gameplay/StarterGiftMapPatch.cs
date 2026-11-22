@@ -5,7 +5,8 @@ namespace SpectrumStardewMod.Gameplay;
 
 /// <summary>
 /// Replaces the vanilla starting gift contents with one Cookie.
-/// Stardew creates a separate protected gift box for each farmer.
+/// Stardew reads this property from the farm map when it creates each
+/// farmer's protected farmhouse gift box.
 /// </summary>
 internal sealed class StarterGiftMapPatch
 {
@@ -19,7 +20,14 @@ internal sealed class StarterGiftMapPatch
 
     private void OnAssetRequested(object? sender, AssetRequestedEventArgs e)
     {
-        if (!e.NameWithoutLocale.IsEquivalentTo("Maps/FarmHouse"))
+        string assetName = e.NameWithoutLocale.Name;
+        bool isFarmMap =
+            e.NameWithoutLocale.IsEquivalentTo("Maps/Farm") ||
+            assetName.StartsWith("Maps/Farm_", StringComparison.OrdinalIgnoreCase);
+
+        // Stardew reads FarmHouseStarterGift from the farm map, not the
+        // farmhouse interior map. Farm_* also covers vanilla farm variants.
+        if (!isFarmMap)
             return;
 
         e.Edit(asset =>
